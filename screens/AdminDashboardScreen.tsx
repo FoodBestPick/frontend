@@ -51,28 +51,102 @@ export const AdminDashboardScreen = () => {
     { name: "카페", population: 15, color: "#9C27B0", legendFontColor: "#333", legendFontSize: 13 },
   ];
 
+  const miniChartStyle = {
+    ...StyleSheet.flatten(styles.miniChart),
+    width: width * 1.1,
+  };
+
   return (
     <View style={styles.container}>
       <Header title="관리자 대시보드" />
       <ScrollView contentContainerStyle={styles.content}>
         {/* 상단 주요 통계 */}
         <View style={styles.cardSection}>
+          {/* 총 사용자 수 */}
           <View style={styles.statCard}>
             <View style={styles.cardHeader}>
-              <Ionicons name="person-outline" size={18} color={COLORS.text} />
-              <Text style={styles.cardLabel}>총 사용자 수</Text>
+              <View style={styles.headerLeft}>
+                <Ionicons name="person-outline" size={18} color={COLORS.text} />
+                <Text style={styles.cardLabel}>총 사용자 수</Text>
+              </View>
+              <Text style={styles.rateText}>+2.5%</Text>
             </View>
             <Text style={styles.bigValue}>{stats.users.toLocaleString()}명</Text>
-            <Text style={styles.rateText}>+2.5%</Text>
+
+            {/* ✅ 미니 라인 차트 */}
+            <LineChart
+              data={{
+                labels: ["", "", "", "", "", "", ""],
+                datasets: [{ data: [11800, 12000, 12200, 12300, 12450, 12500, 12345] }],
+              }}
+              width={miniChartStyle.width}
+              height={60}
+              withDots={false}
+              withInnerLines={false}
+              withVerticalLines={false}
+              withHorizontalLines={false}
+              withVerticalLabels={false}
+              withHorizontalLabels={false}
+              withShadow={true}
+              transparent={true} 
+              chartConfig={{
+                backgroundColor: "transparent",
+                backgroundGradientFrom: "transparent",
+                backgroundGradientTo: "transparent",
+                backgroundGradientFromOpacity: 0,
+                backgroundGradientToOpacity: 0,
+                fillShadowGradient: "rgba(76, 175, 80, 0.3)",
+                fillShadowGradientOpacity: 0.3,
+                decimalPlaces: 0,
+                color: (opacity = 1) => `rgba(76, 175, 80, ${opacity})`,
+                labelColor: () => "transparent",
+              }}
+              style={miniChartStyle}
+            />
+
           </View>
 
+          {/* 총 맛집 수 */}
           <View style={styles.statCard}>
             <View style={styles.cardHeader}>
-              <MaterialCommunityIcons name="store-outline" size={18} color={COLORS.text} />
-              <Text style={styles.cardLabel}>총 맛집 수</Text>
+              <View style={styles.headerLeft}>
+                <MaterialCommunityIcons name="store-outline" size={18} color={COLORS.text} />
+                <Text style={styles.cardLabel}>총 맛집 수</Text>
+              </View>
+              <Text style={styles.rateText}>+1.8%</Text>
             </View>
             <Text style={styles.bigValue}>{stats.restaurants.toLocaleString()}개</Text>
-            <Text style={styles.rateText}>+1.8%</Text>
+
+            {/* ✅ 미니 라인 차트 */}
+            <LineChart
+              data={{
+                labels: ["", "", "", "", "", "", ""],
+                datasets: [{ data: [950, 500, 1050, 1100, 1150, 1200, 1234] }],
+              }}
+              width={miniChartStyle.width}
+              height={60}
+              withDots={false}
+              withInnerLines={false}
+              withVerticalLines={false}
+              withHorizontalLines={false}
+              withVerticalLabels={false}
+              withHorizontalLabels={false}
+              withShadow={true}
+              transparent={true} 
+              chartConfig={{
+                backgroundColor: "transparent",
+                backgroundGradientFrom: "transparent",
+                backgroundGradientTo: "transparent",
+                backgroundGradientFromOpacity: 0,
+                backgroundGradientToOpacity: 0,
+                fillShadowGradient: "rgba(33, 150, 243, 0.3)", 
+                fillShadowGradientOpacity: 0.3,
+                decimalPlaces: 0,
+                color: (opacity = 1) => `rgba(33, 150, 243, ${opacity})`, 
+                labelColor: () => "transparent", 
+              }}
+              style={miniChartStyle}
+            />
           </View>
         </View>
 
@@ -87,7 +161,6 @@ export const AdminDashboardScreen = () => {
         <View style={styles.alertBox}>
           <Text style={styles.alertTitle}>긴급 알림 / 미처리 업무</Text>
           <Text style={styles.alertItem}>승인 대기 맛집: 2건</Text>
-          <Text style={styles.alertItem}>신고된 리뷰: 3건</Text>
           <TouchableOpacity style={styles.alertButton}>
             <Text style={styles.alertButtonText}>바로 확인하기</Text>
           </TouchableOpacity>
@@ -97,8 +170,8 @@ export const AdminDashboardScreen = () => {
         <View style={styles.feedSection}>
           <Text style={styles.sectionTitle}>실시간 활동 피드</Text>
           <FeedItem icon="storefront-outline" color={COLORS.primary} text="새로운 맛집 ‘제주 흑돼지’가 승인 대기 중입니다." />
-          <FeedItem icon="chatbubble-outline" color={COLORS.secondary} text="맛집 ‘감성타코’에 새 리뷰가 등록되었습니다." />
-          <FeedItem icon="alert-circle-outline" color={COLORS.warning} text="리뷰 신고가 접수되었습니다. (광고성)" />
+          <FeedItem icon="chatbubble-outline" color={COLORS.primary} text="맛집 ‘감성타코’에 새 리뷰가 등록되었습니다." />
+          <FeedItem icon="alert-circle-outline" color="#f44336" text="리뷰 신고가 접수되었습니다. (광고성)" />
         </View>
 
         {/* 주간 사용자 활동 */}
@@ -109,7 +182,7 @@ export const AdminDashboardScreen = () => {
             height={180}
             chartConfig={chartConfig}
             bezier
-            style={styles.chart}
+            style={styles.linechart}
           />
         </ChartSection>
 
@@ -135,16 +208,16 @@ export const AdminDashboardScreen = () => {
             chartConfig={chartConfig}
             yAxisLabel=""
             yAxisSuffix=""
-            withInnerLines={false} 
-            style={styles.chart}
-/>
+            withInnerLines={false}
+            style={styles.barchart}
+          />
         </ChartSection>
 
         {/* 빠른 링크 */}
         <View style={styles.quickLinkSection}>
           <Text style={styles.sectionTitle}>빠른 링크</Text>
           <View style={styles.quickGrid}>
-            <QuickLink icon="checkmark-done-outline" label="맛집 승인" />
+            <QuickLink icon="checkmark-done-outline" label="맛집 등록" />
             <QuickLink icon="shield-outline" label="콘텐츠 신고 관리" />
             <QuickLink icon="megaphone-outline" label="공지사항 작성" />
             <QuickLink icon="headset-outline" label="고객문의 확인" />
@@ -200,18 +273,21 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
   },
-  cardHeader: { flexDirection: "row", alignItems: "center", gap: 6 },
+  cardHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  headerLeft: { flexDirection: "row", alignItems: "center", gap: 6 },
   cardLabel: { fontSize: 14, color: COLORS.text },
   bigValue: { fontSize: 28, fontWeight: "bold", color: COLORS.primary, marginTop: 6 },
   rateText: { color: "green", fontSize: 13 },
 
+  miniChart: {
+    marginTop: 8,
+    marginLeft: -60,
+    alignSelf: "flex-start",
+  },
+
   reviewRow: { flexDirection: "row", justifyContent: "space-between" },
 
-  alertBox: {
-    backgroundColor: "#ffe8e8",
-    borderRadius: 12,
-    padding: 16,
-  },
+  alertBox: { backgroundColor: "#ffe8e8", borderRadius: 12, padding: 16 },
   alertTitle: { fontWeight: "bold", fontSize: 16, color: "#b00020", marginBottom: 8 },
   alertItem: { color: "#a00", fontSize: 14, marginBottom: 2 },
   alertButton: {
@@ -228,13 +304,9 @@ const styles = StyleSheet.create({
   feedItem: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 8 },
   feedText: { fontSize: 14, color: COLORS.text },
 
-  chartSection: {
-    backgroundColor: COLORS.card,
-    borderRadius: 12,
-    padding: 16,
-  },
-  chart: { 
-    borderRadius: 12, marginVertical: 8, alignSelf: "center", marginLeft: -40},
+  chartSection: { backgroundColor: COLORS.card, borderRadius: 12, padding: 16 },
+  linechart: { borderRadius: 12, marginVertical: 8, alignSelf: "center", marginLeft: -20 },
+  barchart: { borderRadius: 12, marginVertical: 8, alignSelf: "center", marginLeft: -40 },
 
   quickLinkSection: { marginBottom: 40 },
   quickGrid: {

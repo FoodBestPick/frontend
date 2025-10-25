@@ -73,7 +73,7 @@ export const AdminDashboardScreen = () => {
             </View>
             <Text style={styles.bigValue}>{stats.users.toLocaleString()}명</Text>
 
-            {/* ✅ 미니 라인 차트 */}
+            {/* 미니 라인 차트 */}
             <LineChart
               data={{
                 labels: ["", "", "", "", "", "", ""],
@@ -117,7 +117,7 @@ export const AdminDashboardScreen = () => {
             </View>
             <Text style={styles.bigValue}>{stats.restaurants.toLocaleString()}개</Text>
 
-            {/* ✅ 미니 라인 차트 */}
+            {/* 미니 라인 차트 */}
             <LineChart
               data={{
                 labels: ["", "", "", "", "", "", ""],

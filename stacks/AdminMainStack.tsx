@@ -6,6 +6,7 @@ import MaterialIcons from "react-native-vector-icons/MaterialIcons";
 import FontAwesome5 from "react-native-vector-icons/FontAwesome5";
 import { View, Text } from "react-native";
 import { AdminDashboardScreen } from "../screens/AdminDashboardScreen";
+import { AdminStatsScreen } from "../screens/AdminStatsScreen";
 
 const Tab = createBottomTabNavigator();
 
@@ -55,7 +56,7 @@ export const AdminMainStack = () => {
             return (
               <MaterialIcons name="outlined-flag" size={22} color={color} />
             );
-          if (route.name === "분석")
+          if (route.name === "통계")
             return (
               <FontAwesome5 name="chart-bar" size={20} color={color} solid={focused} />
             );
@@ -69,8 +70,12 @@ export const AdminMainStack = () => {
       />
       <Tab.Screen name="식당" component={() => <Placeholder title="식당" />} />
       <Tab.Screen name="회원" component={() => <Placeholder title="회원" />} />
+      <Tab.Screen 
+        name="통계" 
+        component={AdminStatsScreen} 
+        options={{ title: "통계" }}
+      />
       <Tab.Screen name="보고서" component={() => <Placeholder title="보고서" />} />
-      <Tab.Screen name="분석" component={() => <Placeholder title="분석" />} />
     </Tab.Navigator>
   );
 };

@@ -1,6 +1,6 @@
 import { NavigationContainer } from "@react-navigation/native";
 import { StatusBar } from "react-native";
-import { AdminMainStack } from "./stacks/AdminMainStack";
+import { AdminMainStack } from "../frontend/presentation/navigation/AdminNavigation";
 
 export default function App() {
   return (

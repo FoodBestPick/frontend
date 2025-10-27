@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { View, Text, TouchableOpacity, ScrollView, Dimensions, StyleSheet } from "react-native";
 import { Header } from "../components/Header";
-import { COLORS } from "../constants/colors";
+import { COLORS } from "../../core/constants/colors";
 import { LineChart, BarChart, PieChart } from "react-native-chart-kit";
 
 const { width } = Dimensions.get("window");

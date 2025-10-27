@@ -5,8 +5,9 @@ import Ionicons from "react-native-vector-icons/Ionicons";
 import MaterialIcons from "react-native-vector-icons/MaterialIcons";
 import FontAwesome5 from "react-native-vector-icons/FontAwesome5";
 import { View, Text } from "react-native";
-import { AdminDashboardScreen } from "../screens/AdminDashboardScreen";
+import { AdminDashBoardScreen } from "../screens/AdminDashBoardScreen";
 import { AdminStatsScreen } from "../screens/AdminStatsScreen";
+import { AdminUserScreen } from "../screens/AdminUserScreen";
 
 const Tab = createBottomTabNavigator();
 
@@ -65,11 +66,15 @@ export const AdminMainStack = () => {
     >
       <Tab.Screen
         name="대시보드"
-        component={AdminDashboardScreen}
+        component={AdminDashBoardScreen}
         options={{ title: "대시보드" }}
       />
       <Tab.Screen name="식당" component={() => <Placeholder title="식당" />} />
-      <Tab.Screen name="회원" component={() => <Placeholder title="회원" />} />
+      <Tab.Screen 
+        name="회원" 
+        component={AdminUserScreen}
+        options={{ title: "회원" }}
+      />
       <Tab.Screen 
         name="통계" 
         component={AdminStatsScreen} 

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import {
   ScrollView,
   View,
@@ -6,32 +6,29 @@ import {
   StyleSheet,
   TouchableOpacity,
   Dimensions,
+  RefreshControl,
 } from "react-native";
 import { Header } from "../components/Header";
 import { DashboardCard } from "../components/DashBoardCard";
-import { COLORS } from "../constants/colors";
-import { getAdminStats } from "../services/AdminService";
+import { COLORS } from "../../core/constants/colors";
+import { AdminDashBoardViewModel } from "../viewmodels/AdminDashBoardViewModels";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 import { LineChart, BarChart, PieChart } from "react-native-chart-kit";
 
 const { width } = Dimensions.get("window");
 
-export const AdminDashboardScreen = () => {
-  const [stats, setStats] = useState({
-    users: 12345,
-    restaurants: 1234,
-    todayReviews: 56,
-    weekReviews: 342,
-    monthReviews: 1428,
-  });
+export const AdminDashBoardScreen = () => {
 
-  useEffect(() => {
-    (async () => {
-      const data = await getAdminStats();
-      setStats((prev) => ({ ...prev, ...data }));
-    })();
+  const { stats, fetchStats } = AdminDashBoardViewModel();
+  const [refreshing, setRefreshing] = useState(false);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await fetchStats(); 
+    setRefreshing(false);
   }, []);
+
 
   const lineData = {
     labels: ["월", "화", "수", "목", "금", "토", "일"],
@@ -59,7 +56,12 @@ export const AdminDashboardScreen = () => {
   return (
     <View style={styles.container}>
       <Header title="관리자 대시보드" />
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView
+        contentContainerStyle={styles.content}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} /> 
+        }
+      >
         {/* 상단 주요 통계 */}
         <View style={styles.cardSection}>
           {/* 총 사용자 수 */}
@@ -73,7 +75,6 @@ export const AdminDashboardScreen = () => {
             </View>
             <Text style={styles.bigValue}>{stats.users.toLocaleString()}명</Text>
 
-            {/* 미니 라인 차트 */}
             <LineChart
               data={{
                 labels: ["", "", "", "", "", "", ""],
@@ -88,13 +89,11 @@ export const AdminDashboardScreen = () => {
               withVerticalLabels={false}
               withHorizontalLabels={false}
               withShadow={true}
-              transparent={true} 
+              transparent={true}
               chartConfig={{
                 backgroundColor: "transparent",
                 backgroundGradientFrom: "transparent",
                 backgroundGradientTo: "transparent",
-                backgroundGradientFromOpacity: 0,
-                backgroundGradientToOpacity: 0,
                 fillShadowGradient: "rgba(76, 175, 80, 0.3)",
                 fillShadowGradientOpacity: 0.3,
                 decimalPlaces: 0,
@@ -103,7 +102,6 @@ export const AdminDashboardScreen = () => {
               }}
               style={miniChartStyle}
             />
-
           </View>
 
           {/* 총 맛집 수 */}
@@ -117,11 +115,10 @@ export const AdminDashboardScreen = () => {
             </View>
             <Text style={styles.bigValue}>{stats.restaurants.toLocaleString()}개</Text>
 
-            {/* 미니 라인 차트 */}
             <LineChart
               data={{
                 labels: ["", "", "", "", "", "", ""],
-                datasets: [{ data: [950, 500, 1050, 1100, 1150, 1200, 1234] }],
+                datasets: [{ data: [950, 1000, 1050, 1100, 1150, 1200, 1234] }],
               }}
               width={miniChartStyle.width}
               height={60}
@@ -132,18 +129,16 @@ export const AdminDashboardScreen = () => {
               withVerticalLabels={false}
               withHorizontalLabels={false}
               withShadow={true}
-              transparent={true} 
+              transparent={true}
               chartConfig={{
                 backgroundColor: "transparent",
                 backgroundGradientFrom: "transparent",
                 backgroundGradientTo: "transparent",
-                backgroundGradientFromOpacity: 0,
-                backgroundGradientToOpacity: 0,
-                fillShadowGradient: "rgba(33, 150, 243, 0.3)", 
+                fillShadowGradient: "rgba(33, 150, 243, 0.3)",
                 fillShadowGradientOpacity: 0.3,
                 decimalPlaces: 0,
-                color: (opacity = 1) => `rgba(33, 150, 243, ${opacity})`, 
-                labelColor: () => "transparent", 
+                color: (opacity = 1) => `rgba(33, 150, 243, ${opacity})`,
+                labelColor: () => "transparent",
               }}
               style={miniChartStyle}
             />

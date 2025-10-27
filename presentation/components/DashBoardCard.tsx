@@ -1,7 +1,7 @@
 // components/DashboardCard.tsx
 import React from "react";
 import { View, Text, StyleSheet } from "react-native";
-import { COLORS } from "../constants/colors";
+import { COLORS } from "../../core/constants/colors";
 
 type Props = {
   label: string;

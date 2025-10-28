@@ -8,7 +8,7 @@ import {
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import type { RootStackParamList } from '../../App';
+import { RootStackParamList } from "../navigation/types/RootStackParamList"
 
 type Navigation = NativeStackNavigationProp<RootStackParamList>;
 const ORANGE = '#FFA847';
@@ -51,9 +51,7 @@ export default function OnboardingScreen() {
 
     return (
         <View style={styles.container}>
-            {/* 로고 */}
-            <Image source={require('../../assets/logo.png')} style={styles.logo} />
-
+        
             {/* 현재 슬라이드 이미지 */}
             <Image source={current.image} style={styles.image} />
 

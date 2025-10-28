@@ -12,7 +12,7 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import type { RootStackParamList } from '../../App';
+import { RootStackParamList } from "../navigation/types/RootStackParamList"
 
 type Navigation = NativeStackNavigationProp<RootStackParamList>;
 const ORANGE = '#FFA847';

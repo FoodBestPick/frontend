@@ -13,7 +13,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import CheckBox from '@react-native-community/checkbox';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import type { RootStackParamList } from '../../App';
+import { RootStackParamList } from "../navigation/types/RootStackParamList"
 
 type Navigation = NativeStackNavigationProp<RootStackParamList>;
 const ORANGE = '#FFA847';
@@ -28,11 +28,15 @@ export default function LoginScreen() {
     const [autoLogin, setAutoLogin] = useState(false);
 
     const handleLogin = () => {
-        if (!email || !password)
-            return Alert.alert('알림', '이메일과 비밀번호를 입력하세요.');
-        Alert.alert('로그인 성공', `환영합니다, ${email}!`);
+        if (email === "admin" && password === "1234") {
+            navigation.reset({
+                index: 0,
+                routes: [{ name: "AdminMain" }],
+            });
+        } else {
+            Alert.alert("로그인 실패", "아이디 또는 비밀번호를 확인하세요.");
+        }
     };
-
     return (
         <SafeAreaView style={[styles.safeArea, { paddingTop: insets.top + 10 }]}>
             <StatusBar barStyle="dark-content" backgroundColor="#fff" />
@@ -111,7 +115,7 @@ export default function LoginScreen() {
                     아직 회원이 아니신가요?{' '}
                     <Text
                         style={styles.link}
-                        onPress={() => navigation.navigate('Signup')}
+                        onPress={() => navigation.navigate('SignUp')}
                     >
                         회원가입하기
                     </Text>

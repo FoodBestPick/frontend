@@ -5,4 +5,5 @@ export type RootStackParamList = {
   FindAccount: undefined;
   SignUp: undefined;
   AdminMain: undefined;
+  UserMain: undefined;
 };

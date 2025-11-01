@@ -6,4 +6,8 @@ export class GetAdminStats {
   async execute() {
     return await this.repository.getStats();
   }
+
+  async executeDetail() {
+    return await this.repository.getDetailStats();
+  }
 }

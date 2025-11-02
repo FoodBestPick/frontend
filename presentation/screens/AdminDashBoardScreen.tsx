@@ -29,56 +29,60 @@ export const AdminDashBoardScreen = () => {
     setRefreshing(false);
   }, []);
 
+  if (!stats) {
+    return (
+      <View style={[styles.container, { justifyContent: "center", alignItems: "center" }]}>
+        <Text style={{ color: COLORS.text, fontSize: 16 }}>로딩 중...</Text>
+      </View>
+    );
+  }
 
   const lineData = {
     labels: ["월", "화", "수", "목", "금", "토", "일"],
-    datasets: [{ data: [2300, 2450, 2600, 2800, 2950, 2900, 2750] }],
+    datasets: [{ data: stats.data.weekUserData ?? [] }],
   };
 
   const barData = {
     labels: ["월", "화", "수", "목", "금", "토", "일"],
-    datasets: [{ data: [50, 60, 70, 65, 80, 90, 60] }],
+    datasets: [{ data: stats.data.barData ?? [] }],
   };
 
-  const pieData = [
-    { name: "한식", population: 40, color: "#FF8A65", legendFontColor: "#333", legendFontSize: 13 },
-    { name: "중식", population: 20, color: "#FFCA28", legendFontColor: "#333", legendFontSize: 13 },
-    { name: "일식", population: 15, color: "#4CAF50", legendFontColor: "#333", legendFontSize: 13 },
-    { name: "양식", population: 10, color: "#2196F3", legendFontColor: "#333", legendFontSize: 13 },
-    { name: "카페", population: 15, color: "#9C27B0", legendFontColor: "#333", legendFontSize: 13 },
-  ];
+  const pieData = (stats.data.pieData ?? []).map((item, index) => ({
+    ...item,
+    color: ["#FF8A65", "#FFCA28", "#4CAF50", "#2196F3", "#9C27B0"][index % 5],
+    legendFontColor: "#333",
+    legendFontSize: 13,
+  }));
 
   const miniChartStyle = {
     ...StyleSheet.flatten(styles.miniChart),
     width: width * 1.1,
   };
-
+  
   return (
     <View style={styles.container}>
       <Header title="관리자 대시보드" />
       <ScrollView
         contentContainerStyle={styles.content}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} /> 
-        }
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
         {/* 상단 주요 통계 */}
         <View style={styles.cardSection}>
-          {/* 총 사용자 수 */}
           <View style={styles.statCard}>
             <View style={styles.cardHeader}>
               <View style={styles.headerLeft}>
                 <Ionicons name="person-outline" size={18} color={COLORS.text} />
                 <Text style={styles.cardLabel}>총 사용자 수</Text>
               </View>
-              <Text style={styles.rateText}>+2.5%</Text>
             </View>
-            <Text style={styles.bigValue}>{stats.users.toLocaleString()}명</Text>
+            <Text style={styles.bigValue}>
+              {stats?.data?.users?.toLocaleString?.() ?? stats.data.users.toLocaleString()}명
+            </Text>
 
             <LineChart
               data={{
                 labels: ["", "", "", "", "", "", ""],
-                datasets: [{ data: [11800, 12000, 12200, 12300, 12450, 12500, 12345] }],
+                datasets: [{ data: stats.data.allUserData ?? [] }],
               }}
               width={miniChartStyle.width}
               height={60}
@@ -111,14 +115,13 @@ export const AdminDashBoardScreen = () => {
                 <MaterialCommunityIcons name="store-outline" size={18} color={COLORS.text} />
                 <Text style={styles.cardLabel}>총 맛집 수</Text>
               </View>
-              <Text style={styles.rateText}>+1.8%</Text>
             </View>
-            <Text style={styles.bigValue}>{stats.restaurants.toLocaleString()}개</Text>
+            <Text style={styles.bigValue}>{stats.data.restaurants.toLocaleString()}개</Text>
 
             <LineChart
               data={{
                 labels: ["", "", "", "", "", "", ""],
-                datasets: [{ data: [950, 1000, 1050, 1100, 1150, 1200, 1234] }],
+                datasets: [{ data: stats.data.allRestaurantData ?? [] }],
               }}
               width={miniChartStyle.width}
               height={60}
@@ -147,9 +150,9 @@ export const AdminDashBoardScreen = () => {
 
         {/* 리뷰 요약 */}
         <View style={styles.reviewRow}>
-          <DashboardCard label="오늘 리뷰" value={stats.todayReviews} />
-          <DashboardCard label="주간 리뷰" value={stats.weekReviews} />
-          <DashboardCard label="월간 리뷰" value={stats.monthReviews} />
+          <DashboardCard label="오늘 리뷰" value={stats.data.todayReviews} />
+          <DashboardCard label="주간 리뷰" value={stats.data.weekReviews} />
+          <DashboardCard label="월간 리뷰" value={stats.data.monthReviews} />
         </View>
 
         {/* 긴급 알림 */}
@@ -173,7 +176,7 @@ export const AdminDashBoardScreen = () => {
         <ChartSection title="주간 사용자 활동">
           <LineChart
             data={lineData}
-            width={width - 40}
+            width={width - 30}
             height={180}
             chartConfig={chartConfig}
             bezier
@@ -183,15 +186,28 @@ export const AdminDashBoardScreen = () => {
 
         {/* 맛집 카테고리 분포 */}
         <ChartSection title="맛집 카테고리 분포">
-          <PieChart
-            data={pieData}
-            width={width - 40}
-            height={200}
-            chartConfig={chartConfig}
-            accessor="population"
-            backgroundColor="transparent"
-            paddingLeft="10"
-          />
+          {(stats.data.pieData ?? []).map((item, index) => (
+            <View key={item.name} style={{ marginTop: 10 }}>
+              {/* 이름 + 퍼센트 표시 */}
+              <View style={styles.catRow}>
+                <Text style={styles.catLabel}>{item.name}</Text>
+                <Text style={styles.catPct}>{item.population}%</Text>
+              </View>
+
+              {/* 퍼센트 막대 */}
+              <View style={styles.catTrack}>
+                <View
+                  style={[
+                    styles.catFill,
+                    {
+                      width: `${item.population}%`,
+                      backgroundColor: ["#FF8A65", "#FFCA28", "#4CAF50", "#2196F3", "#9C27B0"][index % 5],
+                    },
+                  ]}
+                />
+              </View>
+            </View>
+          ))}
         </ChartSection>
 
         {/* 일일 리뷰 등록 수 */}
@@ -322,4 +338,26 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   quickText: { marginTop: 8, fontSize: 14, color: COLORS.text },
+  catRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 6,
+  },
+  catLabel: {
+    color: "#6B7280",
+    fontSize: 13,
+  },
+  catPct: {
+    color: "#6B7280",
+    fontSize: 13,
+  },
+  catTrack: {
+    height: 6,
+    backgroundColor: "#EEF2F7",
+    borderRadius: 999,
+  },
+  catFill: {
+    height: 6,
+    borderRadius: 999,
+  },
 });

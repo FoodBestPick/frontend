@@ -375,17 +375,28 @@ export const AdminStatsScreen = () => {
         {/* 맛집 카테고리 */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>맛집 카테고리 분포</Text>
-          {ui.categories.map((c) => (
-            <View key={c.label} style={{ marginTop: 10 }}>
-              <View style={styles.catRow}>
-                <Text style={styles.catLabel}>{c.label}</Text>
-                <Text style={styles.catPct}>{c.pct}%</Text>
+          {ui.categories.map((c, index) => {
+            const colors = ["#FF6B6B", "#FFD93D", "#6BCB77", "#4D96FF", "#B185DB"];
+            return (
+              <View key={c.label} style={{ marginTop: 10 }}>
+                <View style={styles.catRow}>
+                  <Text style={styles.catLabel}>{c.label}</Text>
+                  <Text style={styles.catPct}>{c.pct}%</Text>
+                </View>
+                <View style={styles.catTrack}>
+                  <View
+                    style={[
+                      styles.catFill,
+                      {
+                        width: `${c.pct}%`,
+                        backgroundColor: colors[index % colors.length], // ✅ 각 항목별 색상 다르게
+                      },
+                    ]}
+                  />
+                </View>
               </View>
-              <View style={styles.catTrack}>
-                <View style={[styles.catFill, { width: `${c.pct}%` }]} />
-              </View>
-            </View>
-          ))}
+            );
+          })}
         </View>
 
         {/* 리뷰 평점 */}

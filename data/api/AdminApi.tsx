@@ -1,12 +1,28 @@
 export const AdminApi = {
   async getStats() {
-        return Promise.resolve({
-            users: 12346,
-            restaurants: 1234,
-            todayReviews: 60,
-            weekReviews: 342,
-            monthReviews: 1428,
-        });
+    return Promise.resolve({
+      code: 200,
+      message: "성공적으로 처리되었습니다.",
+      data: {
+        users: 8542,
+        restaurants: 1234,
+        todayReviews: 60,
+        weekReviews: 342,
+        monthReviews: 1428,
+
+        allUserData: [2300, 2450, 2600, 2800, 2950, 2900, 2750],
+        allRestaurantData: [950, 1000, 1050, 1100, 1150, 1200, 1234],
+        weekUserData: [300, 350, 400, 450, 500, 550, 600],
+        barData: [50, 60, 70, 65, 80, 90, 70],
+        pieData: [
+          { name: "한식", population: 40 },
+          { name: "중식", population: 20 },
+          { name: "일식", population: 15 },
+          { name: "양식", population: 10 },
+          { name: "카페", population: 15 },
+        ],
+      },
+    });
   },
 
   async getDetailStats() {
@@ -147,5 +163,5 @@ export const AdminApi = {
         },
       },
     });
-  }
+  },
 };

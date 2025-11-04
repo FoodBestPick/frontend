@@ -33,11 +33,11 @@ export default function LoginScreen() {
                 index: 0,
                 routes: [{ name: "AdminMain" }],
             });
-        } else if(email === "user@example.com" && password == "1234") {
-            /*navigation.reset({
-                index : 0
+        } else if (email === "user@example.com" && password == "1234") {
+            navigation.reset({
+                index: 0,
                 routes: [{ name: "UserMain" }],
-            });*/
+            });
         } else {
             Alert.alert("로그인 실패", "아이디 또는 비밀번호를 확인하세요.");
         }

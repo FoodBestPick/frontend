@@ -10,6 +10,7 @@ import LoginScreen from "../frontend/presentation/screens/LoginScreen";
 import FindAccountScreen from "../frontend/presentation/screens/FindAccountScreen";
 import OnboardingScreen from "../frontend/presentation/screens/OnboardingScreen";
 import SignUpScreen from "../frontend/presentation/screens/SignupScreen";
+import UserMain from "../frontend/presentation/screens/UserMain";
 
 const Stack = createStackNavigator<RootStackParamList>();
 
@@ -25,6 +26,8 @@ export default function App() {
           <Stack.Screen name="FindAccount" component={FindAccountScreen} />
           <Stack.Screen name="SignUp" component={SignUpScreen} />
           <Stack.Screen name="AdminMain" component={AdminMainStack} />
+          <Stack.Screen name="UserMain" component={UserMain} />
+
         </Stack.Navigator>
       </NavigationContainer>
     </>

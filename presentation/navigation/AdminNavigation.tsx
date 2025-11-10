@@ -7,6 +7,7 @@ import { View, Text } from "react-native";
 import { AdminDashBoardScreen } from "../screens/AdminDashBoardScreen";
 import { AdminStatsScreen } from "../screens/AdminStatsScreen";
 import { AdminUserScreen } from "../screens/AdminUserScreen";
+import { AdminRestaurantScreen } from "../screens/AdminRestaurantScreen";
 
 const Tab = createBottomTabNavigator();
 
@@ -46,7 +47,7 @@ export const AdminMainStack = () => {
                 color={color}
               />
             );
-          if (route.name === "식당")
+          if (route.name === "맛집")
             return <Ionicons name="location-outline" size={22} color={color} />;
           if (route.name === "회원")
             return (
@@ -68,7 +69,11 @@ export const AdminMainStack = () => {
         component={AdminDashBoardScreen}
         options={{ title: "대시보드" }}
       />
-      <Tab.Screen name="식당" component={() => <Placeholder title="식당" />} />
+      <Tab.Screen 
+        name="맛집" 
+        component={AdminRestaurantScreen}
+        options={{ title: "맛집" }}
+        />
       <Tab.Screen 
         name="회원" 
         component={AdminUserScreen}

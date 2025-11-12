@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useContext } from "react";
 import {
   View,
   Text,
@@ -14,8 +14,11 @@ import { Dropdown } from "react-native-element-dropdown";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import { COLORS } from "../../core/constants/colors";
 import { Header } from "../components/Header";
+import { ThemeContext } from "../../context/ThemeContext";
 
 export const AdminUserScreen = () => {
+  const { theme } = useContext(ThemeContext);
+
   const [expandedUsers, setExpandedUsers] = useState<number[]>([]);
   const [page, setPage] = useState(1);
   const [activeModal, setActiveModal] = useState<{
@@ -81,33 +84,25 @@ export const AdminUserScreen = () => {
   const filteredUsers = users.filter((u) => {
     const matchesStatus =
       selectedStatus === "전체" || u.status === selectedStatus;
-
     const matchesSearch =
       searchQuery.trim() === "" ||
       u.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       u.email.toLowerCase().includes(searchQuery.toLowerCase());
-
     return matchesStatus && matchesSearch;
   });
 
   const sortedUsers = [...filteredUsers].sort((a, b) => {
     switch (selectedSort) {
       case "최신 가입순":
-      case "newest":
         return new Date(b.joinDate).getTime() - new Date(a.joinDate).getTime();
       case "오래된 가입순":
-      case "oldest":
         return new Date(a.joinDate).getTime() - new Date(b.joinDate).getTime();
       case "경고 횟수 높은순":
-      case "warn_high":
         return b.warnings - a.warnings;
       case "경고 횟수 낮은순":
-      case "warn_low":
         return a.warnings - b.warnings;
-      case "전체":
-      case "none":
       default:
-        return 0; 
+        return 0;
     }
   });
 
@@ -116,235 +111,319 @@ export const AdminUserScreen = () => {
     (page - 1) * usersPerPage,
     page * usersPerPage
   );
+
   return (
-    <View style={styles.container}>
+    <View style={{ flex: 1, backgroundColor: theme.background }}>
       <Header title="회원 관리" />
+      <View style={[styles.container, { backgroundColor: theme.background }]}>
 
-      {/* 검색창 */}
-      <View style={styles.searchBar}>
-        <Ionicons name="search-outline" size={18} color="#777" />
-        <TextInput
-          style={styles.input}
-          placeholder="닉네임 또는 이메일로 검색"
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-        />
-      </View>
+        {/* 검색창 */}
+        <View style={[styles.searchBar,
+        {
+          backgroundColor: theme.card,
+          borderColor: theme.border,
+          borderWidth: 1,
+        }]}>
+          <Ionicons name="search-outline" size={18} color={theme.textSecondary} />
+          <TextInput
+            style={[styles.input, { color: theme.textPrimary }]}
+            placeholder="닉네임 또는 이메일로 검색"
+            placeholderTextColor={theme.textSecondary}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+          />
+        </View>
 
-      <View style={styles.dropdownRow}>
-        <Dropdown
-          style={styles.dropdown}
-          data={statusOptions}
-          labelField="label"
-          valueField="value"
-          placeholder="상태 선택"
-          placeholderStyle={styles.placeholderText}
-          selectedTextStyle={styles.selectedText}
-          value={selectedStatus}
-          onChange={(item) => setSelectedStatus(item.value)}
-        />
-        <Dropdown
-          style={styles.dropdown}
-          data={sortOptions}
-          labelField="label"
-          valueField="value"
-          placeholder="정렬 기준"
-          placeholderStyle={styles.placeholderText}
-          selectedTextStyle={styles.selectedText}
-          value={selectedSort}
-          onChange={(item) => setSelectedSort(item.value)}
-        />
-      </View>
-
-      {/* 사용자 카드 목록 */}
-      <ScrollView contentContainerStyle={{ paddingBottom: 100 }}>
-        {paginatedUsers.map((user) => (
-          <View key={user.id} style={styles.card}>
-            <TouchableOpacity
-              style={styles.cardHeader}
-              onPress={() => toggleUser(user.id)}
-            >
-              <View style={styles.userInfo}>
-                <Image source={user.avatar} style={styles.avatar} />
-                <View>
-                  <Text style={styles.userName}>{user.name}</Text>
-                  <Text style={styles.userEmail}>{user.email}</Text>
-                </View>
-              </View>
-              <Ionicons
-                name={
-                  expandedUsers.includes(user.id)
-                    ? "chevron-up"
-                    : "chevron-down"
-                }
-                size={20}
-                color="#777"
-              />
-            </TouchableOpacity>
-
-            {expandedUsers.includes(user.id) && (
-              <View style={styles.detailSection}>
-                <View style={styles.detailRow}>
-                  <Text style={styles.detailLabel}>가입일</Text>
-                  <Text style={styles.detailValue}>{user.joinDate}</Text>
-                </View>
-                <View style={styles.detailRow}>
-                  <Text style={styles.detailLabel}>마지막 활동일</Text>
-                  <Text style={styles.detailValue}>{user.lastActive}</Text>
-                </View>
-                <View style={styles.detailRow}>
-                  <Text style={styles.detailLabel}>상태</Text>
-                  <Text
-                    style={[
-                      styles.detailValue,
-                      {
-                        color:
-                          user.status === "접속중"
-                            ? "#4CAF50"
-                            : user.status === "정지"
-                              ? "#E53935"
-                              : "#999",
-                      },
-                    ]}
-                  >
-                    {user.status}
-                  </Text>
-                </View>
-                <View style={styles.detailRow}>
-                  <Text style={styles.detailLabel}>경고 횟수</Text>
-                  <Text style={styles.detailValue}>{user.warnings}</Text>
-                </View>
-
-                <View style={styles.actionRow}>
-                  <TouchableOpacity
-                    style={styles.actionBtn}
-                    onPress={() => setActiveModal({ type: "permission", user })}
-                  >
-                    <Text style={styles.actionText}>권한 변경</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[styles.actionBtn, { backgroundColor: "#ffcccc" }]}
-                    onPress={() => setActiveModal({ type: "suspend", user })}
-                  >
-                    <Text style={[styles.actionText, { color: "#b00020" }]}>
-                      {user.status === "정지" ? "정지 해제" : "계정 정지"}
-                    </Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[styles.actionBtn, { backgroundColor: "#ffe0b2" }]}
-                    onPress={() => setActiveModal({ type: "warning", user })}
-                  >
-                    <Text style={[styles.actionText, { color: "#e65100" }]}>
-                      경고 추가
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            )}
-          </View>
-        ))}
-      </ScrollView>
-
-      {/* 페이지네이션 */}
-      <View style={styles.pagination}>
-        <TouchableOpacity disabled={page === 1} onPress={() => setPage(page - 1)}>
-          <Text style={[styles.pageBtn, page === 1 && { color: "#aaa" }]}>〈</Text>
-        </TouchableOpacity>
-        <Text style={styles.pageNum}>{page}</Text>
-        <TouchableOpacity
-          disabled={page * usersPerPage >= users.length}
-          onPress={() => setPage(page + 1)}
-        >
-          <Text
+        <View style={styles.dropdownRow}>
+          <Dropdown
             style={[
-              styles.pageBtn,
-              page * usersPerPage >= users.length && { color: "#aaa" },
+              styles.dropdown,
+              { backgroundColor: theme.card, borderColor: theme.border },
             ]}
-          >
-            〉
-          </Text>
-        </TouchableOpacity>
-      </View>
+            containerStyle={{
+              backgroundColor: theme.card,
+              borderColor: theme.border,
+              borderWidth: 1,
+              borderRadius: 8,
+            }}
+            itemTextStyle={{
+              color: theme.textPrimary,
+            }}
+            activeColor={theme.background}
+            data={statusOptions}
+            labelField="label"
+            valueField="value"
+            placeholder="상태 선택"
+            placeholderStyle={[
+              styles.placeholderText,
+              { color: theme.textSecondary },
+            ]}
+            selectedTextStyle={[
+              styles.selectedText,
+              { color: theme.textPrimary },
+            ]}
+            value={selectedStatus}
+            onChange={(item) => setSelectedStatus(item.value)}
+          />
+          <Dropdown
+            style={[
+              styles.dropdown,
+              { backgroundColor: theme.card, borderColor: theme.border },
+            ]}
+            containerStyle={{
+              backgroundColor: theme.card,
+              borderColor: theme.border,
+              borderWidth: 1,
+              borderRadius: 8,
+            }}
+            itemTextStyle={{
+              color: theme.textPrimary,
+            }}
+            activeColor={theme.background}
+            data={sortOptions}
+            labelField="label"
+            valueField="value"
+            placeholder="정렬 기준"
+            placeholderStyle={[
+              styles.placeholderText,
+              { color: theme.textSecondary },
+            ]}
+            selectedTextStyle={[
+              styles.selectedText,
+              { color: theme.textPrimary },
+            ]}
+            value={selectedSort}
+            onChange={(item) => setSelectedSort(item.value)}
+          />
+        </View>
 
-      {/* 모달 3개 */}
-      <PermissionModal
-        visible={activeModal.type === "permission"}
-        onClose={() => setActiveModal({ type: null })}
-        user={activeModal.user}
-        setSuccessModal={setSuccessModal}
-      />
-      <SuspendModal
-        visible={activeModal.type === "suspend"}
-        onClose={() => setActiveModal({ type: null })}
-        user={activeModal.user}
-        setSuccessModal={setSuccessModal}
-      />
-      <WarningModal
-        visible={activeModal.type === "warning"}
-        onClose={() => setActiveModal({ type: null })}
-        user={activeModal.user}
-        setSuccessModal={setSuccessModal}
-      />
-      <SuccessModal
-        visible={successModal.visible}
-        onClose={() => setSuccessModal({ visible: false, type: "", user: null, extra: "" })} 
-        type={successModal.type}
-        user={successModal.user}
-        extra={successModal.extra}
-      />
+        {/* 사용자 카드 목록 */}
+        <ScrollView contentContainerStyle={{ paddingBottom: 100 }}>
+          {paginatedUsers.map((user) => (
+            <View
+              key={user.id}
+              style={[styles.card, {
+                backgroundColor: theme.card,
+                borderColor: theme.border, 
+                borderWidth: 1,
+                shadowColor: theme.background,
+              },]}
+            >
+              <TouchableOpacity
+                style={styles.cardHeader}
+                onPress={() => toggleUser(user.id)}
+              >
+                <View style={styles.userInfo}>
+                  <Image source={user.avatar} style={styles.avatar} />
+                  <View>
+                    <Text style={[styles.userName, { color: theme.textPrimary }]}>
+                      {user.name}
+                    </Text>
+                    <Text style={[styles.userEmail, { color: theme.textSecondary }]}>
+                      {user.email}
+                    </Text>
+                  </View>
+                </View>
+                <Ionicons
+                  name={
+                    expandedUsers.includes(user.id)
+                      ? "chevron-up"
+                      : "chevron-down"
+                  }
+                  size={20}
+                  color={theme.textSecondary}
+                />
+              </TouchableOpacity>
+
+              {expandedUsers.includes(user.id) && (
+                <View style={styles.detailSection}>
+                  <View style={styles.detailRow}>
+                    <Text style={[styles.detailLabel, { color: theme.textSecondary }]}>
+                      가입일
+                    </Text>
+                    <Text style={[styles.detailValue, { color: theme.textPrimary }]}>
+                      {user.joinDate}
+                    </Text>
+                  </View>
+                  <View style={styles.detailRow}>
+                    <Text style={[styles.detailLabel, { color: theme.textSecondary }]}>
+                      마지막 활동일
+                    </Text>
+                    <Text style={[styles.detailValue, { color: theme.textPrimary }]}>
+                      {user.lastActive}
+                    </Text>
+                  </View>
+                  <View style={styles.detailRow}>
+                    <Text style={[styles.detailLabel, { color: theme.textSecondary }]}>
+                      상태
+                    </Text>
+                    <Text
+                      style={[
+                        styles.detailValue,
+                        {
+                          color:
+                            user.status === "접속중"
+                              ? "#4CAF50"
+                              : user.status === "정지"
+                                ? "#E53935"
+                                : theme.textSecondary,
+                        },
+                      ]}
+                    >
+                      {user.status}
+                    </Text>
+                  </View>
+                  <View style={styles.detailRow}>
+                    <Text style={[styles.detailLabel, { color: theme.textSecondary }]}>
+                      경고 횟수
+                    </Text>
+                    <Text style={[styles.detailValue, { color: theme.textPrimary }]}>
+                      {user.warnings}
+                    </Text>
+                  </View>
+
+                  <View style={styles.actionRow}>
+                    <TouchableOpacity
+                      style={[styles.actionBtn, { backgroundColor: theme.icon + "22" }]}
+                      onPress={() =>
+                        setActiveModal({ type: "permission", user })
+                      }
+                    >
+                      <Text style={[styles.actionText, { color: theme.textPrimary }]}>
+                        권한 변경
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.actionBtn, { backgroundColor: "#ffcccc" }]}
+                      onPress={() => setActiveModal({ type: "suspend", user })}
+                    >
+                      <Text style={[styles.actionText, { color: "#b00020" }]}>
+                        {user.status === "정지" ? "정지 해제" : "계정 정지"}
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.actionBtn, { backgroundColor: "#ffe0b2" }]}
+                      onPress={() => setActiveModal({ type: "warning", user })}
+                    >
+                      <Text style={[styles.actionText, { color: "#e65100" }]}>
+                        경고 추가
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              )}
+            </View>
+          ))}
+        </ScrollView>
+
+        <View style={styles.pagination}>
+          <TouchableOpacity disabled={page === 1} onPress={() => setPage(page - 1)}>
+            <Text style={[styles.pageBtn, { color: theme.icon }, page === 1 && { color: "#aaa" }]}>
+              〈
+            </Text>
+          </TouchableOpacity>
+          <Text style={[styles.pageNum, { color: theme.textPrimary }]}>{page}</Text>
+          <TouchableOpacity
+            disabled={page * usersPerPage >= users.length}
+            onPress={() => setPage(page + 1)}
+          >
+            <Text
+              style={[
+                styles.pageBtn,
+                { color: theme.icon },
+                page * usersPerPage >= users.length && { color: "#aaa" },
+              ]}
+            >
+              〉
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        <PermissionModal
+          visible={activeModal.type === "permission"}
+          onClose={() => setActiveModal({ type: null })}
+          user={activeModal.user}
+          setSuccessModal={setSuccessModal}
+          theme={theme}
+        />
+        <SuspendModal
+          visible={activeModal.type === "suspend"}
+          onClose={() => setActiveModal({ type: null })}
+          user={activeModal.user}
+          setSuccessModal={setSuccessModal}
+          theme={theme}
+        />
+        <WarningModal
+          visible={activeModal.type === "warning"}
+          onClose={() => setActiveModal({ type: null })}
+          user={activeModal.user}
+          setSuccessModal={setSuccessModal}
+          theme={theme}
+        />
+        <SuccessModal
+          visible={successModal.visible}
+          onClose={() =>
+            setSuccessModal({ visible: false, type: "", user: null, extra: "" })
+          }
+          type={successModal.type}
+          user={successModal.user}
+          extra={successModal.extra}
+          theme={theme}
+        />
+      </View>
     </View>
   );
 };
-const PermissionModal = ({ visible, onClose, user, setSuccessModal }: any) => {
+
+const PermissionModal = ({ visible, onClose, user, setSuccessModal, theme }: any) => {
   const [role, setRole] = useState("사용자");
 
   return (
-    <Modal transparent visible={visible} animationType="fade">
+    <Modal
+      transparent
+      visible={visible}
+      animationType="fade"
+      presentationStyle="overFullScreen"
+      statusBarTranslucent>
       <View style={styles.overlay}>
-        <View style={styles.modalBox}>
-          <Text style={styles.modalTitle}>권한 변경</Text>
-          <Text style={styles.modalSub}>{user?.name}님의 권한을 변경합니다.</Text>
+        <View style={[styles.modalBox, { backgroundColor: theme.card }]}>
+          <Text style={[styles.modalTitle, { color: theme.textPrimary }]}>권한 변경</Text>
+          <Text style={[styles.modalSub, { color: theme.textSecondary }]}>
+            {user?.name}님의 권한을 변경합니다.
+          </Text>
 
-          {/* 현재 권한 */}
           <View style={styles.permissionRow}>
-            <Text style={[styles.modalLabel, { marginTop: 1 }]}>현재 권한</Text>
-            <Text style={[styles.modalValue, { marginLeft: 20 }]}>사용자</Text>
+            <Text style={[styles.modalLabel, { color: theme.textSecondary }]}>현재 권한</Text>
+            <Text style={[styles.modalValue, { color: theme.textPrimary }]}>사용자</Text>
           </View>
 
-          <View style={styles.modalDivider} />
+          <View style={[styles.modalDivider, { borderColor: theme.border }]} />
 
-          {/* 변경할 권한 */}
-          <Text style={[styles.modalLabel, { marginTop: 14 }]}>변경할 권한</Text>
+          <Text style={[styles.modalLabel, { color: theme.textSecondary }]}>변경할 권한</Text>
           <View style={{ marginTop: 8, gap: 10 }}>
             {["관리자", "사용자"].map((r) => (
               <TouchableOpacity
                 key={r}
-                style={styles.radioItem}
+                style={[styles.radioItem, { backgroundColor: theme.background, borderColor: theme.border }]}
                 onPress={() => setRole(r)}
-                activeOpacity={0.8}
               >
-                <View style={styles.radioOuter}>
-                  {role === r && <View style={styles.radioInner} />}
+                <View style={[styles.radioOuter, { borderColor: theme.icon }]}>
+                  {role === r && <View style={[styles.radioInner, { backgroundColor: theme.icon }]} />}
                 </View>
-                <Text style={styles.radioText}>{r}</Text>
+                <Text style={[styles.radioText, { color: theme.textPrimary }]}>{r}</Text>
               </TouchableOpacity>
             ))}
           </View>
 
           <View style={styles.modalFooter}>
-            <TouchableOpacity style={styles.cancelBtn} onPress={onClose}>
-              <Text style={styles.cancelText}>취소</Text>
+            <TouchableOpacity style={[styles.cancelBtn, { backgroundColor: theme.background }]} onPress={onClose}>
+              <Text style={[styles.cancelText, { color: theme.textPrimary }]}>취소</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={styles.applyBtn}
+              style={[styles.applyBtn, { backgroundColor: theme.icon }]}
               onPress={() => {
                 onClose();
-                setSuccessModal({
-                  visible: true,
-                  type: "permission",
-                  user,
-                  extra: role,
-                });
+                setSuccessModal({ visible: true, type: "permission", user, extra: role });
               }}
             >
               <Text style={styles.applyText}>변경 적용</Text>
@@ -356,60 +435,71 @@ const PermissionModal = ({ visible, onClose, user, setSuccessModal }: any) => {
   );
 };
 
-const SuspendModal = ({ visible, onClose, user, setSuccessModal }: any) => {
+const SuspendModal = ({ visible, onClose, user, setSuccessModal, theme }: any) => {
   const [selectedPeriod, setSelectedPeriod] = useState("1일");
   const [reason, setReason] = useState("");
   const periods = ["1일", "3일", "7일", "30일", "영구 정지"];
 
   return (
-    <Modal transparent visible={visible} animationType="fade">
+    <Modal
+      transparent
+      visible={visible}
+      animationType="fade"
+      presentationStyle="overFullScreen"
+      statusBarTranslucent>
       <View style={styles.overlay}>
-        <View style={styles.modalBox}>
-          <Text style={styles.modalTitle}>계정 상태 변경</Text>
-          <Text style={styles.modalSub}>사용자: {user?.name}</Text>
+        <View style={[styles.modalBox, { backgroundColor: theme.card }]}>
+          <Text style={[styles.modalTitle, { color: theme.textPrimary }]}>계정 상태 변경</Text>
+          <Text style={[styles.modalSub, { color: theme.textSecondary }]}>사용자: {user?.name}</Text>
 
-          <View style={styles.modalDivider} />
+          <View style={[styles.modalDivider, { borderColor: theme.border }]} />
 
-          <Text style={styles.modalLabel}>정지 기간</Text>
+          <Text style={[styles.modalLabel, { color: theme.textSecondary }]}>정지 기간</Text>
           <View style={{ marginTop: 8, gap: 10 }}>
             {periods.map((p) => (
               <TouchableOpacity
                 key={p}
-                style={styles.radioItem}
+                style={[styles.radioItem, { backgroundColor: theme.background, borderColor: theme.border }]}
                 onPress={() => setSelectedPeriod(p)}
-                activeOpacity={0.8}
               >
-                <View style={styles.radioOuter}>
-                  {selectedPeriod === p && <View style={styles.radioInner} />}
+                <View style={[styles.radioOuter, { borderColor: theme.icon }]}>
+                  {selectedPeriod === p && (
+                    <View style={[styles.radioInner, { backgroundColor: theme.icon }]} />
+                  )}
                 </View>
-                <Text style={styles.radioText}>{p}</Text>
+                <Text style={[styles.radioText, { color: theme.textPrimary }]}>{p}</Text>
               </TouchableOpacity>
             ))}
           </View>
 
-          <Text style={[styles.modalLabel, { marginTop: 14 }]}>정지 사유</Text>
+          <Text style={[styles.modalLabel, { color: theme.textSecondary, marginTop: 14 }]}>
+            정지 사유
+          </Text>
           <RNTextInput
-            style={styles.textArea}
-            placeholder="사용자에게 전달될 정지 사유를 입력해주세요. (예: 광고성 리뷰)"
+            style={[
+              styles.textArea,
+              {
+                backgroundColor: theme.background,
+                color: theme.textPrimary,
+                borderColor: theme.border,
+              },
+            ]}
+            placeholder="정지 사유를 입력해주세요."
+            placeholderTextColor={theme.textSecondary}
             multiline
             value={reason}
             onChangeText={setReason}
           />
 
           <View style={styles.modalFooter}>
-            <TouchableOpacity style={styles.cancelBtn} onPress={onClose}>
-              <Text style={styles.cancelText}>취소</Text>
+            <TouchableOpacity style={[styles.cancelBtn, { backgroundColor: theme.background }]} onPress={onClose}>
+              <Text style={[styles.cancelText, { color: theme.textPrimary }]}>취소</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.applyBtn, { backgroundColor: "#E53935" }]}
               onPress={() => {
                 onClose();
-                setSuccessModal({
-                  visible: true,
-                  type: "suspend",
-                  user,
-                  extra: selectedPeriod,
-                });
+                setSuccessModal({ visible: true, type: "suspend", user, extra: selectedPeriod });
               }}
             >
               <Text style={styles.applyText}>정지 적용</Text>
@@ -421,7 +511,7 @@ const SuspendModal = ({ visible, onClose, user, setSuccessModal }: any) => {
   );
 };
 
-const WarningModal = ({ visible, onClose, user, setSuccessModal }: any) => {
+const WarningModal = ({ visible, onClose, user, setSuccessModal, theme }: any) => {
   const [reason, setReason] = useState("");
   const [detail, setDetail] = useState("");
   const [level, setLevel] = useState("1회");
@@ -435,53 +525,66 @@ const WarningModal = ({ visible, onClose, user, setSuccessModal }: any) => {
   ];
 
   return (
-    <Modal transparent visible={visible} animationType="fade">
+    <Modal
+      transparent
+      visible={visible}
+      animationType="fade"
+      presentationStyle="overFullScreen"
+      statusBarTranslucent>
       <View style={styles.overlay}>
-        <View style={styles.modalBox}>
-          <Text style={styles.modalTitle}>경고 추가</Text>
-          <Text style={styles.modalSub}>사용자: {user?.email}</Text>
+        <View style={[styles.modalBox, { backgroundColor: theme.card }]}>
+          <Text style={[styles.modalTitle, { color: theme.textPrimary }]}>경고 추가</Text>
+          <Text style={[styles.modalSub, { color: theme.textSecondary }]}>사용자: {user?.email}</Text>
 
-          <Text style={styles.modalLabel}>경고 사유</Text>
+          <Text style={[styles.modalLabel, { color: theme.textSecondary }]}>경고 사유</Text>
           <RNTextInput
-            style={styles.textField}
+            style={[
+              styles.textField,
+              { backgroundColor: theme.background, color: theme.textPrimary, borderColor: theme.border },
+            ]}
             placeholder="예: 부적절한 리뷰 작성"
+            placeholderTextColor={theme.textSecondary}
             value={reason}
             onChangeText={setReason}
           />
 
           <RNTextInput
-            style={styles.textArea}
+            style={[
+              styles.textArea,
+              { backgroundColor: theme.background, color: theme.textPrimary, borderColor: theme.border },
+            ]}
             placeholder="경고 사유를 구체적으로 입력해주세요."
+            placeholderTextColor={theme.textSecondary}
             multiline
             value={detail}
             onChangeText={setDetail}
           />
 
-          <Text style={styles.modalLabel}>경고 수준</Text>
+          <Text style={[styles.modalLabel, { color: theme.textSecondary }]}>경고 수준</Text>
           <Dropdown
-            style={styles.dropdownField}
+            style={[
+              styles.dropdownField,
+              { backgroundColor: theme.background, borderColor: theme.border },
+            ]}
             data={levelOptions}
             labelField="label"
             valueField="value"
             value={level}
             placeholder="선택하세요"
+            placeholderStyle={{ color: theme.textSecondary }}
+            selectedTextStyle={{ color: theme.textPrimary }}
             onChange={(item) => setLevel(item.value)}
           />
 
           <View style={styles.modalFooter}>
-            <TouchableOpacity style={styles.cancelBtn} onPress={onClose}>
-              <Text style={styles.cancelText}>취소</Text>
+            <TouchableOpacity style={[styles.cancelBtn, { backgroundColor: theme.background }]} onPress={onClose}>
+              <Text style={[styles.cancelText, { color: theme.textPrimary }]}>취소</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.applyBtn, { backgroundColor: "#FF5252" }]}
               onPress={() => {
                 onClose();
-                setSuccessModal({
-                  visible: true,
-                  type: "warning",
-                  user,
-                  extra: level,
-                });
+                setSuccessModal({ visible: true, type: "warning", user, extra: level });
               }}
             >
               <Text style={styles.applyText}>경고 추가</Text>
@@ -493,7 +596,7 @@ const WarningModal = ({ visible, onClose, user, setSuccessModal }: any) => {
   );
 };
 
-const SuccessModal = ({ visible, onClose, type, user, extra }: any) => {
+const SuccessModal = ({ visible, onClose, type, user, extra, theme }: any) => {
   if (!visible) return null;
 
   const getContent = () => {
@@ -510,9 +613,9 @@ const SuccessModal = ({ visible, onClose, type, user, extra }: any) => {
         return {
           icon: "close-circle-outline",
           color: "#E53935",
-          title: "계정 정지 조치가 완료되었습니다!",
+          title: "계정 정지 조치 완료!",
           subtitle: `${user?.name}님의 계정이 ${extra}간 정지되었습니다.`,
-          buttonColor: "#007AFF",
+          buttonColor: "#E53935",
         };
       case "warning":
         return {
@@ -520,24 +623,29 @@ const SuccessModal = ({ visible, onClose, type, user, extra }: any) => {
           color: "#FF9800",
           title: "경고 추가 완료!",
           subtitle: `경고 ${extra}가 성공적으로 추가되었습니다.`,
-          buttonColor: "#FF5252",
+          buttonColor: "#FF9800",
         };
       default:
-        return { icon: "checkmark-circle-outline", color: "#007AFF", title: "", subtitle: "", buttonColor: "#007AFF" };
+        return { icon: "checkmark-circle-outline", color: theme.icon, title: "", subtitle: "", buttonColor: theme.icon };
     }
   };
 
   const { icon, color, title, subtitle, buttonColor } = getContent();
 
   return (
-    <Modal transparent visible={visible} animationType="fade">
+    <Modal
+      transparent
+      visible={visible}
+      animationType="fade"
+      presentationStyle="overFullScreen"
+      statusBarTranslucent>
       <View style={styles.overlay}>
-        <View style={styles.successBox}>
+        <View style={[styles.successBox, { backgroundColor: theme.card }]}>
           <View style={[styles.successIcon, { backgroundColor: `${color}1A` }]}>
             <Ionicons name={icon} size={42} color={color} />
           </View>
-          <Text style={styles.successTitle}>{title}</Text>
-          <Text style={styles.successSub}>{subtitle}</Text>
+          <Text style={[styles.successTitle, { color: theme.textPrimary }]}>{title}</Text>
+          <Text style={[styles.successSub, { color: theme.textSecondary }]}>{subtitle}</Text>
 
           <TouchableOpacity
             style={[styles.successBtn, { backgroundColor: buttonColor }]}
@@ -551,6 +659,7 @@ const SuccessModal = ({ visible, onClose, type, user, extra }: any) => {
   );
 };
 
+
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#F6F7FB", paddingHorizontal: 16 },
   searchBar: {
@@ -561,6 +670,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
     marginBottom: 10,
+    marginTop: 10,
+    
   },
   input: { flex: 1, marginLeft: 8 },
   filterRow: { flexDirection: "row", gap: 10, marginBottom: 10 },
@@ -598,13 +709,18 @@ const styles = StyleSheet.create({
   pageBtn: { fontSize: 20, color: COLORS.primary, marginHorizontal: 14 },
   pageNum: { fontSize: 16, fontWeight: "bold" },
 
-  overlay: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "rgba(0,0,0,0.5)" },
+  overlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
   modalBox: { width: "85%", backgroundColor: "#fff", borderRadius: 20, padding: 20 },
   modalTitle: { fontSize: 20, fontWeight: "bold", textAlign: "center", marginBottom: 6 },
   modalSub: { textAlign: "center", color: "#666", marginBottom: 16 },
   modalDivider: { borderBottomWidth: 1, borderColor: "#eee", marginVertical: 6 },
-  modalLabel: { fontSize: 14, color: "#888", marginTop : 10},
-  modalValue: { fontSize: 15, fontWeight: "bold", color: "#000" },
+  modalLabel: { fontSize: 14, color: "#888" },
+  modalValue: { fontSize: 15, fontWeight: "bold", color: "#000", marginLeft: 15 },
   radioBtn: { borderWidth: 1, borderColor: "#ddd", borderRadius: 12, padding: 12, marginTop: 8 },
   radioActive: { borderColor: "#007AFF", backgroundColor: "#E8F0FF" },
   radioText: { fontSize: 15 },
@@ -629,7 +745,7 @@ const styles = StyleSheet.create({
   applyBtn: { flex: 1, backgroundColor: "#007AFF", padding: 12, borderRadius: 10, alignItems: "center" },
   cancelText: { color: "#000", fontWeight: "bold" },
   applyText: { color: "#fff", fontWeight: "bold" },
-   radioItem: {
+  radioItem: {
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#F9FAFB",
@@ -657,7 +773,7 @@ const styles = StyleSheet.create({
   },
   permissionRow: {
     flexDirection: "row",
-    alignItems: "center",     
+    alignItems: "center",
     marginTop: 10,
     marginBottom: 10,
   },

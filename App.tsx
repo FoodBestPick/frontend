@@ -15,33 +15,36 @@ import SearchScreen from '../frontend/presentation/screens/SearchScreen';
 import SearchResultScreen from '../frontend/presentation/screens/SearchResultScreen';
 import RestaurantDetailScreen from '../frontend/presentation/screens/RestaurantDetailScreen';
 import RouletteScreen from '../frontend/presentation/screens/RouletteScreen';
+import { ThemeProvider } from "./context/ThemeContext"; 
+import { useContext } from "react";
+import { ThemeContext } from "./context/ThemeContext";
 
 const Stack = createStackNavigator<RootStackParamList>();
 
-export default function App() {
+function AppInner() {
+  const { isDarkMode } = useContext(ThemeContext);
   return (
     <>
-      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+      <StatusBar
+        barStyle={isDarkMode ? "light-content" : "dark-content"}
+        backgroundColor={isDarkMode ? "#121212" : "#FFFFFF"}
+      />
       <NavigationContainer>
         <Stack.Navigator
           initialRouteName="Splash"
           screenOptions={{ headerShown: false }}
         >
+          {/* 관리자 */}
           <Stack.Screen name="Splash" component={SplashScreen} />
           <Stack.Screen name="Onboarding" component={OnboardingScreen} />
           <Stack.Screen name="Login" component={LoginScreen} />
           <Stack.Screen name="SignUp" component={SignupScreen} />
           <Stack.Screen name="FindAccount" component={FindAccountScreen} />
-
-          {/* 관리자 */}
           <Stack.Screen name="AdminMain" component={AdminMainStack} />
 
           {/* 사용자 */}
           <Stack.Screen name="UserMain" component={UserMain} />
           <Stack.Screen name="SearchScreen" component={SearchScreen} />
-          <Stack.Screen name="MatchScreen" component={MatchScreen} />
-          <Stack.Screen name="Notification" component={NotificationScreen} />
-          <Stack.Screen name="MyPage" component={MyPageScreen} />
           <Stack.Screen name="SearchResult" component={SearchResultScreen} />
           <Stack.Screen
             name="RestaurantDetail"
@@ -51,5 +54,13 @@ export default function App() {
         </Stack.Navigator>
       </NavigationContainer>
     </>
+  );
+}
+
+export default function App() {
+  return (
+    <ThemeProvider>
+      <AppInner />
+    </ThemeProvider>
   );
 }

@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from "react";
+import React, { useState, useCallback, useEffect, useContext } from "react";
 import {
   View,
   Text,
@@ -12,13 +12,14 @@ import {
 } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import MaterialIcons from "react-native-vector-icons/MaterialIcons";
-import { COLORS } from "../../core/constants/colors";
 import { Header } from "../components/Header";
 import { AdminRestaurantViewModel } from "../viewmodels/AdminRestaurantViewModels";
 import { AdminRestaurant } from "../../domain/entities/AdminRestaurantList";
+import { ThemeContext } from "../../context/ThemeContext";
 
 export const AdminRestaurantScreen = () => {
-  const { restaurants, loading, error, totalPages, refetch, page, hasMore } =
+  const { theme } = useContext(ThemeContext);
+  const { restaurants, loading, error, totalPages, refetch, page } =
     AdminRestaurantViewModel();
 
   const [selectedStatus, setSelectedStatus] = useState("전체");
@@ -63,15 +64,27 @@ export const AdminRestaurantScreen = () => {
   });
 
   return (
-    <View style={styles.container}>
-      <Header title="식당 관리" />
+    <View style={{ flex: 1, backgroundColor: theme.background }}>
+      <Header title="맛집 관리" />
+    <View style={[styles.container, { backgroundColor: theme.background }]}>
 
-      <View style={styles.searchBar}>
-        <Ionicons name="search-outline" size={18} color="#777" />
-        <TextInput
-          style={styles.input}
-          placeholder="식당명을 검색하세요"
-          value={searchQuery}
+        {/* 검색창 */}
+        <View
+          style={[
+            styles.searchBar,
+            {
+              backgroundColor: theme.card,
+              borderColor: theme.border, 
+              borderWidth: 1,
+            },
+          ]}
+        >
+          <Ionicons name="search-outline" size={18} color={theme.textSecondary} />
+          <TextInput
+            style={[styles.input, { color: theme.textPrimary }]}
+            placeholder="식당명을 검색하세요"
+            placeholderTextColor={theme.textSecondary}
+            value={searchQuery}
           onChangeText={(text) => {
             setSearchQuery(text);
             refetch(0, 10, selectedStatus, text);
@@ -86,7 +99,14 @@ export const AdminRestaurantScreen = () => {
             key={tab}
             style={[
               styles.tabButton,
-              selectedStatus === tab && styles.tabButtonActive,
+              {
+                backgroundColor:
+                  selectedStatus === tab
+                    ? theme.icon
+                    : theme.card,
+                borderColor: theme.border,
+                borderWidth: 1,
+              },
             ]}
             onPress={() => {
               setSelectedStatus(tab);
@@ -96,7 +116,12 @@ export const AdminRestaurantScreen = () => {
             <Text
               style={[
                 styles.tabText,
-                selectedStatus === tab && styles.tabTextActive,
+                {
+                  color:
+                    selectedStatus === tab
+                      ? "#fff"
+                      : theme.textPrimary,
+                },
               ]}
             >
               {tab}
@@ -109,23 +134,29 @@ export const AdminRestaurantScreen = () => {
       <ScrollView
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={theme.icon}
+          />
         }
       >
         {loading && page === 0 ? (
           <View style={styles.center}>
-            <ActivityIndicator size="large" color={COLORS.primary} />
-            <Text style={{ marginTop: 10, color: "#555" }}>
+            <ActivityIndicator size="large" color={theme.icon} />
+            <Text style={{ marginTop: 10, color: theme.textSecondary }}>
               식당 데이터를 불러오는 중...
             </Text>
           </View>
         ) : error ? (
           <View style={styles.center}>
-            <Text style={{ color: "red" }}>{error}</Text>
+            <Text style={{ color: "#E53935" }}>{error}</Text>
           </View>
         ) : filteredRestaurants.length === 0 ? (
           <View style={styles.center}>
-            <Text style={{ color: "#777" }}>표시할 식당이 없습니다.</Text>
+            <Text style={{ color: theme.textSecondary }}>
+              표시할 식당이 없습니다.
+            </Text>
           </View>
         ) : (
           filteredRestaurants.map((r) => {
@@ -133,21 +164,38 @@ export const AdminRestaurantScreen = () => {
             const statusValue = r.status ?? "운영중";
 
             return (
-              <View key={r.id} style={styles.card}>
+              <View
+                key={r.id}
+                style={[
+                  styles.card,
+                  {
+                    backgroundColor: theme.card,
+                    shadowColor: theme.background,
+                    borderWidth: 1,
+                    borderColor: theme.border,
+                  },
+                ]}
+              >
                 <Image source={r.image} style={styles.thumbnail} />
                 <View style={styles.info}>
-                  <Text style={styles.name}>{r.name}</Text>
+                  <Text style={[styles.name, { color: theme.textPrimary }]}>
+                    {r.name}
+                  </Text>
 
                   <View style={styles.row}>
                     <Ionicons name="star" size={14} color="#FFD700" />
-                    <Text style={styles.rating}>{r.rating.toFixed(1)}</Text>
+                    <Text style={[styles.rating, { color: theme.textSecondary }]}>
+                      {r.rating.toFixed(1)}
+                    </Text>
                     <Ionicons
                       name="chatbubble-outline"
                       size={13}
-                      color="#777"
+                      color={theme.textSecondary}
                       style={{ marginLeft: 6 }}
                     />
-                    <Text style={styles.review}>{r.review}</Text>
+                    <Text style={[styles.review, { color: theme.textSecondary }]}>
+                      {r.review}
+                    </Text>
                   </View>
 
                   <View style={styles.bottomRow}>
@@ -158,7 +206,10 @@ export const AdminRestaurantScreen = () => {
                       ]}
                     >
                       <Text
-                        style={[styles.statusText, { color: badgeStyle.color }]}
+                        style={[
+                          styles.statusText,
+                          { color: badgeStyle.color },
+                        ]}
                       >
                         {statusValue}
                       </Text>
@@ -175,16 +226,16 @@ export const AdminRestaurantScreen = () => {
 
                       {(statusValue === "수정요청" ||
                         statusValue === "운영중") && (
-                          <TouchableOpacity
-                            onPress={() => console.log("수정 페이지 이동")}
-                          >
-                            <MaterialIcons
-                              name="edit"
-                              size={20}
-                              color="#0A84FF"
-                            />
-                          </TouchableOpacity>
-                        )}
+                        <TouchableOpacity
+                          onPress={() => console.log("수정 페이지 이동")}
+                        >
+                          <MaterialIcons
+                            name="edit"
+                            size={20}
+                            color={theme.icon}
+                          />
+                        </TouchableOpacity>
+                      )}
 
                       {statusValue === "승인대기" && (
                         <TouchableOpacity
@@ -205,20 +256,27 @@ export const AdminRestaurantScreen = () => {
           })
         )}
 
+        {/* 페이지네이션 */}
         {!loading && (
           <View style={styles.paginationContainer}>
             <TouchableOpacity
               disabled={page <= 0}
               onPress={() => refetch(page - 1)}
             >
-              <Text style={[styles.arrow, page <= 0 && styles.disabledArrow]}>
+              <Text
+                style={[
+                  styles.arrow,
+                  { color: theme.icon },
+                  page <= 0 && { color: "#666" },
+                ]}
+              >
                 {"<"}
               </Text>
             </TouchableOpacity>
 
             <View style={styles.pageNumberContainer}>
               {(() => {
-                const maxVisible = 5; // 한 번에 보여줄 페이지 수
+                const maxVisible = 5;
                 const currentBlock = Math.floor(page / maxVisible);
                 const startPage = currentBlock * maxVisible;
                 const endPage = Math.min(startPage + maxVisible, totalPages);
@@ -233,11 +291,21 @@ export const AdminRestaurantScreen = () => {
                     {pages.map((p) => {
                       const isActive = p === page;
                       return (
-                        <TouchableOpacity key={`page-${p}`} onPress={() => refetch(p, 10, selectedStatus, searchQuery)}>
+                        <TouchableOpacity
+                          key={`page-${p}`}
+                          onPress={() =>
+                            refetch(p, 10, selectedStatus, searchQuery)
+                          }
+                        >
                           <Text
                             style={[
                               styles.pageText,
-                              isActive && styles.activePageText,
+                              {
+                                color: isActive
+                                  ? theme.icon
+                                  : theme.textPrimary,
+                                fontWeight: isActive ? "700" : "500",
+                              },
                             ]}
                           >
                             {p + 1}
@@ -245,13 +313,17 @@ export const AdminRestaurantScreen = () => {
                         </TouchableOpacity>
                       );
                     })}
-
-                    {/* ... 마지막 페이지로 넘어가는 ... */}
                     {endPage < totalPages && (
                       <>
-                        <Text style={styles.ellipsis}>...</Text>
-                        <TouchableOpacity onPress={() => refetch(totalPages - 1, 10, selectedStatus)}>
-                          <Text style={styles.pageText}>{totalPages}</Text>
+                        <Text style={[styles.ellipsis, { color: theme.textSecondary }]}>...</Text>
+                        <TouchableOpacity
+                          onPress={() =>
+                            refetch(totalPages - 1, 10, selectedStatus)
+                          }
+                        >
+                          <Text style={[styles.pageText, { color: theme.textPrimary }]}>
+                            {totalPages}
+                          </Text>
                         </TouchableOpacity>
                       </>
                     )}
@@ -265,15 +337,19 @@ export const AdminRestaurantScreen = () => {
               onPress={() => refetch(page + 1)}
             >
               <Text
-                style={[styles.arrow, page >= totalPages - 1 && styles.disabledArrow]}
+                style={[
+                  styles.arrow,
+                  { color: theme.icon },
+                  page >= totalPages - 1 && { color: "#666" },
+                ]}
               >
                 {">"}
               </Text>
             </TouchableOpacity>
           </View>
         )}
-
       </ScrollView>
+    </View>
     </View>
   );
 };
@@ -281,102 +357,67 @@ export const AdminRestaurantScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
     paddingHorizontal: 16,
-    paddingTop: 6,
   },
-
   center: { flex: 1, justifyContent: "center", alignItems: "center" },
-
   searchBar: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#fff",
     borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: 8,
     marginBottom: 10,
+    marginTop : 10, 
+    borderWidth: 1,
   },
-
-  input: {
-    flex: 1,
-    marginLeft: 8,
-  },
-
+  input: { flex: 1, marginLeft: 8 },
   tabRow: {
     flexDirection: "row",
     justifyContent: "space-around",
     marginBottom: 12,
   },
-
   tabButton: {
     paddingVertical: 6,
     paddingHorizontal: 17,
     borderRadius: 12,
-    backgroundColor: "#F2F2F2",
   },
-
-  tabButtonActive: {
-    backgroundColor: "#0A84FF",
-  },
-
   tabText: {
-    color: "#333",
     fontWeight: "600",
   },
-
-  tabTextActive: {
-    color: "#fff",
-  },
-
   card: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#fff",
     borderRadius: 12,
     padding: 12,
     marginBottom: 10,
-    shadowColor: "#000",
     shadowOpacity: 0.05,
     shadowRadius: 3,
     elevation: 2,
   },
-
   thumbnail: {
     width: 60,
     height: 60,
     borderRadius: 8,
     marginRight: 12,
   },
-
   info: { flex: 1 },
-
-  name: { fontSize: 15, fontWeight: "bold", color: "#222" },
-
+  name: { fontSize: 15, fontWeight: "bold" },
   row: { flexDirection: "row", alignItems: "center", marginTop: 4 },
-
-  rating: { fontSize: 13, color: "#555", marginLeft: 3 },
-
-  review: { fontSize: 13, color: "#555", marginLeft: 2 },
-
+  rating: { fontSize: 13, marginLeft: 3 },
+  review: { fontSize: 13, marginLeft: 2 },
   bottomRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     marginTop: 6,
   },
-
   statusBadge: {
     borderRadius: 8,
     paddingVertical: 3,
     paddingHorizontal: 8,
   },
-
   statusText: { fontSize: 12, fontWeight: "600" },
-
   iconRow: { flexDirection: "row", alignItems: "center", gap: 8 },
-
-
   paginationContainer: {
     flexDirection: "row",
     alignItems: "center",
@@ -384,37 +425,19 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     gap: 12,
   },
-
   pageNumberContainer: {
     flexDirection: "row",
     alignItems: "center",
     gap: 14,
   },
-
   pageText: {
     fontSize: 16,
-    color: "#444",
-    fontWeight: "500",
   },
-
-  activePageText: {
-    color: "#0A84FF",
-    fontWeight: "700",
-    textDecorationLine: "underline",
-  },
-
   ellipsis: {
     fontSize: 15,
-    color: "#777",
   },
-
   arrow: {
     fontSize: 18,
-    color: "#0A84FF",
     paddingHorizontal: 4,
-  },
-
-  disabledArrow: {
-    color: "#ccc",
   },
 });

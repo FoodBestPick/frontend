@@ -1,11 +1,18 @@
-import React from "react";
+import React, { useContext } from "react";
 import { View, Text, StyleSheet } from "react-native";
-import { COLORS } from "../../core/constants/colors";
+import { ThemeContext } from "../../context/ThemeContext";
 
 export const Header = ({ title }: { title: string }) => {
+  const { theme } = useContext(ThemeContext);
+
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>{title}</Text>
+    <View
+      style={[
+        styles.container,
+        { backgroundColor: theme.card, borderBottomColor: theme.border },
+      ]}
+    >
+      <Text style={[styles.title, { color: theme.textPrimary }]}>{title}</Text>
     </View>
   );
 };
@@ -14,12 +21,11 @@ const styles = StyleSheet.create({
   container: {
     marginTop: 40,
     paddingVertical: 10,
-    backgroundColor: COLORS.background,
+    borderBottomWidth: 1,
+    alignItems: "center",
   },
   title: {
-    color: "black",
     fontSize: 20,
     fontWeight: "bold",
-    textAlign : "center",
   },
 });

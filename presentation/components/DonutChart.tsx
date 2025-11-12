@@ -1,6 +1,7 @@
-import React from "react";
+import React, { useContext } from "react";
 import { View, Text, StyleSheet } from "react-native";
 import Svg, { G, Circle } from "react-native-svg";
+import { ThemeContext } from "../../context/ThemeContext"; 
 
 interface DonutChartProps {
   size?: number;
@@ -17,6 +18,8 @@ export const DonutChart = ({
   centerTop,
   centerBottom,
 }: DonutChartProps) => {
+  const { theme } = useContext(ThemeContext); 
+
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
   const total = data.reduce((sum, d) => sum + d.value, 0);
@@ -50,8 +53,12 @@ export const DonutChart = ({
       </Svg>
 
       <View style={styles.center}>
-        <Text style={styles.centerTop}>{centerTop}</Text>
-        <Text style={styles.centerBottom}>{centerBottom}</Text>
+        <Text style={[styles.centerTop, { color: theme.textPrimary }]}>
+          {centerTop}
+        </Text>
+        <Text style={[styles.centerBottom, { color: theme.textSecondary }]}>
+          {centerBottom}
+        </Text>
       </View>
     </View>
   );
@@ -66,11 +73,9 @@ const styles = StyleSheet.create({
   centerTop: {
     fontSize: 22,
     fontWeight: "800",
-    color: "#111",
   },
   centerBottom: {
     fontSize: 12,
-    color: "#6B7280",
     marginTop: 2,
   },
 });

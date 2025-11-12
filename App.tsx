@@ -3,7 +3,7 @@ import { NavigationContainer } from "@react-navigation/native";
 import { StatusBar } from "react-native";
 import { createStackNavigator } from "@react-navigation/stack";
 import { AdminMainStack } from "../frontend/presentation/navigation/AdminNavigation";
-import { RootStackParamList } from "./presentation/navigation/types/RootStackParamList"
+import { RootStackParamList } from "./presentation/navigation/types/RootStackParamList";
 
 import SplashScreen from "../frontend/presentation/screens/SplashScreen";
 import LoginScreen from "../frontend/presentation/screens/LoginScreen";
@@ -12,14 +12,25 @@ import OnboardingScreen from "../frontend/presentation/screens/OnboardingScreen"
 import SignUpScreen from "../frontend/presentation/screens/SignupScreen";
 import UserMain from "../frontend/presentation/screens/UserMain";
 
+import { ThemeProvider } from "./context/ThemeContext"; 
+import { useContext } from "react";
+import { ThemeContext } from "./context/ThemeContext";
+
 const Stack = createStackNavigator<RootStackParamList>();
 
-export default function App() {
+function AppInner() {
+  const { isDarkMode } = useContext(ThemeContext);
   return (
     <>
-      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+      <StatusBar
+        barStyle={isDarkMode ? "light-content" : "dark-content"}
+        backgroundColor={isDarkMode ? "#121212" : "#FFFFFF"}
+      />
       <NavigationContainer>
-        <Stack.Navigator initialRouteName="Splash" screenOptions={{ headerShown: false }}>
+        <Stack.Navigator
+          initialRouteName="Splash"
+          screenOptions={{ headerShown: false }}
+        >
           <Stack.Screen name="Splash" component={SplashScreen} />
           <Stack.Screen name="Onboarding" component={OnboardingScreen} />
           <Stack.Screen name="Login" component={LoginScreen} />
@@ -27,9 +38,16 @@ export default function App() {
           <Stack.Screen name="SignUp" component={SignUpScreen} />
           <Stack.Screen name="AdminMain" component={AdminMainStack} />
           <Stack.Screen name="UserMain" component={UserMain} />
-
         </Stack.Navigator>
       </NavigationContainer>
     </>
+  );
+}
+
+export default function App() {
+  return (
+    <ThemeProvider>
+      <AppInner />
+    </ThemeProvider>
   );
 }

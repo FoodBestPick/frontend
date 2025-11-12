@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useCallback } from "react";
+import React, { useMemo, useState, useCallback, useContext } from "react";
 import {
   View,
   Text,
@@ -9,18 +9,20 @@ import {
   RefreshControl,
 } from "react-native";
 import { Header } from "../components/Header";
-import { COLORS } from "../../core/constants/colors";
 import { LineChart, BarChart } from "react-native-chart-kit";
 import { DonutChart } from "../components/DonutChart";
 import Modal from "react-native-modal";
 import { Calendar } from "react-native-calendars";
 import { AdminStatsViewModels } from "../viewmodels/AdminStatsViewModels";
+import { ThemeContext } from "../../context/ThemeContext";
 
 const { width } = Dimensions.get("window");
 
 type TabKey = "오늘" | "주간" | "월간" | "사용자 지정";
 
 export const AdminStatsScreen = () => {
+  const { theme } = useContext(ThemeContext);
+
   const [selectedTab, setSelectedTab] = useState<TabKey>("오늘");
   const [isCalendarVisible, setIsCalendarVisible] = useState(false);
   const [startDate, setStartDate] = useState<string | null>(null);
@@ -67,12 +69,12 @@ export const AdminStatsScreen = () => {
     } = current;
 
     const chartConfig = {
-      backgroundColor: "#fff",
-      backgroundGradientFrom: "#fff",
-      backgroundGradientTo: "#fff",
+      backgroundColor: theme.card,
+      backgroundGradientFrom: theme.card,
+      backgroundGradientTo: theme.card,
       decimalPlaces: 0,
       color: (opacity = 1) => `rgba(10,132,255,${opacity})`,
-      labelColor: () => "#777",
+      labelColor: () => theme.textSecondary,
       barPercentage: 0.8,
     };
 
@@ -144,19 +146,19 @@ export const AdminStatsScreen = () => {
           selectedTab === "오늘"
             ? ["오전", "정오", "오후", "저녁"]
             : selectedTab === "주간"
-            ? ["월", "화", "수", "목", "금", "토", "일"]
-            : selectedTab === "월간"
-            ? ["1주", "2주", "3주", "4주"]
-            : startDate && endDate
-            ? getCustomLabels(startDate, endDate)
-            : [],
+              ? ["월", "화", "수", "목", "금", "토", "일"]
+              : selectedTab === "월간"
+                ? ["1주", "2주", "3주", "4주"]
+                : startDate && endDate
+                  ? getCustomLabels(startDate, endDate)
+                  : [],
         data: timeSeries,
       },
       pie:
         (current.pie ?? []).map((item: any, index: number) => ({
           ...item,
           color: ["#0A84FF", "#2ECC71", "#FFC107", "#E91E63"][index % 4],
-          legendFontColor: "#333",
+          legendFontColor: theme.textPrimary,
           legendFontSize: 13,
         })) ?? [],
       centerTop: joins.toLocaleString(),
@@ -173,20 +175,25 @@ export const AdminStatsScreen = () => {
       })),
       chartConfig,
     };
-  }, [current, selectedTab, startDate, endDate]);
+  }, [current, selectedTab, startDate, endDate, theme]);
 
   if (loading)
-    return <Text style={{ textAlign: "center", marginTop: 100 }}>로딩 중...</Text>;
+    return (
+      <Text style={{ textAlign: "center", marginTop: 100, color: theme.textPrimary }}>
+        로딩 중...
+      </Text>
+    );
+
   if (error)
     return <Text style={{ textAlign: "center", color: "red" }}>{error}</Text>;
   if (!ui) return null;
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: theme.background }]}>
       <Header title="통계 대시보드" />
 
       {/* 탭 영역 */}
-      <View style={styles.tabContainer}>
+      <View style={[styles.tabContainer, { backgroundColor: theme.card }]}>
         {(["오늘", "주간", "월간", "사용자 지정"] as const).map((tab) => (
           <TouchableOpacity
             key={tab}
@@ -198,12 +205,15 @@ export const AdminStatsScreen = () => {
                 setSelectedTab(tab);
               }
             }}
-            style={[styles.tab, selectedTab === tab && styles.tabActive]}
+            style={[
+              styles.tab,
+              selectedTab === tab && { backgroundColor: theme.icon },
+            ]}
           >
             <Text
               style={[
                 styles.tabText,
-                selectedTab === tab && styles.tabTextActive,
+                { color: selectedTab === tab ? "#fff" : theme.textSecondary },
               ]}
             >
               {tab === "사용자 지정" && startDate && endDate
@@ -214,14 +224,14 @@ export const AdminStatsScreen = () => {
         ))}
       </View>
 
-      {/* 캘린더 모달 */}
       <Modal
         isVisible={isCalendarVisible}
         onBackdropPress={() => setIsCalendarVisible(false)}
         style={styles.modal}
       >
-        <View style={styles.modalContainer}>
-          <Text style={styles.modalTitle}>기간 선택</Text>
+        <View style={[styles.modalContainer, { backgroundColor: theme.card }]}>
+          <Text style={[styles.modalTitle, { color: theme.textPrimary }]}>기간 선택</Text>
+
           <Calendar
             markingType="period"
             markedDates={{
@@ -241,26 +251,25 @@ export const AdminStatsScreen = () => {
               }),
               ...(startDate &&
                 endDate && {
-                  ...Object.fromEntries(
-                    Array.from(
-                      {
-                        length:
-                          (new Date(endDate).getTime() -
-                            new Date(startDate).getTime()) /
-                            (1000 * 60 * 60 * 24) -
-                          1,
-                      },
-                      (_, i) => {
-                        const d = new Date(
-                          new Date(startDate).getTime() + (i + 1) * 86400000
-                        )
-                          .toISOString()
-                          .split("T")[0];
-                        return [d, { color: "#B3D7FF", textColor: "black" }];
-                      }
-                    )
-                  ),
-                }),
+                ...Object.fromEntries(
+                  Array.from(
+                    {
+                      length:
+                        (new Date(endDate).getTime() - new Date(startDate).getTime()) /
+                        (1000 * 60 * 60 * 24) -
+                        1,
+                    },
+                    (_, i) => {
+                      const d = new Date(
+                        new Date(startDate).getTime() + (i + 1) * 86400000
+                      )
+                        .toISOString()
+                        .split("T")[0];
+                      return [d, { color: "#B3D7FF", textColor: theme.textPrimary }];
+                    }
+                  )
+                ),
+              }),
             }}
             onDayPress={(day) => {
               if (!startDate || (startDate && endDate)) {
@@ -274,11 +283,16 @@ export const AdminStatsScreen = () => {
               }
             }}
             theme={{
-              selectedDayBackgroundColor: "#0A84FF",
-              todayTextColor: "#0A84FF",
+              backgroundColor: theme.card,
+              calendarBackground: theme.card,
+              dayTextColor: theme.textPrimary,
+              textDisabledColor: theme.textSecondary,
+              monthTextColor: theme.textPrimary,
               arrowColor: "#0A84FF",
+              todayTextColor: "#0A84FF",
             }}
           />
+
           <View style={styles.modalButtonRow}>
             <TouchableOpacity
               style={[styles.modalBtn, { backgroundColor: "#E5E7EB" }]}
@@ -289,8 +303,9 @@ export const AdminStatsScreen = () => {
                 setSelectedTab("오늘");
               }}
             >
-              <Text style={styles.modalCancelText}>취소</Text>
+              <Text style={[styles.modalCancelText, { color: theme.textPrimary }]}>취소</Text>
             </TouchableOpacity>
+
             <TouchableOpacity
               style={[styles.modalBtn, { backgroundColor: "#0A84FF" }]}
               onPress={() => setIsCalendarVisible(false)}
@@ -301,37 +316,45 @@ export const AdminStatsScreen = () => {
         </View>
       </Modal>
 
+
       {/* 본문 */}
       <ScrollView
         contentContainerStyle={styles.scroll}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
         {/* 요약 카드 */}
         <View style={styles.statsGrid}>
           {ui.cards.map((c) => (
-            <View key={c.label} style={styles.statCard}>
-              <Text style={styles.statLabel}>{c.label}</Text>
-              <Text style={styles.statValue}>{c.value}</Text>
-              <Text
-                style={[
-                  styles.statRate,
-                  { color: c.up ? "#2EAD50" : "#E53935" },
-                ]}
-              >
-                {c.rate}
-              </Text>
+            <View key={c.label} style={[styles.statCard,
+            {
+              backgroundColor: theme.card,
+              borderColor: theme.border,
+              borderWidth: 1,
+              shadowColor: theme.background,
+            },
+            ]}>
+              <Text style={[styles.statLabel, { color: theme.textSecondary }]}>{c.label}</Text>
+              <Text style={[styles.statValue, { color: theme.icon }]}>{c.value}</Text>
+              <Text style={{ color: c.up ? "#2EAD50" : "#E53935" }}>{c.rate}</Text>
             </View>
           ))}
         </View>
 
         {/* 방문자 추이 */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{ui.line.title}</Text>
+        <View style={[styles.section,
+        {
+          backgroundColor: theme.card,
+          borderColor: theme.border, 
+          borderWidth: 1,
+          shadowColor: theme.background,
+        },
+        ]}>
+          <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>
+            {ui.line.title}
+          </Text>
           <View style={styles.kpiRow}>
-            <Text style={styles.kpiValue}>{ui.line.kpi.value}</Text>
-            <Text style={styles.kpiSub}>{ui.line.kpi.sub}</Text>
+            <Text style={[styles.kpiValue, { color: theme.textPrimary }]}>{ui.line.kpi.value}</Text>
+            <Text style={[styles.kpiSub, { color: "#3CB371" }]}>{ui.line.kpi.sub}</Text>
           </View>
           <LineChart
             data={{ labels: ui.line.labels, datasets: [{ data: ui.line.data }] }}
@@ -346,8 +369,17 @@ export const AdminStatsScreen = () => {
 
         {/* 신규 유입 경로 */}
         {ui.pie && ui.pie.length > 0 && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>신규 유입 경로</Text>
+          <View style={[styles.section,
+          {
+            backgroundColor: theme.card,
+            borderColor: theme.border,
+            borderWidth: 1,
+            shadowColor: theme.background,
+          },
+          ]}>
+            <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>
+              신규 유입 경로
+            </Text>
             <DonutChart
               data={ui.pie.map((d) => ({
                 name: d.name,
@@ -360,10 +392,8 @@ export const AdminStatsScreen = () => {
             <View style={styles.legend}>
               {ui.pie.map((d) => (
                 <View key={d.name} style={styles.legendRow}>
-                  <View
-                    style={[styles.legendDot, { backgroundColor: d.color }]}
-                  />
-                  <Text style={styles.legendText}>
+                  <View style={[styles.legendDot, { backgroundColor: d.color }]} />
+                  <Text style={[styles.legendText, { color: theme.textSecondary }]}>
                     {d.name} ({d.population ?? d.value}%)
                   </Text>
                 </View>
@@ -373,23 +403,32 @@ export const AdminStatsScreen = () => {
         )}
 
         {/* 맛집 카테고리 */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>맛집 카테고리 분포</Text>
+        <View style={[styles.section,
+        {
+          backgroundColor: theme.card,
+          borderColor: theme.border,
+          borderWidth: 1,
+          shadowColor: theme.background,
+        },
+        ]}>
+          <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>
+            맛집 카테고리 분포
+          </Text>
           {ui.categories.map((c, index) => {
             const colors = ["#FF6B6B", "#FFD93D", "#6BCB77", "#4D96FF", "#B185DB"];
             return (
               <View key={c.label} style={{ marginTop: 10 }}>
                 <View style={styles.catRow}>
-                  <Text style={styles.catLabel}>{c.label}</Text>
-                  <Text style={styles.catPct}>{c.pct}%</Text>
+                  <Text style={[styles.catLabel, { color: theme.textSecondary }]}>{c.label}</Text>
+                  <Text style={[styles.catPct, { color: theme.textSecondary }]}>{c.pct}%</Text>
                 </View>
-                <View style={styles.catTrack}>
+                <View style={[styles.catTrack, { backgroundColor: theme.background }]}>
                   <View
                     style={[
                       styles.catFill,
                       {
                         width: `${c.pct}%`,
-                        backgroundColor: colors[index % colors.length], // ✅ 각 항목별 색상 다르게
+                        backgroundColor: colors[index % colors.length],
                       },
                     ]}
                   />
@@ -400,8 +439,17 @@ export const AdminStatsScreen = () => {
         </View>
 
         {/* 리뷰 평점 */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>리뷰 평점 분포</Text>
+        <View style={[styles.section,
+        {
+          backgroundColor: theme.card,
+          borderColor: theme.border,
+          borderWidth: 1,
+          shadowColor: theme.background,
+        },
+        ]}>
+          <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>
+            리뷰 평점 분포
+          </Text>
           <BarChart
             data={{ labels: ui.bar.labels, datasets: [{ data: ui.bar.data }] }}
             width={width - 40}
@@ -409,20 +457,27 @@ export const AdminStatsScreen = () => {
             chartConfig={ui.chartConfig}
             withInnerLines={false}
             style={styles.chart}
-            yAxisLabel=""
             xAxisLabel=""
+            yAxisLabel=""
             yAxisSuffix=""
           />
         </View>
 
         {/* 인기 검색어 */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>인기 검색어</Text>
+        <View style={[styles.section,
+        {
+          backgroundColor: theme.card,
+          borderColor: theme.border,
+          borderWidth: 1,
+          shadowColor: theme.background,
+        },
+        ]}>
+          <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>인기 검색어</Text>
           {ui.ranks.map((r) => (
             <View key={r.rank} style={styles.rankRow}>
-              <Text style={styles.rankIndex}>{r.rank}</Text>
-              <Text style={styles.rankTerm}>{r.term}</Text>
-              <Text style={styles.rankCount}>{r.count}</Text>
+              <Text style={[styles.rankIndex, { color: theme.icon }]}>{r.rank}</Text>
+              <Text style={[styles.rankTerm, { color: theme.textPrimary }]}>{r.term}</Text>
+              <Text style={[styles.rankCount, { color: theme.textSecondary }]}>{r.count}</Text>
             </View>
           ))}
         </View>
@@ -431,20 +486,16 @@ export const AdminStatsScreen = () => {
   );
 };
 
-// 스타일 정의
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.background },
+  container: { flex: 1 },
   scroll: { padding: 16, paddingBottom: 40 },
   tabContainer: {
     flexDirection: "row",
     justifyContent: "space-around",
     paddingVertical: 10,
-    backgroundColor: "#fff",
   },
   tab: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 12 },
-  tabActive: { backgroundColor: "#0A84FF" },
-  tabText: { color: "#667085", fontWeight: "600" },
-  tabTextActive: { color: "#fff", fontWeight: "700" },
+  tabText: { fontWeight: "600" },
   statsGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -453,7 +504,6 @@ const styles = StyleSheet.create({
   },
   statCard: {
     width: "48%",
-    backgroundColor: "#fff",
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
@@ -462,55 +512,29 @@ const styles = StyleSheet.create({
     shadowRadius: 3,
     elevation: 2,
   },
-  statLabel: { fontSize: 13, color: "#8E8E93" },
-  statValue: {
-    fontSize: 22,
-    fontWeight: "bold",
-    color: COLORS.primary,
-    marginVertical: 4,
-  },
-  statRate: { fontSize: 13, fontWeight: "600" },
-  section: {
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    padding: 16,
-    marginTop: 16,
-  },
-  sectionTitle: {
-    fontWeight: "bold",
-    fontSize: 16,
-    marginBottom: 10,
-    color: COLORS.text,
-  },
+  statLabel: { fontSize: 13 },
+  statValue: { fontSize: 22, fontWeight: "bold", marginVertical: 4 },
+  section: { borderRadius: 12, padding: 16, marginTop: 16 },
+  sectionTitle: { fontWeight: "bold", fontSize: 16, marginBottom: 10 },
   chart: { borderRadius: 12, marginLeft: -30 },
   kpiRow: { flexDirection: "row", alignItems: "flex-end", marginBottom: 6 },
-  kpiValue: { fontSize: 28, fontWeight: "800", color: "#111", marginRight: 6 },
-  kpiSub: { fontSize: 13, color: "#3CB371", fontWeight: "700" },
+  kpiValue: { fontSize: 28, fontWeight: "800", marginRight: 6 },
+  kpiSub: { fontSize: 13, fontWeight: "700" },
   catRow: { flexDirection: "row", justifyContent: "space-between", marginBottom: 6 },
-  catLabel: { color: "#6B7280", fontSize: 13 },
-  catPct: { color: "#6B7280", fontSize: 13 },
-  catTrack: { height: 6, backgroundColor: "#EEF2F7", borderRadius: 999 },
-  catFill: { height: 6, backgroundColor: "#0A84FF", borderRadius: 999 },
-  rankRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    paddingVertical: 8,
-  },
-  rankIndex: {
-    width: 20,
-    fontWeight: "bold",
-    color: COLORS.primary,
-    textAlign: "center",
-  },
-  rankTerm: { flex: 1, color: COLORS.text, paddingLeft: 6 },
-  rankCount: { color: "#8E8E93" },
+  catLabel: { fontSize: 13 },
+  catPct: { fontSize: 13 },
+  catTrack: { height: 6, borderRadius: 999 },
+  catFill: { height: 6, borderRadius: 999 },
+  rankRow: { flexDirection: "row", justifyContent: "space-between", paddingVertical: 8 },
+  rankIndex: { width: 20, fontWeight: "bold", textAlign: "center" },
+  rankTerm: { flex: 1, paddingLeft: 6 },
+  rankCount: {},
   legend: { marginTop: 16 },
   legendRow: { flexDirection: "row", alignItems: "center", marginBottom: 6 },
   legendDot: { width: 10, height: 10, borderRadius: 5, marginRight: 8 },
-  legendText: { color: "#333", fontSize: 13 },
+  legendText: { fontSize: 13 },
   modal: { justifyContent: "flex-end", margin: 0 },
-    modalContainer: {
-    backgroundColor: "white",
+  modalContainer: {
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     paddingVertical: 20,
@@ -534,6 +558,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     alignItems: "center",
   },
-  modalCancelText: { color: "#111", fontWeight: "600" },
+  modalCancelText: { fontWeight: "600" },
   modalConfirmText: { color: "#fff", fontWeight: "700" },
+
 });

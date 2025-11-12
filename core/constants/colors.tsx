@@ -21,3 +21,23 @@ export const COLORS = {
   tabInactive: "#B0BEC5",
   tabActive: "#00BDBD",
 };
+
+export const LightTheme = {
+  background: "#F9F9F9",
+  card: "#FFFFFF",
+  textPrimary: "#222222",
+  textSecondary: "#555555",
+  border: "#E5E5E5",
+  icon: "#0A84FF",
+  chartLine: (opacity: number = 1) => `rgba(10,132,255,${opacity})`,
+};
+
+export const DarkTheme = {
+  background: "#121212",
+  card: "#1E1E1E",
+  textPrimary: "#FFFFFF",
+  textSecondary: "#BBBBBB",
+  border: "#333333",
+  icon: "#66B2FF",
+  chartLine: (opacity: number = 1) => `rgba(100,180,255,${opacity})`,
+};

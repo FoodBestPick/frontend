@@ -10,7 +10,7 @@ import {
 } from "react-native";
 import { Header } from "../components/Header";
 import { DashboardCard } from "../components/DashBoardCard";
-import { COLORS } from "../../core/constants/colors";
+import { COLORS } from "../../core/constants/Colors";
 import { AdminDashBoardViewModel } from "../viewmodels/AdminDashBoardViewModels";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
@@ -299,7 +299,7 @@ export const AdminDashBoardScreen = () => {
         >
           <LineChart
             data={lineData}
-            width={width - 30}
+            width={width - 35}
             height={180}
             chartConfig={chartConfig}
             bezier
@@ -376,7 +376,7 @@ export const AdminDashBoardScreen = () => {
         >
           <BarChart
             data={barData}
-            width={width - 70}
+            width={width - 75}
             height={180}
             chartConfig={chartConfig}
             withInnerLines={false}
@@ -503,7 +503,12 @@ const styles = StyleSheet.create({
   feedText: { fontSize: 14 },
   chartSection: { borderRadius: 12, padding: 16 },
   linechart: { borderRadius: 12, marginVertical: 8, alignSelf: "center" },
-  barchart: { borderRadius: 12, marginVertical: 8, alignSelf: "center", marginRight: 40 },
+  barchart: { 
+    borderRadius: 12, 
+    marginVertical: 8, 
+    alignSelf: "center", 
+    marginRight: 40 
+  },
   quickLinkSection: { marginBottom: 40 },
   quickGrid: {
     flexDirection: "row",

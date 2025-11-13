@@ -12,7 +12,7 @@ import {
 } from "react-native";
 import { Dropdown } from "react-native-element-dropdown";
 import Ionicons from "react-native-vector-icons/Ionicons";
-import { COLORS } from "../../core/constants/colors";
+import { COLORS } from "../../core/constants/Colors";
 import { Header } from "../components/Header";
 import { ThemeContext } from "../../context/ThemeContext";
 

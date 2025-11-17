@@ -74,7 +74,10 @@ const RestaurantDetailScreen = () => {
         backgroundColor="transparent"
       />
 
-      <ScrollView showsVerticalScrollIndicator={false}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: activeTab === '리뷰' ? 80 : 0 }}
+      >
         <View style={styles.imageContainer}>
           <Image
             source={{ uri: detailData.images[0] }}
@@ -200,16 +203,21 @@ const RestaurantDetailScreen = () => {
         )}
       </ScrollView>
 
-      <SafeAreaView edges={['bottom']} style={styles.footer}>
-        <TouchableOpacity style={styles.callButton}>
-          <Icon name="call" size={20} color="#fff" />
-          <Text style={styles.footerButtonText}>전화</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.reserveButton}>
-          <Icon name="calendar" size={20} color="#fff" />
-          <Text style={styles.footerButtonText}>예약</Text>
-        </TouchableOpacity>
-      </SafeAreaView>
+      {/* ✅ 리뷰 탭일 때만 하단에 리뷰 작성하기 버튼 표시 */}
+      {activeTab === '리뷰' && (
+        <SafeAreaView edges={['bottom']} style={styles.footer}>
+          <TouchableOpacity
+            style={styles.writeReviewButton}
+            onPress={() => {
+              // TODO: 리뷰 작성 화면으로 이동
+              console.log('리뷰 작성하기');
+            }}
+          >
+            <Icon name="create-outline" size={20} color="#fff" />
+            <Text style={styles.footerButtonText}>리뷰 작성하기</Text>
+          </TouchableOpacity>
+        </SafeAreaView>
+      )}
     </View>
   );
 };
@@ -403,24 +411,17 @@ const styles = StyleSheet.create({
     paddingVertical: 40,
   },
   footer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
     flexDirection: 'row',
     borderTopWidth: 1,
     borderTopColor: '#F0F0F0',
     padding: 16,
-    gap: 12,
     backgroundColor: '#fff',
   },
-  callButton: {
-    flex: 1,
-    flexDirection: 'row',
-    backgroundColor: '#4CAF50',
-    paddingVertical: 14,
-    borderRadius: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: 6,
-  },
-  reserveButton: {
+  writeReviewButton: {
     flex: 1,
     flexDirection: 'row',
     backgroundColor: '#FFA847',

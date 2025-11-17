@@ -10,14 +10,11 @@ import OnboardingScreen from '../frontend/presentation/screens/OnboardingScreen'
 import LoginScreen from '../frontend/presentation/screens/LoginScreen';
 import SignupScreen from '../frontend/presentation/screens/SignupScreen';
 import FindAccountScreen from '../frontend/presentation/screens/FindAccountScreen';
-import UserMain from '../frontend/presentation/screens/UserMain';
-import SearchScreen from '../frontend/presentation/screens/SearchScreen';
-import SearchResultScreen from '../frontend/presentation/screens/SearchResultScreen';
 import RestaurantDetailScreen from '../frontend/presentation/screens/RestaurantDetailScreen';
-import RouletteScreen from '../frontend/presentation/screens/RouletteScreen';
-import { ThemeProvider } from "./context/ThemeContext"; 
-import { useContext } from "react";
-import { ThemeContext } from "./context/ThemeContext";
+import { ThemeProvider } from './context/ThemeContext';
+import { useContext } from 'react';
+import { ThemeContext } from './context/ThemeContext';
+import UserNavigation from './presentation/navigation/UserNavigation';
 
 const Stack = createStackNavigator<RootStackParamList>();
 
@@ -26,8 +23,8 @@ function AppInner() {
   return (
     <>
       <StatusBar
-        barStyle={isDarkMode ? "light-content" : "dark-content"}
-        backgroundColor={isDarkMode ? "#121212" : "#FFFFFF"}
+        barStyle={isDarkMode ? 'light-content' : 'dark-content'}
+        backgroundColor={isDarkMode ? '#121212' : '#FFFFFF'}
       />
       <NavigationContainer>
         <Stack.Navigator
@@ -43,14 +40,11 @@ function AppInner() {
           <Stack.Screen name="AdminMain" component={AdminMainStack} />
 
           {/* 사용자 */}
-          <Stack.Screen name="UserMain" component={UserMain} />
-          <Stack.Screen name="SearchScreen" component={SearchScreen} />
-          <Stack.Screen name="SearchResult" component={SearchResultScreen} />
+          <Stack.Screen name="UserMain" component={UserNavigation} />
           <Stack.Screen
             name="RestaurantDetail"
             component={RestaurantDetailScreen}
           />
-          <Stack.Screen name="RouletteScreen" component={RouletteScreen} />
         </Stack.Navigator>
       </NavigationContainer>
     </>

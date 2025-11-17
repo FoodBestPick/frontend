@@ -15,6 +15,8 @@ import SearchScreen from '../frontend/presentation/screens/SearchScreen';
 import SearchResultScreen from '../frontend/presentation/screens/SearchResultScreen';
 import RestaurantDetailScreen from '../frontend/presentation/screens/RestaurantDetailScreen';
 import RouletteScreen from '../frontend/presentation/screens/RouletteScreen';
+import { AdminRestaurantAddScreen } from './presentation/screens/AdminRestaurantAddScreen';
+import { MapSelectScreen } from './presentation/screens/MapSelectScreen';
 import { ThemeProvider } from "./context/ThemeContext"; 
 import { useContext } from "react";
 import { ThemeContext } from "./context/ThemeContext";
@@ -34,13 +36,17 @@ function AppInner() {
           initialRouteName="Splash"
           screenOptions={{ headerShown: false }}
         >
-          {/* 관리자 */}
+          {/* 공용 */}
           <Stack.Screen name="Splash" component={SplashScreen} />
           <Stack.Screen name="Onboarding" component={OnboardingScreen} />
           <Stack.Screen name="Login" component={LoginScreen} />
           <Stack.Screen name="SignUp" component={SignupScreen} />
           <Stack.Screen name="FindAccount" component={FindAccountScreen} />
+          <Stack.Screen name="MapSelectScreen" component={MapSelectScreen} />
+
+          {/* 관리자 */}
           <Stack.Screen name="AdminMain" component={AdminMainStack} />
+          <Stack.Screen name="AdminRestaurantAdd" component={AdminRestaurantAddScreen}/>
 
           {/* 사용자 */}
           <Stack.Screen name="UserMain" component={UserMain} />

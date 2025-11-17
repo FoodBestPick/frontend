@@ -12,12 +12,18 @@ import {
 } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import MaterialIcons from "react-native-vector-icons/MaterialIcons";
+import { useNavigation } from "@react-navigation/native";import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { RootStackParamList } from "../navigation/types/RootStackParamList";
 import { Header } from "../components/Header";
 import { AdminRestaurantViewModel } from "../viewmodels/AdminRestaurantViewModels";
 import { AdminRestaurant } from "../../domain/entities/AdminRestaurantList";
 import { ThemeContext } from "../../context/ThemeContext";
 
+type Navigation = NativeStackNavigationProp<RootStackParamList>;
+
 export const AdminRestaurantScreen = () => {
+  const navigation = useNavigation<Navigation>();
+
   const { theme } = useContext(ThemeContext);
   const { restaurants, loading, error, totalPages, refetch, page } =
     AdminRestaurantViewModel();
@@ -65,8 +71,12 @@ export const AdminRestaurantScreen = () => {
 
   return (
     <View style={{ flex: 1, backgroundColor: theme.background }}>
-      <Header title="맛집 관리" />
-    <View style={[styles.container, { backgroundColor: theme.background }]}>
+      <Header
+        title="맛집"
+        iconName="add" 
+        onIconPress={() => navigation.navigate("AdminRestaurantAdd")}
+      />
+      <View style={[styles.container, { backgroundColor: theme.background }]}>
 
         {/* 검색창 */}
         <View
@@ -74,7 +84,7 @@ export const AdminRestaurantScreen = () => {
             styles.searchBar,
             {
               backgroundColor: theme.card,
-              borderColor: theme.border, 
+              borderColor: theme.border,
               borderWidth: 1,
             },
           ]}

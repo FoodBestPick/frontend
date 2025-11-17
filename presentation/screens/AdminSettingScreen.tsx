@@ -1,4 +1,4 @@
-import React, { useContext } from "react";
+import React, { useContext, useState } from "react";
 import {
   View,
   Text,
@@ -6,17 +6,38 @@ import {
   TouchableOpacity,
   ScrollView,
   Switch,
-  Alert,
 } from "react-native";
 import MaterialIcons from "react-native-vector-icons/MaterialIcons";
 import { Header } from "../components/Header";
 import { ThemeContext } from "../../context/ThemeContext";
+import { useNavigation } from "@react-navigation/native";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { RootStackParamList } from "../navigation/types/RootStackParamList";
+import { CacheResetModal } from "../components/CacheResetModal"; 
+import AsyncStorage from "@react-native-async-storage/async-storage";
+
+type Navigation = NativeStackNavigationProp<RootStackParamList>;
 
 export const AdminSettingScreen = () => {
+  const navigation = useNavigation<Navigation>();
   const { isDarkMode, toggleDarkMode, theme } = useContext(ThemeContext);
+  const [modalVisible, setModalVisible] = useState(false);
 
   const handlePress = (label: string) => {
-    Alert.alert(label, `${label} 클릭됨`);
+    console.log(`${label} 클릭됨`);
+  };
+
+  const handleLogout = () => {
+    navigation.reset({
+      index: 0,
+      routes: [{ name: "Login" }],
+    });
+  };
+
+
+  const handleCacheReset = async () => {
+    await AsyncStorage.clear();
+    toggleDarkMode(false); 
   };
 
   return (
@@ -24,7 +45,6 @@ export const AdminSettingScreen = () => {
       <Header title="설정" />
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        {/* 🔹 계정 관리 */}
         <Text style={[styles.sectionTitle, { color: theme.textSecondary }]}>
           계정 관리
         </Text>
@@ -77,7 +97,6 @@ export const AdminSettingScreen = () => {
           />
         </TouchableOpacity>
 
-        {/* 🔹 시스템 설정 */}
         <Text style={[styles.sectionTitle, { color: theme.textSecondary }]}>
           시스템 설정
         </Text>
@@ -98,11 +117,11 @@ export const AdminSettingScreen = () => {
 
         <TouchableOpacity
           style={[styles.itemRow, { backgroundColor: theme.card }]}
-          onPress={() => handlePress("알림 설정")}
+          onPress={() => setModalVisible(true)}
         >
-          <MaterialIcons name="notifications" size={22} color={theme.icon} />
+          <MaterialIcons name="delete-sweep" size={22} color={theme.icon} />
           <Text style={[styles.itemText, { color: theme.textPrimary }]}>
-            알림 설정
+            캐시 초기화
           </Text>
           <View style={{ flex: 1 }} />
           <MaterialIcons
@@ -128,7 +147,6 @@ export const AdminSettingScreen = () => {
           />
         </TouchableOpacity>
 
-        {/* 🔹 기타 */}
         <Text style={[styles.sectionTitle, { color: theme.textSecondary }]}>
           기타
         </Text>
@@ -184,13 +202,12 @@ export const AdminSettingScreen = () => {
           />
         </TouchableOpacity>
 
-        {/* 🔻 로그아웃 (맨 아래 고정) */}
         <TouchableOpacity
           style={[
             styles.logoutRow,
             { backgroundColor: theme.card, borderColor: theme.border },
           ]}
-          onPress={() => handlePress("로그아웃")}
+          onPress={handleLogout}
         >
           <MaterialIcons name="logout" size={22} color="#E53935" />
           <Text style={[styles.logoutText]}>로그아웃</Text>
@@ -198,6 +215,12 @@ export const AdminSettingScreen = () => {
           <MaterialIcons name="chevron-right" size={22} color="#E53935" />
         </TouchableOpacity>
       </ScrollView>
+
+      <CacheResetModal
+        visible={modalVisible}
+        onCancel={() => setModalVisible(false)}
+        onConfirm={handleCacheReset}
+      />
     </View>
   );
 };

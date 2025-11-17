@@ -358,7 +358,7 @@ export const AdminStatsScreen = () => {
           </View>
           <LineChart
             data={{ labels: ui.line.labels, datasets: [{ data: ui.line.data }] }}
-            width={width + 10}
+            width={width - 35}
             height={180}
             chartConfig={ui.chartConfig}
             bezier
@@ -452,7 +452,7 @@ export const AdminStatsScreen = () => {
           </Text>
           <BarChart
             data={{ labels: ui.bar.labels, datasets: [{ data: ui.bar.data }] }}
-            width={width - 40}
+            width={width - 55}
             height={180}
             chartConfig={ui.chartConfig}
             withInnerLines={false}
@@ -516,7 +516,7 @@ const styles = StyleSheet.create({
   statValue: { fontSize: 22, fontWeight: "bold", marginVertical: 4 },
   section: { borderRadius: 12, padding: 16, marginTop: 16 },
   sectionTitle: { fontWeight: "bold", fontSize: 16, marginBottom: 10 },
-  chart: { borderRadius: 12, marginLeft: -30 },
+  chart: { borderRadius: 12, marginLeft : -16},
   kpiRow: { flexDirection: "row", alignItems: "flex-end", marginBottom: 6 },
   kpiValue: { fontSize: 28, fontWeight: "800", marginRight: 6 },
   kpiSub: { fontSize: 13, fontWeight: "700" },

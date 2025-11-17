@@ -3,7 +3,6 @@ import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import MaterialIcons from "react-native-vector-icons/MaterialIcons";
 import FontAwesome5 from "react-native-vector-icons/FontAwesome5";
-import { View, Text } from "react-native";
 import { AdminDashBoardScreen } from "../screens/AdminDashBoardScreen";
 import { AdminStatsScreen } from "../screens/AdminStatsScreen";
 import { AdminUserScreen } from "../screens/AdminUserScreen";
@@ -12,12 +11,6 @@ import { AdminSettingScreen } from "../screens/AdminSettingScreen";
 import { ThemeContext } from "../../context/ThemeContext";
 
 const Tab = createBottomTabNavigator();
-
-const Placeholder = ({ title }: { title: string }) => (
-  <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
-    <Text>{title} 화면</Text>
-  </View>
-);
 
 export const AdminMainStack = () => {
   const { isDarkMode, theme } = useContext(ThemeContext);

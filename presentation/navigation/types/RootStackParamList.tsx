@@ -5,6 +5,16 @@ export type RootStackParamList = {
   SignUp: undefined;
   FindAccount: undefined;
   AdminMain: undefined;
+  AdminRestaurantAdd:
+  | undefined
+  | {
+    selectedLocation: {
+      lat: number;
+      lng: number;
+      address: string;
+    };
+  };
+  MapSelectScreen: undefined;
   UserMain: undefined;
   RouletteScreen: undefined;
   SearchScreen: undefined;

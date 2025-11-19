@@ -10,7 +10,15 @@ export const AdminRepositoryImpl: AdminRepository = {
     return await AdminApi.getDetailStats();
   },
 
-  async getRestaurantList(page: number, size: number, status?: string, keyword?: string){
+  async getRestaurantList(page: number, size: number, status?: string, keyword?: string) {
     return await AdminApi.getRestaurantList(page, size, status, keyword);
+  },
+
+  async getUserList(page: number, size: number, status?: string, sort?: string, keyword?: string) {
+    return await AdminApi.getUserList(page, size, status, sort, keyword);
+  },
+
+  async getNotifications() {
+    return await AdminApi.getNotifications();
   }
 };

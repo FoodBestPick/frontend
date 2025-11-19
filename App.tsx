@@ -16,6 +16,7 @@ import SearchResultScreen from '../frontend/presentation/screens/SearchResultScr
 import RestaurantDetailScreen from '../frontend/presentation/screens/RestaurantDetailScreen';
 import RouletteScreen from '../frontend/presentation/screens/RouletteScreen';
 import { AdminRestaurantAddScreen } from './presentation/screens/AdminRestaurantAddScreen';
+import { AdminNotificationScreen } from './presentation/screens/AdminNotificationScreen';
 import { MapSelectScreen } from './presentation/screens/MapSelectScreen';
 import { ThemeProvider } from "./context/ThemeContext"; 
 import { useContext } from "react";
@@ -47,6 +48,7 @@ function AppInner() {
           {/* 관리자 */}
           <Stack.Screen name="AdminMain" component={AdminMainStack} />
           <Stack.Screen name="AdminRestaurantAdd" component={AdminRestaurantAddScreen}/>
+          <Stack.Screen name="NotificationScreen" component={AdminNotificationScreen} />
 
           {/* 사용자 */}
           <Stack.Screen name="UserMain" component={UserMain} />

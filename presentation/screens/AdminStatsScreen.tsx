@@ -7,6 +7,7 @@ import {
   Dimensions,
   StyleSheet,
   RefreshControl,
+  ActivityIndicator,
 } from "react-native";
 import { Header } from "../components/Header";
 import { LineChart, BarChart } from "react-native-chart-kit";
@@ -179,13 +180,41 @@ export const AdminStatsScreen = () => {
 
   if (loading)
     return (
-      <Text style={{ textAlign: "center", marginTop: 100, color: theme.textPrimary }}>
-        로딩 중...
-      </Text>
+      <View
+        style={{
+          flex: 1,
+          justifyContent: "center",
+          alignItems: "center",
+          backgroundColor: theme.background,
+        }}
+      >
+        <ActivityIndicator size="large" color={theme.icon} />
+        <Text
+          style={{
+            marginTop: 10,
+            color: theme.textSecondary,
+            fontSize: 15,
+          }}
+        >
+          통계 데이터를 불러오는 중...
+        </Text>
+      </View>
     );
 
   if (error)
-    return <Text style={{ textAlign: "center", color: "red" }}>{error}</Text>;
+    return (
+      <View
+        style={{
+          flex: 1,
+          justifyContent: "center",
+          alignItems: "center",
+          backgroundColor: theme.background,
+        }}
+      >
+        <Text style={{ color: "red", fontSize: 16 }}>{error}</Text>
+      </View>
+    );
+
   if (!ui) return null;
 
   return (

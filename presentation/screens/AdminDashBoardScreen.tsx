@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   Dimensions,
   RefreshControl,
+  ActivityIndicator,
 } from "react-native";
 import { Header } from "../components/Header";
 import { DashboardCard } from "../components/DashBoardCard";
@@ -38,22 +39,22 @@ export const AdminDashBoardScreen = () => {
   if (!stats) {
     return (
       <View
-        style={[
-          styles.container,
-          {
-            justifyContent: "center",
-            alignItems: "center",
-            backgroundColor: isDarkMode ? theme.border : COLORS.background,
-          },
-        ]}
+        style={{
+          flex: 1,
+          justifyContent: "center",
+          alignItems: "center",
+          backgroundColor: theme.background,
+        }}
       >
+        <ActivityIndicator size="large" color={theme.icon} />
         <Text
           style={{
-            color: isDarkMode ? theme.textPrimary : COLORS.text,
-            fontSize: 16,
+            marginTop: 10,
+            color: theme.textSecondary,
+            fontSize: 15,
           }}
         >
-          로딩 중...
+          대시보드 데이터를 불러오는 중...
         </Text>
       </View>
     );

@@ -1,3 +1,5 @@
+import { AdminUser, AdminUserList } from "../../domain/entities/AdminUserList";
+
 export const AdminApi = {
   async getStats() {
     return Promise.resolve({
@@ -138,7 +140,7 @@ export const AdminApi = {
           joinRate: 15.8,
           restaurantRate: 4.3,
           reviewRate: 11.4,
-          timeSeries: [35, 48, 42, 55, 22,11],
+          timeSeries: [35, 48, 42, 55, 22, 11],
           categories: {
             한식: 40,
             중식: 28,
@@ -169,7 +171,7 @@ export const AdminApi = {
     page: number = 0,
     size: number = 10,
     status?: string,
-    keyword?: string ) {
+    keyword?: string) {
     const allRestaurants = [
       {
         id: 1,
@@ -499,7 +501,7 @@ export const AdminApi = {
         status: "수정요청",
         image: require("../../assets/user1.png"),
       },
-            {
+      {
         id: 42,
         name: "을지로노포",
         rating: 4.4,
@@ -604,5 +606,224 @@ export const AdminApi = {
       size,
       totalPages,
     });
-  }
+  },
+
+  async getUserList(
+    page: number,
+    size: number,
+    status?: string,
+    sort?: string,
+    keyword?: string
+  ): Promise<AdminUserList> {
+
+    const allUsers: AdminUser[] = [
+      {
+        id: 1,
+        name: "맛집탐험가",
+        email: "minjun.kim@example.com",
+        avatar: require("../../assets/user1.png"),
+        joinDate: "2023-03-15",
+        lastActive: "2024-07-28",
+        status: "접속중",
+        warnings: 0,
+      },
+      {
+        id: 2,
+        name: "서연의맛집",
+        email: "seoyeon.lee@example.com",
+        avatar: require("../../assets/user2.png"),
+        joinDate: "2023-04-22",
+        lastActive: "2024-07-25",
+        status: "미접속",
+        warnings: 1,
+      },
+      {
+        id: 3,
+        name: "맛집탐험가",
+        email: "minjun.kim@example.com",
+        avatar: require("../../assets/user1.png"),
+        joinDate: "2023-03-15",
+        lastActive: "2024-07-28",
+        status: "접속중",
+        warnings: 0,
+      },
+      {
+        id: 4,
+        name: "서연의맛집",
+        email: "seoyeon.lee@example.com",
+        avatar: require("../../assets/user2.png"),
+        joinDate: "2023-04-22",
+        lastActive: "2024-07-25",
+        status: "미접속",
+        warnings: 1,
+      },
+      {
+        id: 5,
+        name: "맛집탐험가",
+        email: "minjun.kim@example.com",
+        avatar: require("../../assets/user1.png"),
+        joinDate: "2023-03-15",
+        lastActive: "2024-07-28",
+        status: "접속중",
+        warnings: 0,
+      },
+      {
+        id: 6,
+        name: "서연의맛집",
+        email: "seoyeon.lee@example.com",
+        avatar: require("../../assets/user2.png"),
+        joinDate: "2023-04-22",
+        lastActive: "2024-07-25",
+        status: "미접속",
+        warnings: 1,
+      },
+      {
+        id: 7,
+        name: "맛집탐험가",
+        email: "minjun.kim@example.com",
+        avatar: require("../../assets/user1.png"),
+        joinDate: "2023-03-15",
+        lastActive: "2024-07-28",
+        status: "접속중",
+        warnings: 0,
+      },
+      {
+        id: 8,
+        name: "서연의맛집",
+        email: "seoyeon.lee@example.com",
+        avatar: require("../../assets/user2.png"),
+        joinDate: "2023-04-22",
+        lastActive: "2024-07-25",
+        status: "미접속",
+        warnings: 1,
+      },
+      {
+        id: 9,
+        name: "맛집탐험가",
+        email: "minjun.kim@example.com",
+        avatar: require("../../assets/user1.png"),
+        joinDate: "2023-03-15",
+        lastActive: "2024-07-28",
+        status: "접속중",
+        warnings: 0,
+      },
+      {
+        id: 10,
+        name: "서연의맛집",
+        email: "seoyeon.lee@example.com",
+        avatar: require("../../assets/user2.png"),
+        joinDate: "2023-04-22",
+        lastActive: "2024-07-25",
+        status: "미접속",
+        warnings: 1,
+      },
+      {
+        id: 11,
+        name: "맛집탐험가",
+        email: "minjun.kim@example.com",
+        avatar: require("../../assets/user1.png"),
+        joinDate: "2023-03-15",
+        lastActive: "2024-07-28",
+        status: "접속중",
+        warnings: 0,
+      },
+      {
+        id: 12,
+        name: "서연의맛집",
+        email: "seoyeon.lee@example.com",
+        avatar: require("../../assets/user2.png"),
+        joinDate: "2023-04-22",
+        lastActive: "2024-07-25",
+        status: "미접속",
+        warnings: 1,
+      },
+    ];
+
+    let filtered = [...allUsers];
+
+    if (keyword && keyword.trim() !== "") {
+      const q = keyword.toLowerCase();
+      filtered = filtered.filter(
+        (u) =>
+          u.name.toLowerCase().includes(q) ||
+          u.email.toLowerCase().includes(q)
+      );
+    }
+
+    if (status && status !== "전체") {
+      filtered = filtered.filter((u) => u.status === status);
+    }
+
+    switch (sort) {
+      case "최신 가입순":
+        filtered.sort((a, b) => new Date(b.joinDate).getTime() - new Date(a.joinDate).getTime());
+        break;
+
+      case "오래된 가입순":
+        filtered.sort((a, b) => new Date(a.joinDate).getTime() - new Date(b.joinDate).getTime());
+        break;
+
+      case "경고 횟수 높은순":
+        filtered.sort((a, b) => b.warnings - a.warnings);
+        break;
+
+      case "경고 횟수 낮은순":
+        filtered.sort((a, b) => a.warnings - b.warnings);
+        break;
+    }
+
+    const start = (page - 1) * size;
+    const paginated = filtered.slice(start, start + size);
+    const totalPages = Math.ceil(filtered.length / size);
+
+    return {
+      code: 200,
+      message: "success",
+      data: paginated,
+      page,
+      size,
+      totalPages,
+    };
+  },
+
+  async getNotifications() {
+    return {
+      code: 200,
+      message: "OK",
+      data: [
+        {
+          id: 1,
+          category: "INQUIRY",
+          title: "새로운 사용자 문의",
+          message: "OOO님의 1:1 문의가 도착했습니다.",
+          createdAt: "5분 전",
+          read: false,
+        },
+        {
+          id: 2,
+          category: "REPORT",
+          title: "리뷰 신고 접수",
+          message: "XX식당에 대한 리뷰 신고가 접수되었습니다.",
+          createdAt: "오후 2:45",
+          read: true,
+        },
+        {
+          id: 3,
+          category: "RESTAURANT_REQUEST",
+          title: "새로운 맛집 요청",
+          message: "새로운 맛집 등록 요청이 있습니다.",
+          createdAt: "오전 10:12",
+          read: false,
+        },
+        {
+          id: 4,
+          category: "USER_PENALTY",
+          title: "계정 제재 알림",
+          message: "정책 위반으로 사용자 계정이 제재되었습니다.",
+          createdAt: "어제",
+          read: false,
+        },
+      ],
+    };
+  },
 };

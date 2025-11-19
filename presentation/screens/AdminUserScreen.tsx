@@ -1,4 +1,4 @@
-import React, { useState, useContext } from "react";
+import React, { useState, useContext, useEffect } from "react";
 import {
   View,
   Text,
@@ -8,6 +8,7 @@ import {
   TextInput,
   Image,
   Modal,
+  ActivityIndicator,
   TextInput as RNTextInput,
 } from "react-native";
 import { Dropdown } from "react-native-element-dropdown";
@@ -15,16 +16,32 @@ import Ionicons from "react-native-vector-icons/Ionicons";
 import { COLORS } from "../../core/constants/Colors";
 import { Header } from "../components/Header";
 import { ThemeContext } from "../../context/ThemeContext";
+import { AdminUserViewModel } from "../../presentation/viewmodels/AdminUserViewModels";
 
 export const AdminUserScreen = () => {
   const { theme } = useContext(ThemeContext);
 
+  const {
+    response,
+    loading,
+    error,
+    page,
+    setPage,
+    status,
+    setStatus,
+    sort,
+    setSort,
+    keyword,
+    setKeyword,
+    refresh,
+  } = AdminUserViewModel();
+
   const [expandedUsers, setExpandedUsers] = useState<number[]>([]);
-  const [page, setPage] = useState(1);
   const [activeModal, setActiveModal] = useState<{
     type: "permission" | "suspend" | "warning" | null;
     user?: any;
   }>({ type: null, user: null });
+
   const [successModal, setSuccessModal] = useState({
     visible: false,
     type: "",
@@ -32,46 +49,9 @@ export const AdminUserScreen = () => {
     extra: "",
   });
 
-  const [selectedStatus, setSelectedStatus] = useState("전체");
-  const [selectedSort, setSelectedSort] = useState("전체");
-  const [searchQuery, setSearchQuery] = useState("");
-
-  const statusOptions = [
-    { label: "전체", value: "전체" },
-    { label: "접속중", value: "접속중" },
-    { label: "미접속", value: "미접속" },
-    { label: "정지", value: "정지" },
-  ];
-  const sortOptions = [
-    { label: "전체", value: "전체" },
-    { label: "최신 가입순", value: "최신 가입순" },
-    { label: "오래된 가입순", value: "오래된 가입순" },
-    { label: "경고 횟수 높은순", value: "경고 횟수 높은순" },
-    { label: "경고 횟수 낮은순", value: "경고 횟수 낮은순" },
-  ];
-
-  const users = [
-    {
-      id: 1,
-      name: "맛집탐험가",
-      email: "minjun.kim@example.com",
-      avatar: require("../../assets/user1.png"),
-      joinDate: "2023-03-15",
-      lastActive: "2024-07-28",
-      status: "접속중",
-      warnings: 0,
-    },
-    {
-      id: 2,
-      name: "서연의맛집",
-      email: "seoyeon.lee@example.com",
-      avatar: require("../../assets/user2.png"),
-      joinDate: "2023-04-22",
-      lastActive: "2024-07-25",
-      status: "미접속",
-      warnings: 1,
-    },
-  ];
+  useEffect(() => {
+    refresh(page, 10, status, sort, keyword);
+  }, [page, status, sort, keyword]);
 
   const toggleUser = (id: number) => {
     setExpandedUsers((prev) =>
@@ -81,36 +61,60 @@ export const AdminUserScreen = () => {
     );
   };
 
-  const filteredUsers = users.filter((u) => {
-    const matchesStatus =
-      selectedStatus === "전체" || u.status === selectedStatus;
-    const matchesSearch =
-      searchQuery.trim() === "" ||
-      u.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      u.email.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesStatus && matchesSearch;
-  });
+  if (loading)
+    return (
+      <View
+        style={{
+          flex: 1,
+          justifyContent: "center",
+          alignItems: "center",
+          backgroundColor: theme.background,
+        }}
+      >
+        <ActivityIndicator size="large" color={theme.icon} />
+        <Text
+          style={{
+            marginTop: 10,
+            color: theme.textSecondary,
+            fontSize: 15,
+          }}
+        >
+          유저 데이터를 불러오는 중...
+        </Text>
+      </View>
+    );
 
-  const sortedUsers = [...filteredUsers].sort((a, b) => {
-    switch (selectedSort) {
-      case "최신 가입순":
-        return new Date(b.joinDate).getTime() - new Date(a.joinDate).getTime();
-      case "오래된 가입순":
-        return new Date(a.joinDate).getTime() - new Date(b.joinDate).getTime();
-      case "경고 횟수 높은순":
-        return b.warnings - a.warnings;
-      case "경고 횟수 낮은순":
-        return a.warnings - b.warnings;
-      default:
-        return 0;
-    }
-  });
+  if (error)
+    return (
+      <View
+        style={{
+          flex: 1,
+          justifyContent: "center",
+          alignItems: "center",
+          backgroundColor: theme.background,
+        }}
+      >
+        <Text style={{ color: "red", fontSize: 16 }}>{error}</Text>
+      </View>
+    );
 
-  const usersPerPage = 10;
-  const paginatedUsers = sortedUsers.slice(
-    (page - 1) * usersPerPage,
-    page * usersPerPage
-  );
+  const users = response?.data ?? [];
+  const totalPages = response?.totalPages ?? 1;
+
+  const statusOptions = [
+    { label: "전체", value: "전체" },
+    { label: "접속중", value: "접속중" },
+    { label: "미접속", value: "미접속" },
+    { label: "정지", value: "정지" },
+  ];
+
+  const sortOptions = [
+    { label: "전체", value: "전체" },
+    { label: "최신 가입순", value: "최신 가입순" },
+    { label: "오래된 가입순", value: "오래된 가입순" },
+    { label: "경고 횟수 높은순", value: "경고 횟수 높은순" },
+    { label: "경고 횟수 낮은순", value: "경고 횟수 낮은순" },
+  ];
 
   return (
     <View style={{ flex: 1, backgroundColor: theme.background }}>
@@ -118,22 +122,23 @@ export const AdminUserScreen = () => {
       <View style={[styles.container, { backgroundColor: theme.background }]}>
 
         {/* 검색창 */}
-        <View style={[styles.searchBar,
-        {
-          backgroundColor: theme.card,
-          borderColor: theme.border,
-          borderWidth: 1,
-        }]}>
+        <View
+          style={[
+            styles.searchBar,
+            { backgroundColor: theme.card, borderColor: theme.border, borderWidth: 1 },
+          ]}
+        >
           <Ionicons name="search-outline" size={18} color={theme.textSecondary} />
           <TextInput
             style={[styles.input, { color: theme.textPrimary }]}
             placeholder="닉네임 또는 이메일로 검색"
             placeholderTextColor={theme.textSecondary}
-            value={searchQuery}
-            onChangeText={setSearchQuery}
+            value={keyword}
+            onChangeText={setKeyword}
           />
         </View>
 
+        {/* 필터 */}
         <View style={styles.dropdownRow}>
           <Dropdown
             style={[
@@ -146,25 +151,17 @@ export const AdminUserScreen = () => {
               borderWidth: 1,
               borderRadius: 8,
             }}
-            itemTextStyle={{
-              color: theme.textPrimary,
-            }}
+            placeholderStyle={{ color: theme.textSecondary }}
+            selectedTextStyle={{ color: theme.textPrimary }}
+            itemTextStyle={{ color: theme.textPrimary }}
             activeColor={theme.background}
             data={statusOptions}
             labelField="label"
             valueField="value"
-            placeholder="상태 선택"
-            placeholderStyle={[
-              styles.placeholderText,
-              { color: theme.textSecondary },
-            ]}
-            selectedTextStyle={[
-              styles.selectedText,
-              { color: theme.textPrimary },
-            ]}
-            value={selectedStatus}
-            onChange={(item) => setSelectedStatus(item.value)}
+            value={status}
+            onChange={(item) => setStatus(item.value)}
           />
+
           <Dropdown
             style={[
               styles.dropdown,
@@ -176,43 +173,29 @@ export const AdminUserScreen = () => {
               borderWidth: 1,
               borderRadius: 8,
             }}
-            itemTextStyle={{
-              color: theme.textPrimary,
-            }}
+            placeholderStyle={{ color: theme.textSecondary }}
+            selectedTextStyle={{ color: theme.textPrimary }}
+            itemTextStyle={{ color: theme.textPrimary }}
             activeColor={theme.background}
             data={sortOptions}
             labelField="label"
             valueField="value"
-            placeholder="정렬 기준"
-            placeholderStyle={[
-              styles.placeholderText,
-              { color: theme.textSecondary },
-            ]}
-            selectedTextStyle={[
-              styles.selectedText,
-              { color: theme.textPrimary },
-            ]}
-            value={selectedSort}
-            onChange={(item) => setSelectedSort(item.value)}
+            value={sort}
+            onChange={(item) => setSort(item.value)}
           />
         </View>
 
-        {/* 사용자 카드 목록 */}
-        <ScrollView contentContainerStyle={{ paddingBottom: 100 }}>
-          {paginatedUsers.map((user) => (
+        {/* 사용자 리스트 */}
+        <ScrollView contentContainerStyle={{ paddingBottom: 20 }}>
+          {users.map((user) => (
             <View
               key={user.id}
-              style={[styles.card, {
-                backgroundColor: theme.card,
-                borderColor: theme.border, 
-                borderWidth: 1,
-                shadowColor: theme.background,
-              },]}
+              style={[
+                styles.card,
+                { backgroundColor: theme.card, borderColor: theme.border, borderWidth: 1 },
+              ]}
             >
-              <TouchableOpacity
-                style={styles.cardHeader}
-                onPress={() => toggleUser(user.id)}
-              >
+              <TouchableOpacity style={styles.cardHeader} onPress={() => toggleUser(user.id)}>
                 <View style={styles.userInfo}>
                   <Image source={user.avatar} style={styles.avatar} />
                   <View>
@@ -224,12 +207,9 @@ export const AdminUserScreen = () => {
                     </Text>
                   </View>
                 </View>
+
                 <Ionicons
-                  name={
-                    expandedUsers.includes(user.id)
-                      ? "chevron-up"
-                      : "chevron-down"
-                  }
+                  name={expandedUsers.includes(user.id) ? "chevron-up" : "chevron-down"}
                   size={20}
                   color={theme.textSecondary}
                 />
@@ -245,6 +225,7 @@ export const AdminUserScreen = () => {
                       {user.joinDate}
                     </Text>
                   </View>
+
                   <View style={styles.detailRow}>
                     <Text style={[styles.detailLabel, { color: theme.textSecondary }]}>
                       마지막 활동일
@@ -253,10 +234,9 @@ export const AdminUserScreen = () => {
                       {user.lastActive}
                     </Text>
                   </View>
+
                   <View style={styles.detailRow}>
-                    <Text style={[styles.detailLabel, { color: theme.textSecondary }]}>
-                      상태
-                    </Text>
+                    <Text style={[styles.detailLabel, { color: theme.textSecondary }]}>상태</Text>
                     <Text
                       style={[
                         styles.detailValue,
@@ -265,14 +245,15 @@ export const AdminUserScreen = () => {
                             user.status === "접속중"
                               ? "#4CAF50"
                               : user.status === "정지"
-                                ? "#E53935"
-                                : theme.textSecondary,
+                              ? "#E53935"
+                              : theme.textSecondary,
                         },
                       ]}
                     >
                       {user.status}
                     </Text>
                   </View>
+
                   <View style={styles.detailRow}>
                     <Text style={[styles.detailLabel, { color: theme.textSecondary }]}>
                       경고 횟수
@@ -281,18 +262,14 @@ export const AdminUserScreen = () => {
                       {user.warnings}
                     </Text>
                   </View>
-
                   <View style={styles.actionRow}>
                     <TouchableOpacity
                       style={[styles.actionBtn, { backgroundColor: theme.icon + "22" }]}
-                      onPress={() =>
-                        setActiveModal({ type: "permission", user })
-                      }
+                      onPress={() => setActiveModal({ type: "permission", user })}
                     >
-                      <Text style={[styles.actionText, { color: theme.textPrimary }]}>
-                        권한 변경
-                      </Text>
+                      <Text style={[styles.actionText, { color: theme.textPrimary }]}>권한 변경</Text>
                     </TouchableOpacity>
+
                     <TouchableOpacity
                       style={[styles.actionBtn, { backgroundColor: "#ffcccc" }]}
                       onPress={() => setActiveModal({ type: "suspend", user })}
@@ -301,13 +278,12 @@ export const AdminUserScreen = () => {
                         {user.status === "정지" ? "정지 해제" : "계정 정지"}
                       </Text>
                     </TouchableOpacity>
+
                     <TouchableOpacity
                       style={[styles.actionBtn, { backgroundColor: "#ffe0b2" }]}
                       onPress={() => setActiveModal({ type: "warning", user })}
                     >
-                      <Text style={[styles.actionText, { color: "#e65100" }]}>
-                        경고 추가
-                      </Text>
+                      <Text style={[styles.actionText, { color: "#e65100" }]}>경고 추가</Text>
                     </TouchableOpacity>
                   </View>
                 </View>
@@ -316,29 +292,97 @@ export const AdminUserScreen = () => {
           ))}
         </ScrollView>
 
-        <View style={styles.pagination}>
-          <TouchableOpacity disabled={page === 1} onPress={() => setPage(page - 1)}>
-            <Text style={[styles.pageBtn, { color: theme.icon }, page === 1 && { color: "#aaa" }]}>
-              〈
+        <View style={styles.paginationContainer}>
+          {/* 이전 페이지 */}
+          <TouchableOpacity
+            disabled={page <= 1}
+            onPress={() => setPage(page - 1)}
+          >
+            <Text
+              style={[
+                styles.arrow,
+                { color: theme.icon },
+                page <= 1 && { color: "#666" },
+              ]}
+            >
+              {"<"}
             </Text>
           </TouchableOpacity>
-          <Text style={[styles.pageNum, { color: theme.textPrimary }]}>{page}</Text>
+
+          {/* 페이지 번호 */}
+          <View style={styles.pageNumberContainer}>
+            {(() => {
+              const maxVisible = 5;
+              const currentBlock = Math.floor((page - 1) / maxVisible);
+              const startPage = currentBlock * maxVisible + 1;
+              const endPage = Math.min(startPage + maxVisible - 1, totalPages);
+
+              const pages = [];
+              for (let i = startPage; i <= endPage; i++) {
+                pages.push(i);
+              }
+
+              return (
+                <>
+                  {pages.map((p) => {
+                    const isActive = p === page;
+                    return (
+                      <TouchableOpacity
+                        key={`page-${p}`}
+                        onPress={() => setPage(p)}
+                      >
+                        <Text
+                          style={[
+                            styles.pageText,
+                            {
+                              color: isActive ? theme.icon : theme.textPrimary,
+                              fontWeight: isActive ? "700" : "500",
+                            },
+                          ]}
+                        >
+                          {p}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+
+                  {/* ... 이후 마지막 페이지 */}
+                  {endPage < totalPages && (
+                    <>
+                      <Text style={[styles.ellipsis, { color: theme.textSecondary }]}>
+                        ...
+                      </Text>
+
+                      <TouchableOpacity onPress={() => setPage(totalPages)}>
+                        <Text style={[styles.pageText, { color: theme.textPrimary }]}>
+                          {totalPages}
+                        </Text>
+                      </TouchableOpacity>
+                    </>
+                  )}
+                </>
+              );
+            })()}
+          </View>
+
+          {/* 다음 페이지 */}
           <TouchableOpacity
-            disabled={page * usersPerPage >= users.length}
+            disabled={page >= totalPages}
             onPress={() => setPage(page + 1)}
           >
             <Text
               style={[
-                styles.pageBtn,
+                styles.arrow,
                 { color: theme.icon },
-                page * usersPerPage >= users.length && { color: "#aaa" },
+                page >= totalPages && { color: "#666" },
               ]}
             >
-              〉
+              {">"}
             </Text>
           </TouchableOpacity>
         </View>
 
+        {/* 모달들 */}
         <PermissionModal
           visible={activeModal.type === "permission"}
           onClose={() => setActiveModal({ type: null })}
@@ -362,9 +406,7 @@ export const AdminUserScreen = () => {
         />
         <SuccessModal
           visible={successModal.visible}
-          onClose={() =>
-            setSuccessModal({ visible: false, type: "", user: null, extra: "" })
-          }
+          onClose={() => setSuccessModal({ visible: false, type: "", user: null, extra: "" })}
           type={successModal.type}
           user={successModal.user}
           extra={successModal.extra}
@@ -705,9 +747,28 @@ const styles = StyleSheet.create({
     marginHorizontal: 4,
   },
   actionText: { fontSize: 13, fontWeight: "bold" },
-  pagination: { flexDirection: "row", justifyContent: "center", alignItems: "center", paddingVertical: 10 },
-  pageBtn: { fontSize: 20, color: COLORS.primary, marginHorizontal: 14 },
-  pageNum: { fontSize: 16, fontWeight: "bold" },
+  paginationContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 16,
+    gap: 12,
+  },
+  pageNumberContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 14,
+  },
+  pageText: {
+    fontSize: 16,
+  },
+  ellipsis: {
+    fontSize: 15,
+  },
+  arrow: {
+    fontSize: 18,
+    paddingHorizontal: 4,
+  },
 
   overlay: {
     flex: 1,

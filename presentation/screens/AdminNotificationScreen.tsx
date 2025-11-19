@@ -6,6 +6,7 @@ import {
     ScrollView,
     TouchableOpacity,
     Modal,
+    ActivityIndicator,
 } from "react-native";
 import { Header } from "../components/Header";
 import { useNavigation } from "@react-navigation/native";
@@ -13,6 +14,7 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../navigation/types/RootStackParamList";
 import { ThemeContext } from "../../context/ThemeContext";
 import MaterialIcons from "react-native-vector-icons/MaterialIcons";
+import { AdminNotificationViewModels } from "../viewmodels/AdminNotificationViewModels";
 
 type Navigation = NativeStackNavigationProp<RootStackParamList>;
 
@@ -20,40 +22,7 @@ export const AdminNotificationScreen = () => {
     const navigation = useNavigation<Navigation>();
     const { theme, isDarkMode } = useContext(ThemeContext);
 
-    const serverNotifications = [
-        {
-            id: 1,
-            category: "INQUIRY",
-            title: "새로운 사용자 문의",
-            message: "OOO님의 1:1 문의가 도착했습니다.",
-            createdAt: "5분 전",
-            read: false,
-        },
-        {
-            id: 2,
-            category: "REPORT",
-            title: "리뷰 신고 접수",
-            message: "XX식당에 대한 리뷰 신고가 접수되었습니다.",
-            createdAt: "오후 2:45",
-            read: true,
-        },
-        {
-            id: 3,
-            category: "RESTAURANT_REQUEST",
-            title: "새로운 맛집 요청",
-            message: "새로운 맛집 등록 요청이 있습니다.",
-            createdAt: "오전 10:12",
-            read: false,
-        },
-        {
-            id: 4,
-            category: "USER_PENALTY",
-            title: "계정 제재 알림",
-            message: "정책 위반으로 사용자 계정이 제재되었습니다.",
-            createdAt: "어제",
-            read: false,
-        },
-    ];
+    const { response, loading, error, refresh } = AdminNotificationViewModels();
 
     const categoryMap: any = {
         INQUIRY: { icon: "chat-bubble-outline", color: "#1E88E5" },
@@ -70,12 +39,52 @@ export const AdminNotificationScreen = () => {
         setSelectedCategory((prev) => (prev === cat ? null : cat));
     };
 
-    const filteredList = serverNotifications.filter((item) => {
+    const notifications = response?.data ?? [];
+
+    const filteredList = notifications.filter((item) => {
         if (readFilter === "UNREAD" && item.read) return false;
         if (readFilter === "READ" && !item.read) return false;
         if (selectedCategory && item.category !== selectedCategory) return false;
         return true;
     });
+
+
+    if (loading)
+        return (
+            <View
+                style={{
+                    flex: 1,
+                    justifyContent: "center",
+                    alignItems: "center",
+                    backgroundColor: theme.background,
+                }}
+            >
+                <ActivityIndicator size="large" color={theme.icon} />
+                <Text
+                    style={{
+                        marginTop: 10,
+                        color: theme.textSecondary,
+                        fontSize: 15,
+                    }}
+                >
+                    알림 데이터를 불러오는 중...
+                </Text>
+            </View>
+        );
+
+    if (error)
+        return (
+            <View
+                style={{
+                    flex: 1,
+                    justifyContent: "center",
+                    alignItems: "center",
+                    backgroundColor: theme.background,
+                }}
+            >
+                <Text style={{ color: "red", fontSize: 16 }}>{error}</Text>
+            </View>
+        );
 
     return (
         <View style={[styles.container, { backgroundColor: theme.background }]}>
@@ -111,7 +120,6 @@ export const AdminNotificationScreen = () => {
                                 },
                             ]}
                         >
-                            {/* 아이콘 */}
                             <View
                                 style={[
                                     styles.iconCircle,
@@ -125,7 +133,6 @@ export const AdminNotificationScreen = () => {
                                 />
                             </View>
 
-                            {/* 텍스트 */}
                             <View style={{ flex: 1 }}>
                                 <Text style={[styles.title, { color: theme.textPrimary }]}>
                                     {item.title}

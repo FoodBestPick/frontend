@@ -14,4 +14,18 @@ export class GetAdminStats {
   async executeRestaurantList(page: number, size: number, status?: string, keyword? : string) {
     return this.repository.getRestaurantList(page, size, status, keyword);
   }
+
+  async executeUserList(
+    page: number,
+    size: number,
+    status?: string,
+    sort?: string,
+    keyword?: string
+  ) {
+    return await this.repository.getUserList(page, size, status, sort, keyword);
+  }
+
+  async executeNotifications() {
+    return await this.repository.getNotifications();
+  }
 }

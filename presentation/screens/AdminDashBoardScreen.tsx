@@ -16,10 +16,15 @@ import Ionicons from "react-native-vector-icons/Ionicons";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 import { LineChart, BarChart } from "react-native-chart-kit";
 import { ThemeContext } from "../../context/ThemeContext";
+import { useNavigation } from "@react-navigation/native";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { RootStackParamList } from "../navigation/types/RootStackParamList";
 
 const { width } = Dimensions.get("window");
+type Navigation = NativeStackNavigationProp<RootStackParamList>;
 
 export const AdminDashBoardScreen = () => {
+  const navigation = useNavigation<Navigation>();
   const { isDarkMode, theme } = useContext(ThemeContext);
   const { stats, fetchStats } = AdminDashBoardViewModel();
   const [refreshing, setRefreshing] = useState(false);
@@ -86,7 +91,11 @@ export const AdminDashBoardScreen = () => {
         { backgroundColor: isDarkMode ? theme.background : COLORS.background },
       ]}
     >
-      <Header title="관리자 대시보드" />
+      <Header
+        title="관리자 대시보드"
+        iconName="notifications-none"
+        onIconPress={() => navigation.navigate("NotificationScreen")}
+      />
       <ScrollView
         contentContainerStyle={styles.content}
         refreshControl={

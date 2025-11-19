@@ -13,6 +13,7 @@ import FindAccountScreen from '../frontend/presentation/screens/FindAccountScree
 import RestaurantDetailScreen from '../frontend/presentation/screens/RestaurantDetailScreen';
 import UserNavigation from './presentation/navigation/UserNavigation';
 import { AdminRestaurantAddScreen } from './presentation/screens/AdminRestaurantAddScreen';
+import { AdminNotificationScreen } from './presentation/screens/AdminNotificationScreen';
 import { MapSelectScreen } from './presentation/screens/MapSelectScreen';
 import { ThemeProvider } from './context/ThemeContext';
 import { useContext } from 'react';
@@ -46,6 +47,10 @@ function AppInner() {
           <Stack.Screen
             name="AdminRestaurantAdd"
             component={AdminRestaurantAddScreen}
+          />
+          <Stack.Screen
+            name="NotificationScreen"
+            component={AdminNotificationScreen}
           />
 
           {/* 사용자 */}

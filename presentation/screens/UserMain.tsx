@@ -1,27 +1,57 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
     View,
     Text,
-    TextInput,
     StyleSheet,
     FlatList,
     Image,
     TouchableOpacity,
     StatusBar,
     Dimensions,
-    Animated
+    Animated,
+    LayoutAnimation,
+    Platform,
+    UIManager,
 } from "react-native";
 import Icon from "react-native-vector-icons/Ionicons";
-import { foodRes, CategoryKey, Store } from "../../data/mock/foodRes";
-import { LayoutAnimation } from "react-native";
+
+// 🔥 [수정] 여기가 잘못되어 있었습니다. 이걸로 바꾸세요.
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useNavigation } from "@react-navigation/native"; // ✅ 추가
+
+import { useNavigation } from "@react-navigation/native";
+import { foodRes, CategoryKey, Store } from "../../data/mock/foodRes";
+import UserTabBar from "../components/UserTabBar";
+
+if (Platform.OS === "android" && UIManager.setLayoutAnimationEnabledExperimental) {
+    UIManager.setLayoutAnimationEnabledExperimental(true);
+}
 
 const { width } = Dimensions.get("window");
+const MAIN_COLOR = "#FFA847";
+
+const SCROLL_THRESHOLD = 220;
+
+// 스크롤바 트랙의 길이 (화면 너비의 75%)
+const TRACK_WIDTH = width * 0.75;
 
 const UserMain = () => {
     const [selectedCategory, setSelectedCategory] = useState<CategoryKey>("전체");
-    const navigation = useNavigation(); // ✅ 추가
+    const navigation = useNavigation();
+
+    const scrollY = useRef(new Animated.Value(0)).current;
+    const [isStickyActive, setIsStickyActive] = useState(false);
+
+    useEffect(() => {
+        const listenerId = scrollY.addListener(({ value }) => {
+            if (value > SCROLL_THRESHOLD - 50 && !isStickyActive) {
+                setIsStickyActive(true);
+            } else if (value <= SCROLL_THRESHOLD - 50 && isStickyActive) {
+                setIsStickyActive(false);
+            }
+        });
+        return () => scrollY.removeListener(listenerId);
+    }, [isStickyActive]);
+
 
     const categories: { key: CategoryKey; icon: any }[] = [
         { key: "전체", icon: require("../../assets/icons/all.png") },
@@ -36,13 +66,9 @@ const UserMain = () => {
         { key: "일식", icon: require("../../assets/icons/japanese.png") },
     ];
 
-
     const getStoresByCategory = (category: CategoryKey): Store[] => {
         if (category === "전체") return [];
-
         const stores = foodRes[category] || [];
-
-        // ⭐ 평점 숫자만 추출해서 내림차순 정렬
         return [...stores].sort((a, b) => {
             const ratingA = parseFloat(String(a.rating).replace(/[^\d.]/g, ""));
             const ratingB = parseFloat(String(b.rating).replace(/[^\d.]/g, ""));
@@ -50,47 +76,117 @@ const UserMain = () => {
         });
     };
 
+    const FixedSearchBar = () => (
+        <View style={styles.fixedHeader}>
+            <View style={styles.headerTitleWrap}><Text style={styles.headerTitle}>맛집 찾기</Text></View>
+            <TouchableOpacity
+                style={styles.searchBox}
+                activeOpacity={0.9}
+                onPress={() => navigation.navigate("SearchScreen" as never)}
+            >
+                <Icon name="search-outline" size={20} color="#BBB" style={styles.searchIcon} />
+                <Text style={styles.placeholderText}>원하는 음식을 입력해주세요</Text>
+            </TouchableOpacity>
+        </View>
+    );
 
-
-    const CategorySection = ({
-        category,
-        stores,
-    }: {
-        category: string;
-        stores: Store[];
-    }) => {
-        const scrollX = useRef(new Animated.Value(0)).current;
-        const [scrollBarWidth, setScrollBarWidth] = useState(50);
-        const [scrollViewWidth, setScrollViewWidth] = useState(1);
-        const [contentWidth, setContentWidth] = useState(1);
-        const [trackWidth, setTrackWidth] = useState(1);
-
-        // ✅ translateX = 스크롤 시 막대의 이동 거리
-        const translateX = scrollX.interpolate({
-            inputRange: [0, Math.max(contentWidth - scrollViewWidth, 1)],
-            outputRange: [0, Math.max(trackWidth - scrollBarWidth, 0)],
-            extrapolate: "clamp",
+    const StickyOneRowCategory = () => {
+        const opacity = scrollY.interpolate({
+            inputRange: [SCROLL_THRESHOLD - 50, SCROLL_THRESHOLD],
+            outputRange: [0, 1],
+            extrapolate: 'clamp',
         });
 
-        const onScroll = Animated.event(
-            [{ nativeEvent: { contentOffset: { x: scrollX } } }],
-            { useNativeDriver: false }
+        const translateY = scrollY.interpolate({
+            inputRange: [SCROLL_THRESHOLD - 50, SCROLL_THRESHOLD],
+            outputRange: [-20, 0],
+            extrapolate: 'clamp',
+        });
+
+        return (
+            <Animated.View
+                style={[
+                    styles.stickyCategoryContainer,
+                    { opacity, transform: [{ translateY }] }
+                ]}
+                pointerEvents={isStickyActive ? 'auto' : 'none'}
+            >
+                <FlatList
+                    data={categories}
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    keyExtractor={item => item.key}
+                    contentContainerStyle={{ paddingHorizontal: 10 }}
+                    renderItem={({ item }) => (
+                        <TouchableOpacity
+                            style={[styles.scrollCatItem, selectedCategory === item.key && styles.scrollCatItemSelected]}
+                            onPress={() => setSelectedCategory(item.key)}
+                        >
+                            <Image source={item.icon} style={[styles.iconSmall, selectedCategory === item.key && { tintColor: MAIN_COLOR }]} />
+                            <Text style={[styles.textSmall, selectedCategory === item.key && styles.textSelected]}>{item.key}</Text>
+                        </TouchableOpacity>
+                    )}
+                />
+                <View style={styles.stickyTitleWrap}>
+                    <Text style={styles.recommendTitle}>맛집 추천</Text>
+                    {selectedCategory !== '전체' && <Text style={styles.subTitleSmall}>{selectedCategory}</Text>}
+                </View>
+            </Animated.View>
         );
+    };
 
-        // ✅ 스크롤바 길이 자동 계산
-        const updateScrollBarWidth = (scrollW: number, contentW: number, tWidth: number) => {
-            if (tWidth <= 0 || contentW <= 0) return;
+    const MainGridHeader = () => (
+        <View>
+            <View style={styles.gridWrapper}>
+                {categories.map((item) => {
+                    const isSelected = selectedCategory === item.key;
+                    return (
+                        <TouchableOpacity
+                            key={item.key}
+                            style={[styles.gridItem, isSelected && styles.gridItemSelected]}
+                            onPress={() => {
+                                LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+                                setSelectedCategory(item.key);
+                            }}
+                            activeOpacity={0.7}
+                        >
+                            <Image
+                                source={item.icon}
+                                style={[styles.icon, isSelected && styles.iconSelected]}
+                            />
+                            <Text
+                                style={[styles.gridText, isSelected && styles.gridTextSelected]}
+                                numberOfLines={1}
+                                adjustsFontSizeToFit={true}
+                            >
+                                {item.key}
+                            </Text>
+                        </TouchableOpacity>
+                    );
+                })}
+            </View>
 
-            // ✅ 스크롤 가능한 경우만 비율 계산
-            if (contentW > scrollW) {
-                const ratio = scrollW / contentW;
-                const newWidth = Math.max(tWidth * ratio * 1.1, 40); // 약간 길게
-                setScrollBarWidth(newWidth);
-            } else {
-                // ✅ 아직 데이터 로드 중일 때 (스크롤 불가)
-                setScrollBarWidth(tWidth * 0.3); // 트랙의 30%만 기본 표시 (시각적 안정)
-            }
-        };
+            <View style={styles.recommendHeader}>
+                <Text style={styles.recommendTitle}>맛집 추천</Text>
+                {selectedCategory !== "전체" && <Text style={styles.subTitleSmall}>{selectedCategory}</Text>}
+            </View>
+        </View>
+    );
+
+    const CategorySection = ({ category, stores }: { category: string; stores: Store[] }) => {
+        const scrollX = useRef(new Animated.Value(0)).current;
+        const [contentWidth, setContentWidth] = useState(1);
+        const [scrollViewWidth, setScrollViewWidth] = useState(1);
+
+        const scrollIndicatorSize = contentWidth > scrollViewWidth
+            ? (scrollViewWidth / contentWidth) * TRACK_WIDTH
+            : TRACK_WIDTH;
+
+        const scrollIndicatorPosition = scrollX.interpolate({
+            inputRange: [0, Math.max(contentWidth - scrollViewWidth, 1)],
+            outputRange: [0, TRACK_WIDTH - scrollIndicatorSize],
+            extrapolate: "clamp",
+        });
 
         return (
             <View key={category} style={styles.categorySection}>
@@ -100,584 +196,230 @@ const UserMain = () => {
                     showsHorizontalScrollIndicator={false}
                     data={stores}
                     keyExtractor={(item) => item.id.toString()}
+                    onScroll={Animated.event([{ nativeEvent: { contentOffset: { x: scrollX } } }], { useNativeDriver: false })}
+                    onContentSizeChange={(w) => setContentWidth(w)}
+                    onLayout={(e) => setScrollViewWidth(e.nativeEvent.layout.width)}
                     renderItem={({ item, index }) => (
-                        <View style={styles.card}>
-                            {index < 3 && (
-                                <View
-                                    style={[
-                                        styles.rankBadge,
-                                        index === 0
-                                            ? { backgroundColor: "#FFD700" }
-                                            : index === 1
-                                                ? { backgroundColor: "#C0C0C0" }
-                                                : { backgroundColor: "#CD7F32" },
-                                    ]}
-                                >
-                                    <Text style={styles.rankBadgeText}>{index + 1}</Text>
+                        <TouchableOpacity style={styles.cardContainer} activeOpacity={0.8}>
+                            <View style={styles.cardImageWrapper}>
+                                {index < 3 && (
+                                    <View style={[styles.rankBadgeAbsolute, index === 0 ? { backgroundColor: "#FFD700" } : index === 1 ? { backgroundColor: "#C0C0C0" } : { backgroundColor: "#CD7F32" }]}>
+                                        <Text style={styles.rankTextWhite}>{index + 1}</Text>
+                                    </View>
+                                )}
+                                <Image source={{ uri: item.image[0] }} style={styles.cardImage} resizeMode="cover" />
+                            </View>
+                            <View style={styles.cardContent}>
+                                <Text style={styles.cardTitle} numberOfLines={1}>{item.name}</Text>
+                                <View style={styles.cardInfoRow}>
+                                    <Icon name="star" size={12} color={MAIN_COLOR} />
+                                    <Text style={styles.ratingScore}>{item.rating}</Text>
+                                    <Text style={styles.reviewCountShort}>({item.reviews})</Text>
                                 </View>
-                            )}
-                            {item.image?.[0] && (
-                                <Image
-                                    source={{ uri: item.image[0] }}
-                                    style={styles.cardImage}
-                                />
-                            )}
-                            <Text style={styles.cardTitle}>{item.name}</Text>
-                            <Text style={styles.cardRating}>⭐ {item.rating}</Text>
-                        </View>
+                            </View>
+                        </TouchableOpacity>
                     )}
-                    onScroll={onScroll}
-                    onContentSizeChange={(w) => {
-                        setContentWidth(w);
-                        updateScrollBarWidth(scrollViewWidth, w, trackWidth);
-                    }}
-                    onLayout={(e) => {
-                        const w = e.nativeEvent.layout.width;
-                        setScrollViewWidth(w);
-                        updateScrollBarWidth(w, contentWidth, trackWidth);
-                    }}
-
+                    contentContainerStyle={{ paddingRight: 20, paddingBottom: 10, paddingLeft: 2 }}
                 />
 
-                <View
-                    style={styles.scrollTrack}
-                    onLayout={(e) => {
-                        const tw = e.nativeEvent.layout.width;
-                        setTrackWidth(tw);
-                        updateScrollBarWidth(scrollViewWidth, contentWidth, tw);
-                    }}
-                >
-                    <Animated.View
-                        style={[
-                            styles.scrollThumb,
-                            {
-                                width: scrollBarWidth,
-                                transform: [{ translateX }],
-                            },
-                        ]}
-                    />
-                </View>
-
+                {contentWidth > scrollViewWidth && (
+                    <View style={styles.scrollTrack}>
+                        <Animated.View
+                            style={[
+                                styles.scrollThumb,
+                                {
+                                    width: scrollIndicatorSize,
+                                    transform: [{ translateX: scrollIndicatorPosition }]
+                                }
+                            ]}
+                        />
+                    </View>
+                )}
             </View>
         );
     };
 
-
-
-
-
-    const renderCoupangCard = ({ item, index }: { item: Store; index: number }) => (
-        <View style={styles.storeRow}>
-            {/* 상단: 랭킹 + 음식점 이름 */}
-            <View style={styles.headerRow}>
-                {index < 3 && ( // 🏅 1~3등까지만 표시
-                    <View
-                        style={[
-                            styles.rankBadgeList,
-                            index === 0
-                                ? { backgroundColor: "#FFD700" } // 금
-                                : index === 1
-                                    ? { backgroundColor: "#C0C0C0" } // 은
-                                    : { backgroundColor: "#CD7F32" }, // 동
-                        ]}
-                    >
-                        <Text style={styles.rankBadgeListText}>{index + 1}</Text>
+    const renderStoreListItem = ({ item, index }: { item: Store; index: number }) => (
+        <TouchableOpacity style={styles.storeContainer} activeOpacity={0.9}>
+            <View style={styles.storeHeader}>
+                {index < 3 ? (
+                    <View style={[styles.rankBadge, index === 0 ? { backgroundColor: "#FFD700" } : index === 1 ? { backgroundColor: "#C0C0C0" } : { backgroundColor: "#CD7F32" }]}>
+                        <Text style={styles.rankTextWhite}>{index + 1}</Text>
                     </View>
-                )}
-
+                ) : (<View style={{ width: 26 }} />)}
                 <Text style={styles.storeName}>{item.name}</Text>
             </View>
-
-            {/* 이미지 */}
-            <View style={styles.imageGridVertical}>
-                {item.image?.[0] && (
-                    <Image source={{ uri: item.image[0] }} style={styles.mainImageVertical} />
-                )}
-                <View style={styles.subImageColumnVertical}>
-                    {item.image?.slice(1, 3)?.map(
-                        (uri, idx) =>
-                            uri && <Image key={idx} source={{ uri }} style={styles.subImageVertical} />,
-                    )}
+            <View style={styles.imageGrid}>
+                <Image source={{ uri: item.image[0] }} style={styles.mainImage} resizeMode="cover" />
+                <View style={styles.subImageColumn}>
+                    <Image source={{ uri: item.image[1] || item.image[0] }} style={styles.subImage} resizeMode="cover" />
+                    <Image source={{ uri: item.image[2] || item.image[0] }} style={styles.subImage} resizeMode="cover" />
                 </View>
             </View>
-
-            {/* 하단 정보 */}
-            <View style={styles.infoRow}>
-                <Text style={styles.ratingText}>
-                    ⭐ {item.rating.toFixed(1)} ({item.reviews}+)
-                </Text>
-                <Text style={styles.distanceText}>📍 0.8km</Text>
+            <View style={styles.storeFooter}>
+                <View style={styles.ratingContainer}>
+                    <Icon name="star" size={14} color={MAIN_COLOR} style={{ marginRight: 2 }} />
+                    <Text style={styles.ratingScore}>{item.rating.toFixed(1)}</Text>
+                    <Text style={styles.reviewCount}>({item.reviews}+)</Text>
+                </View>
+                <View style={styles.distanceContainer}>
+                    <Icon name="location-sharp" size={14} color="#AAA" style={{ marginRight: 2 }} />
+                    <Text style={styles.distanceText}>0.8km</Text>
+                </View>
             </View>
-
-            {/* 음식점 구분선 */}
-            <View style={styles.divider} />
-        </View>
+            <View style={styles.separator} />
+        </TouchableOpacity>
     );
-
-
-
-
 
     return (
         <SafeAreaView style={styles.container}>
             <StatusBar barStyle="dark-content" backgroundColor="#FFF" />
 
-            {selectedCategory === "전체" ? (
-                <FlatList<[string, Store[]]>
-                    data={Object.entries(foodRes)}
-                    keyExtractor={(item) => item[0]}
-                    renderItem={({ item }) => (
-                        <CategorySection
-                            category={item[0]}
-                            stores={
-                                [...item[1]]
-                                    .sort((a, b) => b.rating - a.rating) // ✅ 평점 높은 순 정렬
-                                    .map((store) => ({
-                                        ...store,
-                                        rating: Number(store.rating.toFixed(1)), // ✅ 소수점 한 자리만 유지
-                                    }))
-                            }
-                        />
-                    )} showsVerticalScrollIndicator={false}
-                    ListHeaderComponent={
-                        <>
-                            <View style={[styles.header, { marginTop: 5 }]}>
-                                <Text style={styles.title}>맛집 찾기</Text>
-                            </View>
+            <FixedSearchBar />
 
-                            <View style={styles.searchBox}>
-                                <Icon
-                                    name="search-outline"
-                                    size={18}
-                                    color="#FFA847"
-                                    style={styles.searchIcon}
-                                />
-                                <TouchableOpacity
-                                    style={styles.searchInput}
-                                    activeOpacity={0.8}
-                                    onPress={() => navigation.navigate("SearchScreen" as never)}
-                                >
-                                    <Text style={{ color: "#bbb", fontSize: 14 }}>
-                                        원하는 음식을 입력해주세요
-                                    </Text>
-                                </TouchableOpacity>
-                            </View>
+            <View style={{ flex: 1, position: 'relative' }}>
+                <StickyOneRowCategory />
 
-                            <View style={styles.categoryContainer}>
-                                <FlatList
-                                    data={categories}
-                                    keyExtractor={(item) => item.key}
-                                    numColumns={5}
-                                    scrollEnabled={false}
-                                    contentContainerStyle={styles.gridContainer}
-                                    renderItem={({ item }) => {
-                                        const isSelected = selectedCategory === item.key;
-                                        return (
-                                            <TouchableOpacity
-                                                style={[
-                                                    styles.categoryButton,
-                                                    isSelected && styles.categoryButtonSelected,
-                                                ]}
-                                                onPress={() => {
-                                                    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-                                                    setSelectedCategory(item.key);
-                                                }}
-                                                activeOpacity={0.8}
-                                            >
-                                                <Image
-                                                    source={item.icon}
-                                                    style={[styles.icon, isSelected && styles.iconSelected]}
-                                                />
-                                                <Text
-                                                    style={[styles.text, isSelected && styles.textSelected]}
-                                                >
-                                                    {item.key}
-                                                </Text>
-                                            </TouchableOpacity>
-                                        );
-                                    }}
-                                />
-                            </View>
+                {selectedCategory === "전체" ? (
+                    <Animated.FlatList
+                        onScroll={Animated.event(
+                            [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+                            { useNativeDriver: true }
+                        )}
+                        scrollEventThrottle={16}
 
-                            <View style={styles.recommendHeader}>
-                                <Text style={styles.recommendTitle}>맛집 추천</Text>
-                                <Text style={styles.subTitle}>{selectedCategory}</Text>
-                            </View>
+                        data={Object.entries(foodRes)}
+                        keyExtractor={(item) => item[0]}
+                        showsVerticalScrollIndicator={false}
+                        contentContainerStyle={{ paddingBottom: 100, paddingTop: 10 }}
+                        ListHeaderComponent={MainGridHeader}
+                        renderItem={({ item }) => (
+                            <CategorySection
+                                key={item[0]}
+                                category={item[0]}
+                                stores={[...item[1]].sort((a, b) => b.rating - a.rating)}
+                            />
+                        )}
+                    />
+                ) : (
+                    <Animated.FlatList<Store>
+                        onScroll={Animated.event(
+                            [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+                            { useNativeDriver: true }
+                        )}
+                        scrollEventThrottle={16}
 
-
-                        </>
-                    }
-                />
-            ) : (
-                <FlatList<Store>
-                    data={getStoresByCategory(selectedCategory)}
-                    keyExtractor={(item) => item.id.toString()}
-                    renderItem={renderCoupangCard}
-                    showsVerticalScrollIndicator={false}
-                    contentContainerStyle={{ paddingTop: 10 }} // ✅ 이 한 줄 추가 (중요)
-
-                    ListHeaderComponent={
-                        <>
-                            <View style={styles.header}>
-                                <Text style={styles.title}>맛집 찾기</Text>
-                            </View>
-
-                            <View style={styles.searchBox}>
-                                <Icon
-                                    name="search-outline"
-                                    size={18}
-                                    color="#FFA847"
-                                    style={styles.searchIcon}
-                                />
-                                <TouchableOpacity
-                                    style={styles.searchInput}
-                                    activeOpacity={0.8}
-                                    onPress={() => navigation.navigate("SearchScreen" as never)}
-                                >
-                                    <Text style={{ color: "#bbb", fontSize: 14 }}>
-                                        원하는 음식을 입력해주세요
-                                    </Text>
-                                </TouchableOpacity>
-                            </View>
-
-                            <View style={styles.categoryContainer}>
-                                <FlatList
-                                    data={categories}
-                                    keyExtractor={(item) => item.key}
-                                    numColumns={5}
-                                    scrollEnabled={false}
-                                    contentContainerStyle={styles.gridContainer}
-                                    renderItem={({ item }) => {
-                                        const isSelected = selectedCategory === item.key;
-                                        return (
-                                            <TouchableOpacity
-                                                style={[
-                                                    styles.categoryButton,
-                                                    isSelected && styles.categoryButtonSelected,
-                                                ]}
-                                                onPress={() => {
-                                                    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-                                                    setSelectedCategory(item.key);
-                                                }}
-                                                activeOpacity={0.8}
-                                            >
-                                                <Image
-                                                    source={item.icon}
-                                                    style={[styles.icon, isSelected && styles.iconSelected]}
-                                                />
-                                                <Text
-                                                    style={[styles.text, isSelected && styles.textSelected]}
-                                                >
-                                                    {item.key}
-                                                </Text>
-                                            </TouchableOpacity>
-                                        );
-                                    }}
-                                />
-                            </View>
-
-                            <View style={styles.recommendHeader}>
-                                <Text style={styles.recommendTitle}>맛집 추천</Text>
-                                <Text style={styles.subTitle}>{selectedCategory}</Text>
-                            </View>
-
-
-                        </>
-                    }
-                />
-            )}
-
-            {/* ✅ 하단 네비게이션 */}
-            <View style={styles.tabBar}>
-                {[
-                    { label: "홈", icon: "home-outline", route: "UserMain" },
-                    { label: "룰렛", icon: "refresh-outline", route: "RouletteScreen" },
-                    { label: "매칭", icon: "people-outline", route: "MatchScreen" },
-                    { label: "마이페이지", icon: "person-outline", route: "MyPageScreen" },
-                    { label: "알림", icon: "notifications-outline", route: "NotificationScreen" },
-                ].map(({ label, icon, route }, idx) => (
-                    <TouchableOpacity
-                        key={idx}
-                        style={styles.tabItem}
-                        onPress={() => navigation.navigate(route as never)} // ✅ 작동 부분
-                    >
-                        <Icon
-                            name={icon}
-                            size={22}
-                            color={label === "홈" ? "#FFA847" : "#999"}
-                        />
-                        <Text
-                            style={[styles.tabLabel, label === "홈" && styles.tabLabelActive]}
-                        >
-                            {label}
-                        </Text>
-                    </TouchableOpacity>
-                ))}
+                        data={getStoresByCategory(selectedCategory)}
+                        keyExtractor={(item) => item.id.toString()}
+                        showsVerticalScrollIndicator={false}
+                        contentContainerStyle={{ paddingBottom: 100, paddingTop: 10 }}
+                        ListHeaderComponent={MainGridHeader}
+                        renderItem={renderStoreListItem}
+                    />
+                )}
             </View>
+
+            <UserTabBar active="홈" />
         </SafeAreaView>
     );
 };
 
 export default UserMain;
 
-// 💅 스타일 (기존과 동일)
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: "#fff" },
-    header: { alignItems: "center", marginTop: 10 },
-    title: { fontSize: 20, fontWeight: "700", color: "#000" },
+
+    fixedHeader: {
+        backgroundColor: '#fff',
+        paddingTop: 12,
+        paddingBottom: 12,
+        borderBottomWidth: 1,
+        borderBottomColor: '#F5F5F5',
+        zIndex: 100,
+    },
+    headerTitleWrap: { alignItems: 'center', marginBottom: 12 },
+    headerTitle: { fontSize: 18, fontWeight: "700", color: "#000" },
     searchBox: {
-        flexDirection: "row",
-        alignItems: "center",
-        alignSelf: "center",
-        borderWidth: 1,
-        borderColor: "#FFA847",
-        borderRadius: 10,
-        width: "90%",
-        height: 38,
-        marginTop: 10,
-        paddingHorizontal: 10,
-    },
-    searchIcon: { marginRight: 6 },
-    searchInput: { flex: 1, fontSize: 14, color: "#333" },
-    categoryContainer: {
-        flexDirection: "row",
-        flexWrap: "wrap",
-        justifyContent: "center",
-        alignItems: "center",
-        paddingHorizontal: 12,
-        marginTop: 16,
-    },
-    categoryItem: {
-        alignItems: "center",
-        justifyContent: "center",
-        width: 60,
-        height: 60,
-        margin: 6,
-        borderRadius: 14
-    },
-    categoryItemActive: { backgroundColor: "#FFA847" },
-    categoryText: { fontSize: 12, color: "#888", marginTop: 4, textAlign: "center" },
-    categoryTextActive: { color: "#fff", fontWeight: "600" },
-    categorySection: {
-        marginTop: 15, paddingHorizontal: 15, marginBottom: 4, // ✅ 섹션 아래 살짝 여백
-    },
-    subTitle: { fontSize: 16, fontWeight: "700", marginBottom: 10 },
-    card: {
+        flexDirection: "row", alignItems: "center", alignSelf: "center",
+        borderWidth: 1, borderColor: MAIN_COLOR, borderRadius: 8,
+        width: width - 32, height: 44, paddingHorizontal: 12,
         backgroundColor: "#fff",
-        width: 150,
-        marginRight: 15,
-        borderRadius: 14,
-        borderWidth: 1,
-        borderColor: "#eee",
-        padding: 6, // ✅ 이미지와 테두리 사이 여백
-        shadowColor: "#000",
-        shadowOpacity: 0.05,
-        shadowRadius: 2,
-        elevation: 1,
     },
+    searchIcon: { marginRight: 8 },
+    placeholderText: { flex: 1, fontSize: 14, color: "#BBB" },
 
-    cardImage: {
-        width: "100%",
-        height: 100,
-        borderRadius: 14, // ✅ 카드보다 살짝 작은 radius로 내부 둥글기
-        resizeMode: "cover",
-    },
-
-    cardTitle: { fontSize: 14, fontWeight: "600", marginTop: 8, marginLeft: 8 },
-    cardRating: { fontSize: 12, color: "#777", marginLeft: 8 },
-    recommendHeader: { marginTop: 20, marginLeft: 15 },
-    recommendTitle: { fontSize: 17, fontWeight: "800" },
-    storeCardCoupang: {
-        backgroundColor: "#fff",
-        borderRadius: 15,
-        padding: 12,
-        marginHorizontal: 15,
-        marginBottom: 15,
-        shadowColor: "#000",
-        shadowOpacity: 0.05,
-        shadowRadius: 3,
-        elevation: 2,
-    },
-    rankText: { color: "#FFA847", fontWeight: "700", fontSize: 16, marginBottom: 5 },
-    imageGrid: { flexDirection: "row", justifyContent: "space-between" },
-
-    mainImage: {
-        flex: 2,
-        height: 110,
-        resizeMode: "cover",
-        borderRadius: 10,
-    },
-    // ✅ 음식점 리스트형 카드용 스타일
-    // ✅ 리스트형 평면 카드 (실선 구분)
-    storeRow: {
-        backgroundColor: "#fff",
-        paddingVertical: 12,
-        paddingHorizontal: 16,
-    },
-
-    headerRow: {
-        flexDirection: "row",
-        alignItems: "center",
-        marginBottom: 8,
-    },
-
-    rankBadgeList: {
-        width: 22,
-        height: 22,
-        borderRadius: 11,
-        justifyContent: "center",
-        alignItems: "center",
-        marginRight: 8,
-    },
-
-    rankBadgeListText: {
-        color: "#fff",
-        fontWeight: "700",
-        fontSize: 12,
-    },
-
-    storeName: {
-        fontSize: 15,
-        fontWeight: "700",
-        color: "#000",
-    },
-
-    imageGridVertical: {
-        flexDirection: "row",
-        justifyContent: "space-between",
-        marginBottom: 12,
-    },
-
-    mainImageVertical: {
-        flex: 2.2, // ✅ 살짝 더 넓게 (왼쪽 메인 강조)
-        height: 125,
-        resizeMode: "cover",
-        borderRadius: 10,
-    },
-
-    subImageColumnVertical: {
-        flex: 1,
-        justifyContent: "space-between",
-        marginLeft: 10,
-    },
-
-    subImageVertical: {
-        height: 58, // ✅ 두 장이 균형감 있게 배치되도록
-        width: "100%",
-        borderRadius: 10,
-        resizeMode: "cover",
-    },
-
-    infoRow: {
-        flexDirection: "row",
-        justifyContent: "space-between",
-        alignItems: "center",
-    },
-
-    ratingText: {
-        fontSize: 13,
-        color: "#333",
-    },
-
-    distanceText: {
-        fontSize: 13,
-        color: "#777",
-    },
-
-    divider: {
-        height: 1,
-        backgroundColor: "#000000", // ✅ 회색 실선으로 구분
-        marginTop: 12,
-    },
-
-
-    rankBadge: {
-        position: "absolute",
-        top: 11,        // 여백
-        left: 11,
-        width: 24,
-        height: 24,
-        borderRadius: 12,
-        justifyContent: "center",
-        alignItems: "center",
-        zIndex: 2,     // ✅ 이미지보다 위로 올리기
-        elevation: 2,  // ✅ 안드로이드에서도 위로
-    },
-
-    rankBadgeText: {
-        color: "#fff",
-        fontWeight: "700",
-        fontSize: 12,
-    },
-    tabBar: {
-        flexDirection: "row",
-        justifyContent: "space-around",
-        alignItems: "center",
-        borderTopWidth: 1,
-        borderColor: "#eee",
-        backgroundColor: "#fff",
-        height: 65,
-        position: "absolute",
-        bottom: 0,
+    stickyCategoryContainer: {
+        position: 'absolute',
+        top: 0,
         left: 0,
         right: 0,
-        paddingBottom: 10,
-        borderTopLeftRadius: 20,
-        borderTopRightRadius: 20,
-        elevation: 8,
+        backgroundColor: '#fff',
+        zIndex: 50,
+        paddingTop: 10,
+        borderBottomWidth: 1,
+        borderBottomColor: '#F5F5F5',
     },
+    stickyTitleWrap: { marginTop: 4, marginBottom: 10, paddingLeft: 16 },
+
+    gridWrapper: { flexDirection: "row", flexWrap: "wrap", paddingHorizontal: 16, justifyContent: 'space-between', marginTop: 10 },
+    gridItem: { width: '18%', aspectRatio: 0.85, alignItems: "center", justifyContent: "center", marginBottom: 15, borderRadius: 12 },
+    gridItemSelected: { backgroundColor: '#FFF4E6' },
+    icon: { width: 32, height: 32, resizeMode: "contain", marginBottom: 6, tintColor: "#555" },
+    iconSelected: { tintColor: "#FFA847" },
+    gridText: { fontSize: 11, color: "#666", textAlign: "center", fontWeight: "500" },
+    gridTextSelected: { color: "#FFA847", fontWeight: "700" },
+
+    recommendHeader: { marginTop: 10, marginLeft: 16, marginBottom: 10 },
+    recommendTitle: { fontSize: 18, fontWeight: "800", color: "#000" },
+    subTitle: { fontSize: 16, fontWeight: "700", marginBottom: 10, color: "#333" },
+    subTitleSmall: { fontSize: 14, fontWeight: "600", color: "#888", marginTop: 4, marginBottom: 10 },
+
+    categorySection: { marginBottom: 24, paddingLeft: 16 },
+    cardContainer: { width: 150, marginRight: 12, backgroundColor: "#fff", borderRadius: 12, borderWidth: 1, borderColor: "#ECECEC", paddingBottom: 12, marginBottom: 4 },
+    cardImageWrapper: { width: '100%', height: 110, borderTopLeftRadius: 11, borderTopRightRadius: 11, overflow: 'hidden', marginBottom: 8, position: 'relative' },
+    cardImage: { width: "100%", height: "100%" },
+    rankBadgeAbsolute: { position: "absolute", top: 8, left: 8, zIndex: 10, width: 20, height: 20, borderRadius: 10, justifyContent: "center", alignItems: "center" },
+    cardContent: { paddingHorizontal: 10 },
+    cardTitle: { fontSize: 15, fontWeight: "800", color: "#000", marginBottom: 4 },
+    cardInfoRow: { flexDirection: "row", alignItems: "center" },
+    ratingScore: { fontSize: 13, fontWeight: "700", color: "#333", marginLeft: 2, marginRight: 2 },
+    reviewCountShort: { fontSize: 12, color: "#999" },
+
+    storeContainer: { paddingHorizontal: 16, paddingVertical: 16, backgroundColor: "#fff" },
+    storeHeader: { flexDirection: "row", alignItems: "center", marginBottom: 10 },
+    rankBadge: { width: 24, height: 24, borderRadius: 12, justifyContent: "center", alignItems: "center", marginRight: 8 },
+    rankTextWhite: { color: "#fff", fontSize: 13, fontWeight: "800" },
+    storeName: { fontSize: 18, fontWeight: "800", color: "#000" },
+    imageGrid: { flexDirection: "row", height: 140, borderRadius: 12, overflow: "hidden" },
+    mainImage: { flex: 2, height: "100%", marginRight: 4 },
+    subImageColumn: { flex: 1, justifyContent: "space-between" },
+    subImage: { width: "100%", height: "49.5%", borderRadius: 0 },
+
+    storeFooter: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginTop: 10 },
+    ratingContainer: { flexDirection: "row", alignItems: "center" },
+    reviewCount: { fontSize: 13, color: "#999" },
+    distanceContainer: { flexDirection: "row", alignItems: "center" },
+    distanceText: { fontSize: 13, color: "#888" },
+    separator: { height: 1, backgroundColor: "#F5F5F5", marginTop: 20 },
+
     scrollTrack: {
-        width: "55%",        // ✅ 전체 길이 줄이기
-        alignSelf: "center", // 가운데 정렬
-        height: 5,           // ✅ 더 굵게
-        backgroundColor: "#e6e6e6",
-        borderRadius: 4,
-        marginTop: 8,
-        overflow: "hidden",
+        width: TRACK_WIDTH,
+        height: 6,
+        backgroundColor: "#F0F0F0",
+        alignSelf: "center",
+        borderRadius: 3,
+        marginTop: 10,
+        overflow: 'hidden'
     },
     scrollThumb: {
-        height: 5,           // ✅ 동일한 두께
+        height: '100%',
         backgroundColor: "#FFA847",
-        borderRadius: 4,
-    },
-    gridContainer: {
-        alignItems: "center",
-        justifyContent: "center",
-        paddingVertical: 10,
-    },
-    categoryButton: {
-        width: width / 5 - 10,
-        margin: 5,
-        alignItems: "center",
-        justifyContent: "center",
-        paddingVertical: 6,
-        borderRadius: 10,
-    },
-    categoryButtonSelected: {
-        backgroundColor: "#FFF4E6",
-    },
-    icon: {
-        width: 36,
-        height: 36,
-        resizeMode: "contain",
-        marginBottom: 5,
-        tintColor: "#888",
-    },
-    iconSelected: {
-        tintColor: "#FFA847",
-    },
-    text: {
-        fontSize: 12,
-        color: "#555",
-        textAlign: "center",
-    },
-    textSelected: {
-        color: "#FFA847",
-        fontWeight: "700",
+        borderRadius: 3
     },
 
-
-    tabItem: { alignItems: "center" },
-    tabLabel: { fontSize: 11, color: "#999", marginTop: 3 },
-    tabLabelActive: { color: "#FFA847", fontWeight: "600" },
+    scrollCatItem: { alignItems: "center", marginHorizontal: 12 },
+    scrollCatItemSelected: {},
+    iconSmall: { width: 28, height: 28, resizeMode: "contain", marginBottom: 4, tintColor: "#999" },
+    textSmall: { fontSize: 11, color: "#999" },
+    textSelected: { color: "#FFA847", fontWeight: "700" },
 });

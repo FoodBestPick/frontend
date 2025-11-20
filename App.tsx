@@ -18,9 +18,10 @@ import RouletteScreen from '../frontend/presentation/screens/RouletteScreen';
 import { AdminRestaurantAddScreen } from './presentation/screens/AdminRestaurantAddScreen';
 import { AdminNotificationScreen } from './presentation/screens/AdminNotificationScreen';
 import { MapSelectScreen } from './presentation/screens/MapSelectScreen';
-import { ThemeProvider } from "./context/ThemeContext"; 
+import { ThemeProvider } from "./context/ThemeContext";
 import { useContext } from "react";
 import { ThemeContext } from "./context/ThemeContext";
+import MyPageScreen from './presentation/screens/MyPageScreen';
 
 const Stack = createStackNavigator<RootStackParamList>();
 
@@ -34,9 +35,14 @@ function AppInner() {
       />
       <NavigationContainer>
         <Stack.Navigator
-          initialRouteName="Splash"
-          screenOptions={{ headerShown: false }}
+          screenOptions={{
+            headerShown: false,
+            animationTypeForReplace: 'push',
+            animation: 'slide_from_right',
+            gestureEnabled: true,
+          }}
         >
+
           {/* 공용 */}
           <Stack.Screen name="Splash" component={SplashScreen} />
           <Stack.Screen name="Onboarding" component={OnboardingScreen} />
@@ -47,7 +53,7 @@ function AppInner() {
 
           {/* 관리자 */}
           <Stack.Screen name="AdminMain" component={AdminMainStack} />
-          <Stack.Screen name="AdminRestaurantAdd" component={AdminRestaurantAddScreen}/>
+          <Stack.Screen name="AdminRestaurantAdd" component={AdminRestaurantAddScreen} />
           <Stack.Screen name="NotificationScreen" component={AdminNotificationScreen} />
 
           {/* 사용자 */}
@@ -59,6 +65,7 @@ function AppInner() {
             component={RestaurantDetailScreen}
           />
           <Stack.Screen name="RouletteScreen" component={RouletteScreen} />
+          <Stack.Screen name="MyPageScreen" component={MyPageScreen} />
         </Stack.Navigator>
       </NavigationContainer>
     </>

@@ -14,13 +14,9 @@ import {
     UIManager,
 } from "react-native";
 import Icon from "react-native-vector-icons/Ionicons";
-
-// 🔥 [수정] 여기가 잘못되어 있었습니다. 이걸로 바꾸세요.
 import { SafeAreaView } from "react-native-safe-area-context";
-
 import { useNavigation } from "@react-navigation/native";
 import { foodRes, CategoryKey, Store } from "../../data/mock/foodRes";
-import UserTabBar from "../components/UserTabBar";
 
 if (Platform.OS === "android" && UIManager.setLayoutAnimationEnabledExperimental) {
     UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -319,7 +315,6 @@ const UserMain = () => {
                 )}
             </View>
 
-            <UserTabBar active="홈" />
         </SafeAreaView>
     );
 };

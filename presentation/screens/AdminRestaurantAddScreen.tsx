@@ -1,4 +1,4 @@
-import React, { useState, useContext, useEffect, useRef } from "react";
+import React, { useState, useContext, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -10,35 +10,38 @@ import {
   Image,
   KeyboardAvoidingView,
   Platform,
-  LayoutAnimation, 
-  UIManager
-} from "react-native";
-import MaterialIcons from "react-native-vector-icons/MaterialIcons";
-import { useNavigation, useRoute } from "@react-navigation/native";
-import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import type { RouteProp } from "@react-navigation/native";
-import { RootStackParamList } from "../navigation/types/RootStackParamList";
-import { Header } from "../components/Header";
-import { ThemeContext } from "../../context/ThemeContext";
-import { launchImageLibrary } from "react-native-image-picker";
+  LayoutAnimation,
+  UIManager,
+} from 'react-native';
+import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
+import { useNavigation, useRoute } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { RouteProp } from '@react-navigation/native';
+import { RootStackParamList } from '../navigation/types/RootStackParamList';
+import { Header } from '../components/Header';
+import { ThemeContext } from '../../context/ThemeContext';
+import { launchImageLibrary } from 'react-native-image-picker';
 
-type Navigation = NativeStackNavigationProp<RootStackParamList, "AdminRestaurantAdd">;
-type AddRouteProp = RouteProp<RootStackParamList, "AdminRestaurantAdd">;
+type Navigation = NativeStackNavigationProp<
+  RootStackParamList,
+  'AdminRestaurantAdd'
+>;
+type AddRouteProp = RouteProp<RootStackParamList, 'AdminRestaurantAdd'>;
 
 export const AdminRestaurantAddScreen = () => {
   const navigation = useNavigation<Navigation>();
   const route = useRoute<AddRouteProp>();
   const { theme } = useContext(ThemeContext);
   const scrollRef = useRef<ScrollView>(null);
-  const menuScrollRef = useRef<ScrollView>(null); 
-  const [name, setName] = useState("");
-  const [category, setCategory] = useState("");
-  const [address, setAddress] = useState("");
-  const [description, setDescription] = useState("");
+  const menuScrollRef = useRef<ScrollView>(null);
+  const [name, setName] = useState('');
+  const [category, setCategory] = useState('');
+  const [address, setAddress] = useState('');
+  const [description, setDescription] = useState('');
   const [mainImages, setMainImages] = useState<string[]>([]);
   const [menus, setMenus] = useState<
     { id: string; image?: string; name: string; price: string }[]
-  >([{ id: "1", image: "", name: "", price: "" }]);
+  >([{ id: '1', image: '', name: '', price: '' }]);
   const isFormValid = name.trim() && category.trim() && address.trim();
   const [selectedFilters, setSelectedFilters] = useState({
     purposes: [] as string[],
@@ -46,7 +49,10 @@ export const AdminRestaurantAddScreen = () => {
     features: [] as string[],
   });
 
-  if (Platform.OS === "android" && UIManager.setLayoutAnimationEnabledExperimental) {
+  if (
+    Platform.OS === 'android' &&
+    UIManager.setLayoutAnimationEnabledExperimental
+  ) {
     UIManager.setLayoutAnimationEnabledExperimental(true);
   }
 
@@ -60,14 +66,16 @@ export const AdminRestaurantAddScreen = () => {
   /** 대표 이미지 업로드 */
   const pickMainImages = () => {
     launchImageLibrary(
-      { mediaType: "photo", includeBase64: false, selectionLimit: 3 },
-      (response) => {
+      { mediaType: 'photo', includeBase64: false, selectionLimit: 3 },
+      response => {
         if (response.didCancel) return;
         if (response.assets) {
-          const uris = response.assets.map((a) => a.uri).filter(Boolean) as string[];
+          const uris = response.assets
+            .map(a => a.uri)
+            .filter(Boolean) as string[];
           setMainImages(uris.slice(0, 3));
         }
-      }
+      },
     );
   };
 
@@ -75,10 +83,10 @@ export const AdminRestaurantAddScreen = () => {
   const CARD_SPACING = 12;
 
   const addMenu = () => {
-    setMenus((prev) => {
+    setMenus(prev => {
       const next = [
         ...prev,
-        { id: Date.now().toString(), name: "", price: "", image: "" },
+        { id: Date.now().toString(), name: '', price: '', image: '' },
       ];
 
       setTimeout(() => {
@@ -100,27 +108,31 @@ export const AdminRestaurantAddScreen = () => {
       LayoutAnimation.create(
         250,
         LayoutAnimation.Types.easeInEaseOut,
-        LayoutAnimation.Properties.opacity
-      )
+        LayoutAnimation.Properties.opacity,
+      ),
     );
 
     setTimeout(() => {
-      setMenus((prev) => prev.filter((_, i) => i !== index));
+      setMenus(prev => prev.filter((_, i) => i !== index));
     }, 100);
   };
 
-  const updateMenuField = (index: number, field: "name" | "price", value: string) => {
-    setMenus((prev) =>
-      prev.map((menu, i) => (i === index ? { ...menu, [field]: value } : menu))
+  const updateMenuField = (
+    index: number,
+    field: 'name' | 'price',
+    value: string,
+  ) => {
+    setMenus(prev =>
+      prev.map((menu, i) => (i === index ? { ...menu, [field]: value } : menu)),
     );
   };
 
   const pickMenuImage = (index: number) => {
-    launchImageLibrary({ mediaType: "photo" }, (response) => {
+    launchImageLibrary({ mediaType: 'photo' }, response => {
       if (response.assets?.[0]?.uri) {
         const uri = response.assets[0].uri;
-        setMenus((prev) =>
-          prev.map((menu, i) => (i === index ? { ...menu, image: uri } : menu))
+        setMenus(prev =>
+          prev.map((menu, i) => (i === index ? { ...menu, image: uri } : menu)),
         );
       }
     });
@@ -128,10 +140,10 @@ export const AdminRestaurantAddScreen = () => {
 
   /** 필터 */
   const toggleFilter = (group: keyof typeof selectedFilters, value: string) => {
-    setSelectedFilters((prev) => {
+    setSelectedFilters(prev => {
       const arr = prev[group];
       return arr.includes(value)
-        ? { ...prev, [group]: arr.filter((v) => v !== value) }
+        ? { ...prev, [group]: arr.filter(v => v !== value) }
         : { ...prev, [group]: [...arr, value] };
     });
   };
@@ -139,25 +151,44 @@ export const AdminRestaurantAddScreen = () => {
   /** 등록 */
   const handleSubmit = () => {
     if (!isFormValid) return;
-    if (menus.length === 0 || !menus.some((m) => m.name)) {
-      Alert.alert("메뉴판 등록", "최소 한 개의 메뉴를 등록해주세요.");
+    if (menus.length === 0 || !menus.some(m => m.name)) {
+      Alert.alert('메뉴판 등록', '최소 한 개의 메뉴를 등록해주세요.');
       return;
     }
-    Alert.alert("등록 완료", `${name} 맛집이 등록되었습니다.`);
+    Alert.alert('등록 완료', `${name} 맛집이 등록되었습니다.`);
     navigation.goBack();
   };
 
-  const purposes = ["데이트", "외식", "회식", "기념일", "모임", "애견동반"];
-  const atmospheres = ["분위기 좋은", "조용한", "뷰가 좋은", "예쁜", "깔끔한", "가성비 좋은"];
-  const features = ["단체석", "주차", "연인석", "테라스", "1인석", "유아의자", "놀이방"];
+  const purposes = ['데이트', '외식', '회식', '기념일', '모임', '애견동반'];
+  const atmospheres = [
+    '분위기 좋은',
+    '조용한',
+    '뷰가 좋은',
+    '예쁜',
+    '깔끔한',
+    '가성비 좋은',
+  ];
+  const features = [
+    '단체석',
+    '주차',
+    '연인석',
+    '테라스',
+    '1인석',
+    '유아의자',
+    '놀이방',
+  ];
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
-      <Header title="맛집 등록" showBackButton onBackPress={() => navigation.goBack()} />
+      <Header
+        title="맛집 등록"
+        showBackButton
+        onBackPress={() => navigation.goBack()}
+      />
 
       <KeyboardAvoidingView
         style={{ flex: 1 }}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <ScrollView
           ref={scrollRef}
@@ -178,13 +209,23 @@ export const AdminRestaurantAddScreen = () => {
             {mainImages.length > 0 ? (
               <View style={styles.imageRow}>
                 {mainImages.map((uri, idx) => (
-                  <Image key={idx} source={{ uri }} style={styles.imagePreviewSmall} />
+                  <Image
+                    key={idx}
+                    source={{ uri }}
+                    style={styles.imagePreviewSmall}
+                  />
                 ))}
               </View>
             ) : (
               <>
-                <MaterialIcons name="add-a-photo" size={32} color={theme.icon} />
-                <Text style={[styles.imageText, { color: theme.textSecondary }]}>
+                <MaterialIcons
+                  name="add-a-photo"
+                  size={32}
+                  color={theme.icon}
+                />
+                <Text
+                  style={[styles.imageText, { color: theme.textSecondary }]}
+                >
                   대표 이미지 추가
                 </Text>
               </>
@@ -193,11 +234,17 @@ export const AdminRestaurantAddScreen = () => {
 
           {/* 기본 정보 */}
           <View style={styles.inputGroup}>
-            <Text style={[styles.label, { color: theme.textSecondary }]}>식당명 *</Text>
+            <Text style={[styles.label, { color: theme.textSecondary }]}>
+              식당명 *
+            </Text>
             <TextInput
               style={[
                 styles.input,
-                { borderColor: theme.border, color: theme.textPrimary, backgroundColor: theme.card },
+                {
+                  borderColor: theme.border,
+                  color: theme.textPrimary,
+                  backgroundColor: theme.card,
+                },
               ]}
               placeholder="예: 감성타코 여의도점"
               placeholderTextColor={theme.textSecondary}
@@ -207,11 +254,17 @@ export const AdminRestaurantAddScreen = () => {
           </View>
 
           <View style={styles.inputGroup}>
-            <Text style={[styles.label, { color: theme.textSecondary }]}>카테고리 *</Text>
+            <Text style={[styles.label, { color: theme.textSecondary }]}>
+              카테고리 *
+            </Text>
             <TextInput
               style={[
                 styles.input,
-                { borderColor: theme.border, color: theme.textPrimary, backgroundColor: theme.card },
+                {
+                  borderColor: theme.border,
+                  color: theme.textPrimary,
+                  backgroundColor: theme.card,
+                },
               ]}
               placeholder="예: 멕시코 음식, 일식 등"
               placeholderTextColor={theme.textSecondary}
@@ -222,11 +275,17 @@ export const AdminRestaurantAddScreen = () => {
 
           {/* 설명 */}
           <View style={styles.inputGroup}>
-            <Text style={[styles.label, { color: theme.textSecondary }]}>설명</Text>
+            <Text style={[styles.label, { color: theme.textSecondary }]}>
+              설명
+            </Text>
             <TextInput
               style={[
                 styles.textArea,
-                { borderColor: theme.border, color: theme.textPrimary, backgroundColor: theme.card },
+                {
+                  borderColor: theme.border,
+                  color: theme.textPrimary,
+                  backgroundColor: theme.card,
+                },
               ]}
               placeholder="식당에 대한 간단한 설명을 입력하세요."
               placeholderTextColor={theme.textSecondary}
@@ -239,7 +298,9 @@ export const AdminRestaurantAddScreen = () => {
 
           {/* 주소 카드 */}
           <View style={styles.inputGroup}>
-            <Text style={[styles.label, { color: theme.textSecondary }]}>주소 *</Text>
+            <Text style={[styles.label, { color: theme.textSecondary }]}>
+              주소 *
+            </Text>
             <View
               style={[
                 styles.addressCard,
@@ -253,11 +314,11 @@ export const AdminRestaurantAddScreen = () => {
                 ]}
                 numberOfLines={2}
               >
-                {address || "지도에서 위치를 선택하세요"}
+                {address || '지도에서 위치를 선택하세요'}
               </Text>
 
               <TouchableOpacity
-                onPress={() => navigation.navigate("MapSelectScreen")}
+                onPress={() => navigation.navigate('MapSelectScreen')}
                 activeOpacity={0.7}
                 style={{ padding: 6 }}
               >
@@ -267,7 +328,9 @@ export const AdminRestaurantAddScreen = () => {
           </View>
 
           {/* 메뉴판 */}
-          <Text style={[styles.sectionTitle, { color: theme.textSecondary }]}>메뉴판</Text>
+          <Text style={[styles.sectionTitle, { color: theme.textSecondary }]}>
+            메뉴판
+          </Text>
           <ScrollView
             ref={menuScrollRef}
             horizontal
@@ -276,16 +339,26 @@ export const AdminRestaurantAddScreen = () => {
             {menus.map((menu, index) => (
               <View
                 key={menu.id}
-                style={[styles.menuCard, { backgroundColor: theme.card, borderColor: theme.border }]}
+                style={[
+                  styles.menuCard,
+                  { backgroundColor: theme.card, borderColor: theme.border },
+                ]}
               >
                 <TouchableOpacity
                   style={[styles.menuImageBox, { borderColor: theme.border }]}
                   onPress={() => pickMenuImage(index)}
                 >
                   {menu.image ? (
-                    <Image source={{ uri: menu.image }} style={styles.menuImage} />
+                    <Image
+                      source={{ uri: menu.image }}
+                      style={styles.menuImage}
+                    />
                   ) : (
-                    <MaterialIcons name="add-photo-alternate" size={28} color={theme.textSecondary} />
+                    <MaterialIcons
+                      name="add-photo-alternate"
+                      size={28}
+                      color={theme.textSecondary}
+                    />
                   )}
                 </TouchableOpacity>
 
@@ -294,10 +367,14 @@ export const AdminRestaurantAddScreen = () => {
                   placeholderTextColor={theme.textSecondary}
                   style={[
                     styles.menuInput,
-                    { borderColor: theme.border, color: theme.textPrimary, backgroundColor: theme.background },
+                    {
+                      borderColor: theme.border,
+                      color: theme.textPrimary,
+                      backgroundColor: theme.background,
+                    },
                   ]}
                   value={menu.name}
-                  onChangeText={(t) => updateMenuField(index, "name", t)}
+                  onChangeText={t => updateMenuField(index, 'name', t)}
                 />
                 <TextInput
                   placeholder="가격"
@@ -305,21 +382,36 @@ export const AdminRestaurantAddScreen = () => {
                   keyboardType="numeric"
                   style={[
                     styles.menuInput,
-                    { borderColor: theme.border, color: theme.textPrimary, backgroundColor: theme.background },
+                    {
+                      borderColor: theme.border,
+                      color: theme.textPrimary,
+                      backgroundColor: theme.background,
+                    },
                   ]}
                   value={menu.price}
-                  onChangeText={(t) => updateMenuField(index, "price", t)}
+                  onChangeText={t => updateMenuField(index, 'price', t)}
                 />
 
-                <TouchableOpacity onPress={() => removeMenu(index)} style={{ alignSelf: "flex-end" }}>
-                  <MaterialIcons name="delete" size={20} color={theme.textSecondary} />
+                <TouchableOpacity
+                  onPress={() => removeMenu(index)}
+                  style={{ alignSelf: 'flex-end' }}
+                >
+                  <MaterialIcons
+                    name="delete"
+                    size={20}
+                    color={theme.textSecondary}
+                  />
                 </TouchableOpacity>
               </View>
             ))}
 
             {/* + 카드 */}
             <TouchableOpacity
-              style={[styles.menuCard, styles.addCard, { borderColor: theme.icon }]}
+              style={[
+                styles.menuCard,
+                styles.addCard,
+                { borderColor: theme.icon },
+              ]}
               onPress={addMenu}
               activeOpacity={0.8}
             >
@@ -348,7 +440,7 @@ export const AdminRestaurantAddScreen = () => {
             <Text
               style={[
                 styles.submitText,
-                { color: isFormValid ? "#fff" : theme.textSecondary },
+                { color: isFormValid ? '#fff' : theme.textSecondary },
               ]}
             >
               등록하기
@@ -363,20 +455,20 @@ export const AdminRestaurantAddScreen = () => {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   form: { paddingHorizontal: 20, paddingVertical: 20, gap: 20 },
-  sectionTitle: { fontSize: 15, fontWeight: "600", marginBottom: 8 },
+  sectionTitle: { fontSize: 15, fontWeight: '600', marginBottom: 8 },
   imagePicker: {
     height: 160,
     borderRadius: 12,
     borderWidth: 1,
-    borderStyle: "dashed",
-    justifyContent: "center",
-    alignItems: "center",
+    borderStyle: 'dashed',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  imageRow: { flexDirection: "row", gap: 8 },
+  imageRow: { flexDirection: 'row', gap: 8 },
   imagePreviewSmall: { width: 90, height: 90, borderRadius: 8 },
   imageText: { marginTop: 8, fontSize: 14 },
   inputGroup: { gap: 6 },
-  label: { fontSize: 14, fontWeight: "600" },
+  label: { fontSize: 14, fontWeight: '600' },
   input: {
     borderWidth: 1,
     borderRadius: 10,
@@ -390,12 +482,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 10,
     fontSize: 15,
-    textAlignVertical: "top",
+    textAlignVertical: 'top',
   },
   addressCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     borderWidth: 1,
     borderRadius: 10,
     paddingVertical: 5,
@@ -410,20 +502,20 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   addCard: {
-    justifyContent: "center",
-    alignItems: "center",
-    borderStyle: "dashed",
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderStyle: 'dashed',
   },
   menuImageBox: {
-    width: "100%",
+    width: '100%',
     height: 100,
     borderWidth: 1,
     borderRadius: 8,
-    justifyContent: "center",
-    alignItems: "center",
+    justifyContent: 'center',
+    alignItems: 'center',
     marginBottom: 8,
   },
-  menuImage: { width: "100%", height: "100%", borderRadius: 8 },
+  menuImage: { width: '100%', height: '100%', borderRadius: 8 },
   menuInput: {
     borderWidth: 1,
     borderRadius: 8,
@@ -433,7 +525,7 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   footerBox: {
-    position: "absolute",
+    position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
@@ -444,8 +536,8 @@ const styles = StyleSheet.create({
   submitBox: {
     height: 50,
     borderRadius: 8,
-    justifyContent: "center",
-    alignItems: "center",
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  submitText: { fontSize: 16, fontWeight: "700" },
+  submitText: { fontSize: 16, fontWeight: '700' },
 });

@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect, useContext } from "react";
+import React, { useState, useCallback, useEffect, useContext } from 'react';
 import {
   View,
   Text,
@@ -9,16 +9,16 @@ import {
   ActivityIndicator,
   RefreshControl,
   ScrollView,
-} from "react-native";
-import Ionicons from "react-native-vector-icons/Ionicons";
-import MaterialIcons from "react-native-vector-icons/MaterialIcons";
-import { useNavigation } from "@react-navigation/native";
-import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { RootStackParamList } from "../navigation/types/RootStackParamList";
-import { Header } from "../components/Header";
-import { AdminRestaurantViewModel } from "../viewmodels/AdminRestaurantViewModels";
-import { AdminRestaurant } from "../../domain/entities/AdminRestaurantList";
-import { ThemeContext } from "../../context/ThemeContext";
+} from 'react-native';
+import Ionicons from 'react-native-vector-icons/Ionicons';
+import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { RootStackParamList } from '../navigation/types/RootStackParamList';
+import { Header } from '../components/Header';
+import { AdminRestaurantViewModel } from '../viewmodels/AdminRestaurantViewModels';
+import { AdminRestaurant } from '../../domain/entities/AdminRestaurantList';
+import { ThemeContext } from '../../context/ThemeContext';
 
 type Navigation = NativeStackNavigationProp<RootStackParamList>;
 
@@ -29,15 +29,15 @@ export const AdminRestaurantScreen = () => {
   const { restaurants, loading, error, totalPages, refetch, page } =
     AdminRestaurantViewModel();
 
-  const [selectedStatus, setSelectedStatus] = useState("전체");
-  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedStatus, setSelectedStatus] = useState('전체');
+  const [searchQuery, setSearchQuery] = useState('');
   const [refreshing, setRefreshing] = useState(false);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    setSearchQuery("");
-    setSelectedStatus("전체");
-    await refetch(0, 10, "전체", "");
+    setSearchQuery('');
+    setSelectedStatus('전체');
+    await refetch(0, 10, '전체', '');
     setRefreshing(false);
   }, []);
 
@@ -45,28 +45,28 @@ export const AdminRestaurantScreen = () => {
     refetch(0, 10, selectedStatus, searchQuery);
   }, [selectedStatus, searchQuery]);
 
-  const statusTabs = ["전체", "운영중", "승인대기", "수정요청"];
+  const statusTabs = ['전체', '운영중', '승인대기', '수정요청'];
 
   const getStatusStyle = (status?: string) => {
     switch (status) {
-      case "승인대기":
-        return { backgroundColor: "#FFF4CC", color: "#B8860B" };
-      case "수정요청":
-        return { backgroundColor: "#FFE0E0", color: "#C62828" };
-      case "운영중":
-        return { backgroundColor: "#E3F2FD", color: "#0277BD" };
+      case '승인대기':
+        return { backgroundColor: '#FFF4CC', color: '#B8860B' };
+      case '수정요청':
+        return { backgroundColor: '#FFE0E0', color: '#C62828' };
+      case '운영중':
+        return { backgroundColor: '#E3F2FD', color: '#0277BD' };
       default:
-        return { backgroundColor: "#E8EAF6", color: "#5C6BC0" };
+        return { backgroundColor: '#E8EAF6', color: '#5C6BC0' };
     }
   };
 
   const filteredRestaurants = restaurants.filter((r: AdminRestaurant) => {
-    const statusValue = r.status ?? "운영중";
+    const statusValue = r.status ?? '운영중';
     const matchesSearch = r.name
       .toLowerCase()
       .includes(searchQuery.toLowerCase());
     const matchesStatus =
-      selectedStatus === "전체" || statusValue === selectedStatus;
+      selectedStatus === '전체' || statusValue === selectedStatus;
     return matchesSearch && matchesStatus;
   });
 
@@ -74,11 +74,10 @@ export const AdminRestaurantScreen = () => {
     <View style={{ flex: 1, backgroundColor: theme.background }}>
       <Header
         title="맛집"
-        iconName="add" 
-        onIconPress={() => navigation.navigate("AdminRestaurantAdd")}
+        iconName="add"
+        onIconPress={() => navigation.navigate('AdminRestaurantAdd')}
       />
       <View style={[styles.container, { backgroundColor: theme.background }]}>
-
         {/* 검색창 */}
         <View
           style={[
@@ -90,277 +89,292 @@ export const AdminRestaurantScreen = () => {
             },
           ]}
         >
-          <Ionicons name="search-outline" size={18} color={theme.textSecondary} />
+          <Ionicons
+            name="search-outline"
+            size={18}
+            color={theme.textSecondary}
+          />
           <TextInput
             style={[styles.input, { color: theme.textPrimary }]}
             placeholder="식당명을 검색하세요"
             placeholderTextColor={theme.textSecondary}
             value={searchQuery}
-          onChangeText={(text) => {
-            setSearchQuery(text);
-            refetch(0, 10, selectedStatus, text);
-          }}
-        />
-      </View>
-
-      {/* 필터 탭 */}
-      <View style={styles.tabRow}>
-        {statusTabs.map((tab) => (
-          <TouchableOpacity
-            key={tab}
-            style={[
-              styles.tabButton,
-              {
-                backgroundColor:
-                  selectedStatus === tab
-                    ? theme.icon
-                    : theme.card,
-                borderColor: theme.border,
-                borderWidth: 1,
-              },
-            ]}
-            onPress={() => {
-              setSelectedStatus(tab);
-              refetch(0, 10, tab, searchQuery);
+            onChangeText={text => {
+              setSearchQuery(text);
+              refetch(0, 10, selectedStatus, text);
             }}
-          >
-            <Text
+          />
+        </View>
+
+        {/* 필터 탭 */}
+        <View style={styles.tabRow}>
+          {statusTabs.map(tab => (
+            <TouchableOpacity
+              key={tab}
               style={[
-                styles.tabText,
+                styles.tabButton,
                 {
-                  color:
-                    selectedStatus === tab
-                      ? "#fff"
-                      : theme.textPrimary,
+                  backgroundColor:
+                    selectedStatus === tab ? theme.icon : theme.card,
+                  borderColor: theme.border,
+                  borderWidth: 1,
                 },
               ]}
+              onPress={() => {
+                setSelectedStatus(tab);
+                refetch(0, 10, tab, searchQuery);
+              }}
             >
-              {tab}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-
-      {/* 리스트 */}
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            tintColor={theme.icon}
-          />
-        }
-      >
-        {loading && page === 0 ? (
-          <View style={styles.center}>
-            <ActivityIndicator size="large" color={theme.icon} />
-            <Text style={{ marginTop: 10, color: theme.textSecondary }}>
-              식당 데이터를 불러오는 중...
-            </Text>
-          </View>
-        ) : error ? (
-          <View style={styles.center}>
-            <Text style={{ color: "#E53935" }}>{error}</Text>
-          </View>
-        ) : filteredRestaurants.length === 0 ? (
-          <View style={styles.center}>
-            <Text style={{ color: theme.textSecondary }}>
-              표시할 식당이 없습니다.
-            </Text>
-          </View>
-        ) : (
-          filteredRestaurants.map((r) => {
-            const badgeStyle = getStatusStyle(r.status);
-            const statusValue = r.status ?? "운영중";
-
-            return (
-              <View
-                key={r.id}
+              <Text
                 style={[
-                  styles.card,
+                  styles.tabText,
                   {
-                    backgroundColor: theme.card,
-                    shadowColor: theme.background,
-                    borderWidth: 1,
-                    borderColor: theme.border,
+                    color: selectedStatus === tab ? '#fff' : theme.textPrimary,
                   },
                 ]}
               >
-                <Image source={r.image} style={styles.thumbnail} />
-                <View style={styles.info}>
-                  <Text style={[styles.name, { color: theme.textPrimary }]}>
-                    {r.name}
-                  </Text>
+                {tab}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
 
-                  <View style={styles.row}>
-                    <Ionicons name="star" size={14} color="#FFD700" />
-                    <Text style={[styles.rating, { color: theme.textSecondary }]}>
-                      {r.rating.toFixed(1)}
-                    </Text>
-                    <Ionicons
-                      name="chatbubble-outline"
-                      size={13}
-                      color={theme.textSecondary}
-                      style={{ marginLeft: 6 }}
-                    />
-                    <Text style={[styles.review, { color: theme.textSecondary }]}>
-                      {r.review}
-                    </Text>
-                  </View>
+        {/* 리스트 */}
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor={theme.icon}
+            />
+          }
+        >
+          {loading && page === 0 ? (
+            <View style={styles.center}>
+              <ActivityIndicator size="large" color={theme.icon} />
+              <Text style={{ marginTop: 10, color: theme.textSecondary }}>
+                식당 데이터를 불러오는 중...
+              </Text>
+            </View>
+          ) : error ? (
+            <View style={styles.center}>
+              <Text style={{ color: '#E53935' }}>{error}</Text>
+            </View>
+          ) : filteredRestaurants.length === 0 ? (
+            <View style={styles.center}>
+              <Text style={{ color: theme.textSecondary }}>
+                표시할 식당이 없습니다.
+              </Text>
+            </View>
+          ) : (
+            filteredRestaurants.map(r => {
+              const badgeStyle = getStatusStyle(r.status);
+              const statusValue = r.status ?? '운영중';
 
-                  <View style={styles.bottomRow}>
-                    <View
-                      style={[
-                        styles.statusBadge,
-                        { backgroundColor: badgeStyle.backgroundColor },
-                      ]}
-                    >
+              return (
+                <View
+                  key={r.id}
+                  style={[
+                    styles.card,
+                    {
+                      backgroundColor: theme.card,
+                      shadowColor: theme.background,
+                      borderWidth: 1,
+                      borderColor: theme.border,
+                    },
+                  ]}
+                >
+                  <Image source={r.image} style={styles.thumbnail} />
+                  <View style={styles.info}>
+                    <Text style={[styles.name, { color: theme.textPrimary }]}>
+                      {r.name}
+                    </Text>
+
+                    <View style={styles.row}>
+                      <Ionicons name="star" size={14} color="#FFD700" />
                       <Text
-                        style={[
-                          styles.statusText,
-                          { color: badgeStyle.color },
-                        ]}
+                        style={[styles.rating, { color: theme.textSecondary }]}
                       >
-                        {statusValue}
+                        {r.rating.toFixed(1)}
+                      </Text>
+                      <Ionicons
+                        name="chatbubble-outline"
+                        size={13}
+                        color={theme.textSecondary}
+                        style={{ marginLeft: 6 }}
+                      />
+                      <Text
+                        style={[styles.review, { color: theme.textSecondary }]}
+                      >
+                        {r.review}
                       </Text>
                     </View>
 
-                    <View style={styles.iconRow}>
-                      <TouchableOpacity onPress={() => console.log("삭제")}>
-                        <MaterialIcons
-                          name="close"
-                          size={20}
-                          color="#D32F2F"
-                        />
-                      </TouchableOpacity>
-
-                      {(statusValue === "수정요청" ||
-                        statusValue === "운영중") && (
-                        <TouchableOpacity
-                          onPress={() => console.log("수정 페이지 이동")}
+                    <View style={styles.bottomRow}>
+                      <View
+                        style={[
+                          styles.statusBadge,
+                          { backgroundColor: badgeStyle.backgroundColor },
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.statusText,
+                            { color: badgeStyle.color },
+                          ]}
                         >
+                          {statusValue}
+                        </Text>
+                      </View>
+
+                      <View style={styles.iconRow}>
+                        <TouchableOpacity onPress={() => console.log('삭제')}>
                           <MaterialIcons
-                            name="edit"
+                            name="close"
                             size={20}
-                            color={theme.icon}
+                            color="#D32F2F"
                           />
                         </TouchableOpacity>
-                      )}
 
-                      {statusValue === "승인대기" && (
-                        <TouchableOpacity
-                          onPress={() => console.log("승인 처리 로직")}
-                        >
-                          <MaterialIcons
-                            name="check"
-                            size={20}
-                            color="#4CAF50"
-                          />
-                        </TouchableOpacity>
-                      )}
+                        {(statusValue === '수정요청' ||
+                          statusValue === '운영중') && (
+                          <TouchableOpacity
+                            onPress={() => console.log('수정 페이지 이동')}
+                          >
+                            <MaterialIcons
+                              name="edit"
+                              size={20}
+                              color={theme.icon}
+                            />
+                          </TouchableOpacity>
+                        )}
+
+                        {statusValue === '승인대기' && (
+                          <TouchableOpacity
+                            onPress={() => console.log('승인 처리 로직')}
+                          >
+                            <MaterialIcons
+                              name="check"
+                              size={20}
+                              color="#4CAF50"
+                            />
+                          </TouchableOpacity>
+                        )}
+                      </View>
                     </View>
                   </View>
                 </View>
-              </View>
-            );
-          })
-        )}
+              );
+            })
+          )}
 
-        {/* 페이지네이션 */}
-        {!loading && (
-          <View style={styles.paginationContainer}>
-            <TouchableOpacity
-              disabled={page <= 0}
-              onPress={() => refetch(page - 1)}
-            >
-              <Text
-                style={[
-                  styles.arrow,
-                  { color: theme.icon },
-                  page <= 0 && { color: "#666" },
-                ]}
+          {/* 페이지네이션 */}
+          {!loading && (
+            <View style={styles.paginationContainer}>
+              <TouchableOpacity
+                disabled={page <= 0}
+                onPress={() => refetch(page - 1)}
               >
-                {"<"}
-              </Text>
-            </TouchableOpacity>
+                <Text
+                  style={[
+                    styles.arrow,
+                    { color: theme.icon },
+                    page <= 0 && { color: '#666' },
+                  ]}
+                >
+                  {'<'}
+                </Text>
+              </TouchableOpacity>
 
-            <View style={styles.pageNumberContainer}>
-              {(() => {
-                const maxVisible = 5;
-                const currentBlock = Math.floor(page / maxVisible);
-                const startPage = currentBlock * maxVisible;
-                const endPage = Math.min(startPage + maxVisible, totalPages);
+              <View style={styles.pageNumberContainer}>
+                {(() => {
+                  const maxVisible = 5;
+                  const currentBlock = Math.floor(page / maxVisible);
+                  const startPage = currentBlock * maxVisible;
+                  const endPage = Math.min(startPage + maxVisible, totalPages);
 
-                const pages = [];
-                for (let i = startPage; i < endPage; i++) {
-                  pages.push(i);
-                }
+                  const pages = [];
+                  for (let i = startPage; i < endPage; i++) {
+                    pages.push(i);
+                  }
 
-                return (
-                  <>
-                    {pages.map((p) => {
-                      const isActive = p === page;
-                      return (
-                        <TouchableOpacity
-                          key={`page-${p}`}
-                          onPress={() =>
-                            refetch(p, 10, selectedStatus, searchQuery)
-                          }
-                        >
+                  return (
+                    <>
+                      {pages.map(p => {
+                        const isActive = p === page;
+                        return (
+                          <TouchableOpacity
+                            key={`page-${p}`}
+                            onPress={() =>
+                              refetch(p, 10, selectedStatus, searchQuery)
+                            }
+                          >
+                            <Text
+                              style={[
+                                styles.pageText,
+                                {
+                                  color: isActive
+                                    ? theme.icon
+                                    : theme.textPrimary,
+                                  fontWeight: isActive ? '700' : '500',
+                                },
+                              ]}
+                            >
+                              {p + 1}
+                            </Text>
+                          </TouchableOpacity>
+                        );
+                      })}
+                      {endPage < totalPages && (
+                        <>
                           <Text
                             style={[
-                              styles.pageText,
-                              {
-                                color: isActive
-                                  ? theme.icon
-                                  : theme.textPrimary,
-                                fontWeight: isActive ? "700" : "500",
-                              },
+                              styles.ellipsis,
+                              { color: theme.textSecondary },
                             ]}
                           >
-                            {p + 1}
+                            ...
                           </Text>
-                        </TouchableOpacity>
-                      );
-                    })}
-                    {endPage < totalPages && (
-                      <>
-                        <Text style={[styles.ellipsis, { color: theme.textSecondary }]}>...</Text>
-                        <TouchableOpacity
-                          onPress={() =>
-                            refetch(totalPages - 1, 10, selectedStatus)
-                          }
-                        >
-                          <Text style={[styles.pageText, { color: theme.textPrimary }]}>
-                            {totalPages}
-                          </Text>
-                        </TouchableOpacity>
-                      </>
-                    )}
-                  </>
-                );
-              })()}
-            </View>
+                          <TouchableOpacity
+                            onPress={() =>
+                              refetch(totalPages - 1, 10, selectedStatus)
+                            }
+                          >
+                            <Text
+                              style={[
+                                styles.pageText,
+                                { color: theme.textPrimary },
+                              ]}
+                            >
+                              {totalPages}
+                            </Text>
+                          </TouchableOpacity>
+                        </>
+                      )}
+                    </>
+                  );
+                })()}
+              </View>
 
-            <TouchableOpacity
-              disabled={page >= totalPages - 1}
-              onPress={() => refetch(page + 1)}
-            >
-              <Text
-                style={[
-                  styles.arrow,
-                  { color: theme.icon },
-                  page >= totalPages - 1 && { color: "#666" },
-                ]}
+              <TouchableOpacity
+                disabled={page >= totalPages - 1}
+                onPress={() => refetch(page + 1)}
               >
-                {">"}
-              </Text>
-            </TouchableOpacity>
-          </View>
-        )}
-      </ScrollView>
-    </View>
+                <Text
+                  style={[
+                    styles.arrow,
+                    { color: theme.icon },
+                    page >= totalPages - 1 && { color: '#666' },
+                  ]}
+                >
+                  {'>'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          )}
+        </ScrollView>
+      </View>
     </View>
   );
 };
@@ -370,21 +384,21 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 16,
   },
-  center: { flex: 1, justifyContent: "center", alignItems: "center" },
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   searchBar: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: 8,
     marginBottom: 10,
-    marginTop : 10, 
+    marginTop: 10,
     borderWidth: 1,
   },
   input: { flex: 1, marginLeft: 8 },
   tabRow: {
-    flexDirection: "row",
-    justifyContent: "space-around",
+    flexDirection: 'row',
+    justifyContent: 'space-around',
     marginBottom: 12,
   },
   tabButton: {
@@ -393,11 +407,11 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   tabText: {
-    fontWeight: "600",
+    fontWeight: '600',
   },
   card: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     borderRadius: 12,
     padding: 12,
     marginBottom: 10,
@@ -412,14 +426,14 @@ const styles = StyleSheet.create({
     marginRight: 12,
   },
   info: { flex: 1 },
-  name: { fontSize: 15, fontWeight: "bold" },
-  row: { flexDirection: "row", alignItems: "center", marginTop: 4 },
+  name: { fontSize: 15, fontWeight: 'bold' },
+  row: { flexDirection: 'row', alignItems: 'center', marginTop: 4 },
   rating: { fontSize: 13, marginLeft: 3 },
   review: { fontSize: 13, marginLeft: 2 },
   bottomRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     marginTop: 6,
   },
   statusBadge: {
@@ -427,18 +441,18 @@ const styles = StyleSheet.create({
     paddingVertical: 3,
     paddingHorizontal: 8,
   },
-  statusText: { fontSize: 12, fontWeight: "600" },
-  iconRow: { flexDirection: "row", alignItems: "center", gap: 8 },
+  statusText: { fontSize: 12, fontWeight: '600' },
+  iconRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   paginationContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
     paddingVertical: 16,
     gap: 12,
   },
   pageNumberContainer: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 14,
   },
   pageText: {

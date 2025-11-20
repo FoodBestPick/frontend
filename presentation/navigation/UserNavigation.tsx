@@ -3,6 +3,9 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import Icon from 'react-native-vector-icons/Ionicons';
 import UserMain from '../screens/UserMain';
 import RouletteScreen from '../screens/RouletteScreen';
+import MatchingScreen from '../screens/MatchScreen';
+import MyPageScreen from '../screens/MyPageScreen';
+import NotificationScreen from '../screens/NotificationScreen';
 
 const Tab = createBottomTabNavigator();
 
@@ -28,7 +31,7 @@ export const UserNavigation = () => {
         tabBarActiveTintColor: '#FFA847',
         tabBarInactiveTintColor: '#999',
         tabBarStyle: {
-          height: 65,
+          height: 75,
           paddingBottom: 10,
           paddingTop: 5,
           borderTopLeftRadius: 20,
@@ -52,6 +55,27 @@ export const UserNavigation = () => {
         name="RouletteTab"
         component={RouletteScreen}
         options={{ tabBarLabel: '룰렛' }}
+      />
+
+      {/* 3. 매칭 */}
+      <Tab.Screen
+        name="MatchingTab"
+        component={MatchingScreen}
+        options={{ tabBarLabel: '매칭' }}
+      />
+
+      {/* 4. 마이페이지 */}
+      <Tab.Screen
+        name="MyPageTab"
+        component={MyPageScreen}
+        options={{ tabBarLabel: '마이페이지' }}
+      />
+
+      {/* 5. 알림 */}
+      <Tab.Screen
+        name="NotificationTab"
+        component={NotificationScreen}
+        options={{ tabBarLabel: '알림' }}
       />
     </Tab.Navigator>
   );

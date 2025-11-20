@@ -4,6 +4,7 @@ import { StatusBar } from 'react-native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { AdminMainStack } from '../frontend/presentation/navigation/AdminNavigation';
 import { RootStackParamList } from './presentation/navigation/types/RootStackParamList';
+import { UserNavigation } from '../frontend/presentation/navigation/UserNavigation';
 
 import SplashScreen from '../frontend/presentation/screens/SplashScreen';
 import OnboardingScreen from '../frontend/presentation/screens/OnboardingScreen';
@@ -57,7 +58,7 @@ function AppInner() {
           <Stack.Screen name="NotificationScreen" component={AdminNotificationScreen} />
 
           {/* 사용자 */}
-          <Stack.Screen name="UserMain" component={UserMain} />
+          <Stack.Screen name="UserMain" component={UserNavigation} />
           <Stack.Screen name="SearchScreen" component={SearchScreen} />
           <Stack.Screen name="SearchResult" component={SearchResultScreen} />
           <Stack.Screen

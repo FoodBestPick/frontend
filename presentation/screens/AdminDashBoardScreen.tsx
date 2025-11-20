@@ -236,7 +236,7 @@ export const AdminDashBoardScreen = () => {
             {
               backgroundColor: isDarkMode ? "#422" : "#ffe8e8",
               borderColor: theme.border,
-              borderWidth: 1, 
+              borderWidth: 1,
             },
           ]}
         >
@@ -268,7 +268,7 @@ export const AdminDashBoardScreen = () => {
             {
               backgroundColor: isDarkMode ? theme.card : COLORS.card,
               borderColor: theme.border,
-              borderWidth: 1, 
+              borderWidth: 1,
             },
           ]}
         >
@@ -305,7 +305,7 @@ export const AdminDashBoardScreen = () => {
           title="주간 사용자 활동"
           textColor={isDarkMode ? theme.textPrimary : COLORS.text}
           cardColor={isDarkMode ? theme.card : COLORS.card}
-          borderColor={theme.border} 
+          borderColor={theme.border}
         >
           <LineChart
             data={lineData}
@@ -513,11 +513,11 @@ const styles = StyleSheet.create({
   feedText: { fontSize: 14 },
   chartSection: { borderRadius: 12, padding: 16 },
   linechart: { borderRadius: 12, marginVertical: 8, alignSelf: "center" },
-  barchart: { 
-    borderRadius: 12, 
-    marginVertical: 8, 
-    alignSelf: "center", 
-    marginRight: 40 
+  barchart: {
+    borderRadius: 12,
+    marginVertical: 8,
+    alignSelf: "center",
+    marginRight: 40
   },
   quickLinkSection: { marginBottom: 40 },
   quickGrid: {

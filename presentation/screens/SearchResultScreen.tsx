@@ -59,8 +59,8 @@ const SearchResultScreen = () => {
   const results: RestaurantItem[] = [
     {
       id: 1,
-      name: '마포갈비',
-      category: '한식',
+      name: '엽기 떡볶이',
+      category: '떡볶이',
       rating: 4.5,
       reviews: 215,
       distance: '0.8km',
@@ -69,8 +69,8 @@ const SearchResultScreen = () => {
     },
     {
       id: 2,
-      name: '제주 흑돼지',
-      category: '한식',
+      name: '두끼',
+      category: '떡볶이',
       rating: 4.7,
       reviews: 342,
       distance: '1.2km',
@@ -79,8 +79,8 @@ const SearchResultScreen = () => {
     },
     {
       id: 3,
-      name: '파이브가이즈',
-      category: '양식',
+      name: '스텔라 떡볶이',
+      category: '떡볶이',
       rating: 4.3,
       reviews: 128,
       distance: '2.1km',

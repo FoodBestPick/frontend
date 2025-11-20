@@ -59,9 +59,9 @@ const RestaurantDetailScreen = () => {
     restTime: '브레이크타임 15:00 - 17:00',
     images: [restaurant.image],
     menus: [
-      { name: '돼지 갈비', price: '20,000원' },
-      { name: '육회 비빔밥', price: '12,000원' },
-      { name: '김치찌개', price: '10,000원' },
+      { name: '기본 떡볶이', price: '20,000원' },
+      { name: '마라 떡볶이', price: '12,000원' },
+      { name: '로제 떡볶이', price: '10,000원' },
     ],
     facilities: ['주차 가능', 'Wi-Fi 제공', '예약 가능', '포장 가능'],
   };

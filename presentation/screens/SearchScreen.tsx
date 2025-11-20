@@ -147,16 +147,16 @@ const SearchScreen = () => {
                   item.trend === 'up'
                     ? 'arrow-up'
                     : item.trend === 'down'
-                    ? 'arrow-down'
-                    : 'remove'
+                      ? 'arrow-down'
+                      : 'remove'
                 }
                 size={16}
                 color={
                   item.trend === 'up'
                     ? '#2ECC71'
                     : item.trend === 'down'
-                    ? '#E74C3C'
-                    : '#999'
+                      ? '#E74C3C'
+                      : '#999'
                 }
               />
             </TouchableOpacity>

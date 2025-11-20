@@ -15,9 +15,16 @@ import UserNavigation from './presentation/navigation/UserNavigation';
 import { AdminRestaurantAddScreen } from './presentation/screens/AdminRestaurantAddScreen';
 import { AdminNotificationScreen } from './presentation/screens/AdminNotificationScreen';
 import { MapSelectScreen } from './presentation/screens/MapSelectScreen';
+<<<<<<< HEAD
 import { ThemeProvider } from './context/ThemeContext';
 import { useContext } from 'react';
 import { ThemeContext } from './context/ThemeContext';
+=======
+import { ThemeProvider } from "./context/ThemeContext";
+import { useContext } from "react";
+import { ThemeContext } from "./context/ThemeContext";
+import MyPageScreen from './presentation/screens/MyPageScreen';
+>>>>>>> c38db81f656e957f1fb6a646429163d2a31ba05b
 
 const Stack = createStackNavigator<RootStackParamList>();
 
@@ -31,9 +38,14 @@ function AppInner() {
       />
       <NavigationContainer>
         <Stack.Navigator
-          initialRouteName="Splash"
-          screenOptions={{ headerShown: false }}
+          screenOptions={{
+            headerShown: false,
+            animationTypeForReplace: 'push',
+            animation: 'slide_from_right',
+            gestureEnabled: true,
+          }}
         >
+
           {/* 공용 */}
           <Stack.Screen name="Splash" component={SplashScreen} />
           <Stack.Screen name="Onboarding" component={OnboardingScreen} />
@@ -44,6 +56,7 @@ function AppInner() {
 
           {/* 관리자 */}
           <Stack.Screen name="AdminMain" component={AdminMainStack} />
+<<<<<<< HEAD
           <Stack.Screen
             name="AdminRestaurantAdd"
             component={AdminRestaurantAddScreen}
@@ -52,6 +65,10 @@ function AppInner() {
             name="NotificationScreen"
             component={AdminNotificationScreen}
           />
+=======
+          <Stack.Screen name="AdminRestaurantAdd" component={AdminRestaurantAddScreen} />
+          <Stack.Screen name="NotificationScreen" component={AdminNotificationScreen} />
+>>>>>>> c38db81f656e957f1fb6a646429163d2a31ba05b
 
           {/* 사용자 */}
           <Stack.Screen name="UserMain" component={UserNavigation} />
@@ -59,6 +76,11 @@ function AppInner() {
             name="RestaurantDetail"
             component={RestaurantDetailScreen}
           />
+<<<<<<< HEAD
+=======
+          <Stack.Screen name="RouletteScreen" component={RouletteScreen} />
+          <Stack.Screen name="MyPageScreen" component={MyPageScreen} />
+>>>>>>> c38db81f656e957f1fb6a646429163d2a31ba05b
         </Stack.Navigator>
       </NavigationContainer>
     </>

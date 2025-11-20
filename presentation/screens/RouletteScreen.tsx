@@ -1,110 +1,98 @@
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useRef, useState, useMemo } from "react";
 import {
   View,
   Text,
   TouchableOpacity,
   StyleSheet,
-  StatusBar,
   Animated,
   Easing,
   Dimensions,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import Icon from 'react-native-vector-icons/Ionicons';
-import { useNavigation } from '@react-navigation/native';
-import { StackNavigationProp } from '@react-navigation/stack';
+  StatusBar,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import Icon from "react-native-vector-icons/Ionicons";
+import { useNavigation } from "@react-navigation/native";
+import UserTabBar from "../components/UserTabBar";
 
-type FilterState = {
-  location?: string;
-  radius?: number;
-  category?: string;
-  priceMin?: number;
-  priceMax?: number;
-  rating?: number;
-  openNow?: boolean;
-  parking?: boolean;
-  delivery?: boolean;
-};
+const { width } = Dimensions.get("window");
+const WHEEL_SIZE = width * 0.85;
+const MAIN_COLOR = "#FFA847";
 
-type RootStackParamList = {
-  RouletteScreen: undefined;
-  SearchResult: { query: string; filters: FilterState };
-};
-
-type NavigationProp = StackNavigationProp<RootStackParamList, 'RouletteScreen'>;
-
-const { width } = Dimensions.get('window');
-const WHEEL_SIZE = Math.min(width - 48, 320);
-
-const DEFAULT_CATEGORIES = [
-  '한식',
-  '중식',
-  '일식',
-  '양식',
-  '분식',
-  '카페',
-  '디저트',
-  '치킨',
-];
-const DEFAULT_MENUS = [
-  '비빔밥',
-  '국밥',
-  '파스타',
-  '피자',
-  '초밥',
-  '타코',
-  '버거',
-  '곱창',
+// 1. 데이터셋 분리
+const CATEGORIES = [
+  "한식", "중식", "일식", "양식",
+  "분식", "야식", "카페", "아시안"
 ];
 
-const RouletteScreen = () => {
-  const navigation = useNavigation<NavigationProp>();
-  const [mode, setMode] = useState<'category' | 'menu'>('category');
+const MENUS = [
+  "치킨", "피자", "삼겹살", "떡볶이",
+  "마라탕", "초밥", "햄버거", "국밥",
+  "파스타", "족발"
+];
 
-  const items = useMemo(
-    () => (mode === 'category' ? DEFAULT_CATEGORIES : DEFAULT_MENUS),
-    [mode],
-  );
-
-  const anglePerItem = 360 / items.length;
+export default function RouletteScreen() {
+  const navigation = useNavigation<any>();
 
   const anim = useRef(new Animated.Value(0)).current;
   const rotationRef = useRef(0);
+
   const [spinning, setSpinning] = useState(false);
+  const [result, setResult] = useState<string | null>(null);
+
+  // 2. 모드 상태 추가 ('category' | 'menu')
+  const [mode, setMode] = useState<'category' | 'menu'>('category');
+
+  // 현재 모드에 따라 보여줄 아이템 결정
+  const currentItems = useMemo(() => {
+    return mode === 'category' ? CATEGORIES : MENUS;
+  }, [mode]);
+
+  const anglePerItem = 360 / currentItems.length;
 
   const spin = () => {
     if (spinning) return;
     setSpinning(true);
+    setResult(null);
 
-    const targetIndex = Math.floor(Math.random() * items.length);
-    const centerAngle = targetIndex * anglePerItem + anglePerItem / 2;
+    // 랜덤 회전 로직 (이전과 동일)
+    const randomAngle = Math.floor(Math.random() * 360);
+    const spins = 5;
+    const totalRotate = (spins * 360) + randomAngle;
 
-    const turns = 6 + Math.floor(Math.random() * 3);
-    const extra = turns * 360 + (360 - (centerAngle % 360));
-    const to = rotationRef.current + extra;
+    const currentVal = rotationRef.current;
+    const toValue = currentVal + totalRotate;
 
     Animated.timing(anim, {
-      toValue: to,
-      duration: 3600,
-      easing: Easing.out(Easing.cubic),
+      toValue: toValue,
+      duration: 4000,
+      easing: Easing.bezier(0.25, 0.1, 0.25, 1),
       useNativeDriver: true,
     }).start(() => {
-      rotationRef.current = to % 360;
+      rotationRef.current = toValue;
+      const finalAngle = toValue % 360;
+      const pointerAngle = (360 - finalAngle) % 360;
+      const index = Math.floor(pointerAngle / anglePerItem);
+
+      // 배열 범위 안전장치
+      const safeIndex = Math.min(Math.max(index, 0), currentItems.length - 1);
+      const picked = currentItems[safeIndex];
+
+      setResult(picked);
       setSpinning(false);
 
-      const picked = items[targetIndex];
-      // ✅ 바로 검색 결과로 이동
-      navigation.navigate('SearchResult', {
-        query: picked,
-        filters: mode === 'category' ? { category: picked } : {},
-      });
+      // 결과 전달 시 type도 같이 넘겨줄 수 있음
+      setTimeout(() => {
+        navigation.navigate("SearchResult", {
+          query: picked,
+          filters: mode === 'category' ? { category: picked } : {},
+        });
+      }, 800);
     });
   };
 
-  const rotateInterpolate = anim.interpolate({
+  const spinValue = anim.interpolate({
     inputRange: [0, 360],
-    outputRange: ['0deg', '360deg'],
-    extrapolate: 'extend',
+    outputRange: ["0deg", "360deg"],
   });
 
   return (
@@ -112,177 +100,301 @@ const RouletteScreen = () => {
       <StatusBar barStyle="dark-content" backgroundColor="#fff" />
 
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Icon name="arrow-back" size={24} color="#000" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>메뉴 룰렛</Text>
-        <View style={{ width: 24 }} />
+        <Text style={styles.headerTitle}>오늘 뭐 먹지?</Text>
       </View>
 
-      <View style={styles.modeRow}>
-        <TouchableOpacity
-          style={[
-            styles.modeChip,
-            mode === 'category' && styles.modeChipActive,
-          ]}
-          onPress={() => setMode('category')}
-          disabled={spinning}
-        >
-          <Text
+      {/* 3. 탭 스위처 추가 */}
+      <View style={styles.tabContainer}>
+        <View style={styles.tabWrapper}>
+          {/* 카테고리 탭 */}
+          <TouchableOpacity
             style={[
-              styles.modeText,
-              mode === 'category' && styles.modeTextActive,
+              styles.tabButton,
+              mode === 'category' && styles.tabButtonActive
+            ]}
+            onPress={() => !spinning && setMode('category')} // 돌릴 땐 탭 변경 금지
+            activeOpacity={0.8}
+          >
+            <Text style={[
+              styles.tabText,
+              mode === 'category' && styles.tabTextActive
+            ]}>카테고리</Text>
+          </TouchableOpacity>
+
+          {/* 메뉴 탭 */}
+          <TouchableOpacity
+            style={[
+              styles.tabButton,
+              mode === 'menu' && styles.tabButtonActive
+            ]}
+            onPress={() => !spinning && setMode('menu')}
+            activeOpacity={0.8}
+          >
+            <Text style={[
+              styles.tabText,
+              mode === 'menu' && styles.tabTextActive
+            ]}>메뉴</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      <View style={styles.content}>
+        {/* 포인터 */}
+        <View style={styles.pointerWrap}>
+          <Icon name="caret-down" size={50} color={MAIN_COLOR} style={styles.pointerIcon} />
+        </View>
+
+        {/* 룰렛 */}
+        <View style={styles.wheelContainer}>
+          <Animated.View
+            style={[
+              styles.wheel,
+              { transform: [{ rotate: spinValue }] }
             ]}
           >
-            카테고리
+            {currentItems.map((label, i) => {
+              const rotate = i * anglePerItem;
+              return (
+                <View
+                  key={`${mode}-${i}`} // 키값 변경으로 리렌더링 유도
+                  style={[
+                    styles.sliceContainer,
+                    { transform: [{ rotate: `${rotate}deg` }] }
+                  ]}
+                >
+                  <View style={styles.divider} />
+                  <View style={[
+                    styles.textWrapper,
+                    { transform: [{ rotate: `${anglePerItem / 2}deg` }] }
+                  ]}>
+                    <Text
+                      style={styles.labelText}
+                      numberOfLines={1}
+                      adjustsFontSizeToFit
+                    >
+                      {label}
+                    </Text>
+                  </View>
+                </View>
+              );
+            })}
+          </Animated.View>
+
+          <View style={styles.centerHub}>
+            <View style={styles.centerHubInner} />
+          </View>
+        </View>
+
+        <View style={styles.resultArea}>
+          <Text style={styles.resultText}>
+            {result ? `"${result}" 당첨!` : " "}
           </Text>
-        </TouchableOpacity>
+        </View>
+      </View>
+
+      <View style={styles.buttonArea}>
         <TouchableOpacity
-          style={[styles.modeChip, mode === 'menu' && styles.modeChipActive]}
-          onPress={() => setMode('menu')}
+          style={[styles.spinButton, spinning && styles.spinButtonDisabled]}
+          onPress={spin}
           disabled={spinning}
+          activeOpacity={0.9}
         >
-          <Text
-            style={[styles.modeText, mode === 'menu' && styles.modeTextActive]}
-          >
-            개별 메뉴
+          <Text style={styles.spinBtnText}>
+            {spinning ? "돌아가는 중..." : `${mode === 'category' ? '카테고리' : '메뉴'} 뽑기`}
           </Text>
         </TouchableOpacity>
       </View>
 
-      <View style={styles.wheelWrap}>
-        <View style={styles.pointer} />
-
-        <Animated.View
-          style={[
-            styles.wheel,
-            {
-              width: WHEEL_SIZE,
-              height: WHEEL_SIZE,
-              transform: [{ rotate: rotateInterpolate }],
-            },
-          ]}
-        >
-          {items.map((label, i) => {
-            const angle = (i / items.length) * 2 * Math.PI;
-            const r = WHEEL_SIZE / 2 - 36;
-            const x = WHEEL_SIZE / 2 + r * Math.sin(angle) - 40;
-            const y = WHEEL_SIZE / 2 - r * Math.cos(angle) - 14;
-
-            const bg = i % 2 === 0 ? '#FFF4E6' : '#FDE3C3';
-
-            return (
-              <View
-                key={i}
-                style={[
-                  styles.label,
-                  {
-                    left: x,
-                    top: y,
-                    backgroundColor: bg,
-                  },
-                ]}
-              >
-                <Text style={styles.labelText}>{label}</Text>
-              </View>
-            );
-          })}
-        </Animated.View>
-      </View>
-
-      <TouchableOpacity
-        style={[styles.spinButton, spinning && { opacity: 0.6 }]}
-        onPress={spin}
-        disabled={spinning}
-      >
-        <Icon name="sync" size={18} color="#fff" />
-        <Text style={styles.spinText}>
-          {spinning ? '돌아가는 중...' : '돌리기'}
-        </Text>
-      </TouchableOpacity>
+      <UserTabBar active="룰렛" />
     </SafeAreaView>
   );
-};
-
-export default RouletteScreen;
+}
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff' },
+  container: { flex: 1, backgroundColor: "#fff" },
+
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
-  },
-  headerTitle: { fontSize: 18, fontWeight: '700', color: '#000' },
-
-  modeRow: {
-    flexDirection: 'row',
-    gap: 8,
-    paddingHorizontal: 16,
-    paddingTop: 16,
-  },
-  modeChip: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
-    backgroundColor: '#fff',
-  },
-  modeChipActive: {
-    backgroundColor: '#FFA847',
-    borderColor: '#FFA847',
-  },
-  modeText: { color: '#666', fontSize: 14 },
-  modeTextActive: { color: '#fff', fontWeight: '700' },
-
-  wheelWrap: {
+    width: '100%',
+    height: 50, // 높이 살짝 줄임
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 20,
+    backgroundColor: '#fff',
   },
-  wheel: {
-    borderRadius: 999,
-    borderWidth: 10,
-    borderColor: '#FFE0B2',
-    backgroundColor: '#FFFDF9',
-  },
-  pointer: {
-    position: 'absolute',
-    top: 10,
-    width: 0,
-    height: 0,
-    borderLeftWidth: 10,
-    borderRightWidth: 10,
-    borderBottomWidth: 18,
-    borderStyle: 'solid',
-    borderLeftColor: 'transparent',
-    borderRightColor: 'transparent',
-    borderBottomColor: '#FFA847',
-    zIndex: 2,
-  },
-  label: {
-    position: 'absolute',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 16,
-  },
-  labelText: { fontSize: 13, color: '#333', fontWeight: '600' },
+  headerTitle: { fontSize: 18, fontWeight: "700", color: "#333" },
 
-  spinButton: {
-    marginTop: 28,
-    alignSelf: 'center',
-    backgroundColor: '#FFA847',
-    paddingHorizontal: 24,
-    paddingVertical: 14,
-    borderRadius: 10,
-    flexDirection: 'row',
+  // 🔥 탭 스타일 추가
+  tabContainer: {
     alignItems: 'center',
-    gap: 8,
+    paddingVertical: 10,
   },
-  spinText: { color: '#fff', fontSize: 16, fontWeight: '700' },
+  tabWrapper: {
+    flexDirection: 'row',
+    backgroundColor: '#F2F4F6', // 회색 배경
+    borderRadius: 25,
+    padding: 4,
+    width: 200, // 전체 너비
+    height: 44,
+  },
+  tabButton: {
+    flex: 1,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  tabButtonActive: {
+    backgroundColor: '#fff', // 활성 탭 흰색 배경
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  tabText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#8B95A1",
+  },
+  tabTextActive: {
+    fontWeight: "700",
+    color: "#333",
+  },
+
+  content: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingBottom: 60,
+  },
+
+  pointerWrap: {
+    position: "absolute",
+    top: "5%", // 탭 때문에 위치 미세 조정
+    zIndex: 50,
+    elevation: 10,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+  },
+  pointerIcon: {
+    marginBottom: -15,
+  },
+
+  wheelContainer: {
+    width: WHEEL_SIZE,
+    height: WHEEL_SIZE,
+    justifyContent: "center",
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 10,
+  },
+
+  wheel: {
+    width: "100%",
+    height: "100%",
+    borderRadius: WHEEL_SIZE / 2,
+    borderWidth: 14,
+    borderColor: MAIN_COLOR,
+    backgroundColor: "#FFF8F0",
+    overflow: "hidden",
+    position: 'relative',
+  },
+
+  sliceContainer: {
+    position: "absolute",
+    width: "100%",
+    height: "100%",
+    left: 0,
+    top: 0,
+    alignItems: 'center',
+  },
+
+  divider: {
+    position: 'absolute',
+    top: 0,
+    width: 2,
+    height: WHEEL_SIZE / 2,
+    backgroundColor: "rgba(255, 168, 71, 0.3)",
+  },
+
+  textWrapper: {
+    position: 'absolute',
+    width: '100%',
+    height: '100%',
+    alignItems: 'center',
+    paddingTop: 28,
+  },
+
+  labelText: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#5A4030",
+    width: 70,
+    textAlign: 'center',
+  },
+
+  centerHub: {
+    position: "absolute",
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: "#fff",
+    alignItems: "center",
+    justifyContent: "center",
+    elevation: 5,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 3,
+  },
+  centerHubInner: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: MAIN_COLOR,
+  },
+
+  resultArea: {
+    marginTop: 30,
+    height: 30,
+    alignItems: 'center',
+  },
+  resultText: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: MAIN_COLOR,
+  },
+
+  buttonArea: {
+    position: 'absolute',
+    bottom: 100,
+    width: '100%',
+    paddingHorizontal: 20,
+    alignItems: 'center',
+  },
+  spinButton: {
+    backgroundColor: MAIN_COLOR,
+    width: '100%',
+    paddingVertical: 16,
+    borderRadius: 16,
+    alignItems: "center",
+    shadowColor: MAIN_COLOR,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  spinButtonDisabled: {
+    backgroundColor: "#FFCFA3",
+    shadowOpacity: 0,
+    elevation: 0,
+  },
+  spinBtnText: {
+    color: "#fff",
+    fontSize: 18,
+    fontWeight: "bold",
+  },
 });

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     View,
     Text,
@@ -14,18 +14,40 @@ import CheckBox from '@react-native-community/checkbox';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from "../navigation/types/RootStackParamList"
+import { LoginKakaoViewModels } from '../viewmodels/LoginKakaoViewModels';
+import { useLoginGoogleViewModel } from '../viewmodels/LoginGoogleViewModels';
+import { GoogleSignin } from '@react-native-google-signin/google-signin';
+import { GOOGLE_WEB_CLIENT_ID } from "@env";
 
 type Navigation = NativeStackNavigationProp<RootStackParamList>;
 const ORANGE = '#FFA847';
 
 export default function LoginScreen() {
     const navigation = useNavigation<Navigation>();
+    const viewModel = new LoginKakaoViewModels();
     const insets = useSafeAreaInsets();
 
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [saveEmail, setSaveEmail] = useState(false);
     const [autoLogin, setAutoLogin] = useState(false);
+
+    useEffect(() => {
+        console.log("🔥 GOOGLE_WEB_CLIENT_ID:", GOOGLE_WEB_CLIENT_ID);
+
+        GoogleSignin.configure({
+            webClientId: `${GOOGLE_WEB_CLIENT_ID}`,
+            offlineAccess: true,
+        });
+
+        console.log("🔥 GoogleSignin configured");
+    }, []);
+
+    const {
+        loading: googleLoading,
+        error: googleError,
+        loginGoogle,
+    } = useLoginGoogleViewModel();
 
     const handleLogin = () => {
         if (email === "admin@example.com" && password === "1234") {
@@ -105,14 +127,62 @@ export default function LoginScreen() {
                 </TouchableOpacity>
 
                 {/* 소셜 로그인 */}
-                <View style={styles.socialContainer}>
-                    <Text style={styles.socialText}>소셜로그인</Text>
-                    <View style={styles.socialIcons}>
-                        <View style={styles.socialCircle} />
-                        <View style={styles.socialCircle} />
-                        <View style={styles.socialCircle} />
-                        <View style={styles.socialCircle} />
-                    </View>
+                <View style={styles.socialIcons}>
+
+                    {/* 카카오 로그인 */}
+                    <TouchableOpacity
+                        style={[styles.socialCircle, { backgroundColor: '#FEE500' }]}
+                        onPress={async () => {
+                            try {
+                                const result = await viewModel.loginWithKakao();
+                                console.log(result);
+                                Alert.alert("카카오 로그인 성공!");
+                            } catch (e) {
+                                Alert.alert("카카오 로그인 실패");
+                            }
+                        }}
+                    >
+                        <Image
+                            source={require("../../assets/kakao.png")}
+                            style={{ width: 24, height: 24, alignSelf: "center", marginTop: 8 }}
+                        />
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                        style={[styles.socialCircle, { backgroundColor: '#FFFFFF' }]}
+                        onPress={async () => {
+                            try {
+                                console.log("🟦 Google login started");
+
+                                const userInfo = await GoogleSignin.signIn();
+                                console.log("🟩 Google userInfo:", userInfo);
+
+                                const idToken = userInfo.data?.idToken;
+                                console.log("🟧 ID TOKEN:", idToken);
+
+                                if (!idToken) {
+                                    Alert.alert("구글 로그인 실패", "ID Token 없음");
+                                    return;
+                                }
+
+                                const response = await loginGoogle(idToken);
+                                console.log("🟩 Backend login success:", response);
+
+                                Alert.alert("구글 로그인 성공!");
+                            } catch (e) {
+                                console.log("🟥 Google login FULL ERROR:", JSON.stringify(e, null, 2));
+                                Alert.alert("구글 로그인 실패");
+                            }
+                        }}
+                    >
+                        <Image
+                            source={require("../../assets/google.png")}
+                            style={{ width: 24, height: 24, alignSelf: "center", marginTop: 8 }}
+                        />
+                    </TouchableOpacity>
+
+                    <View style={styles.socialCircle} />
+                    <View style={styles.socialCircle} />
                 </View>
 
                 {/* 하단 회원가입 문구 */}

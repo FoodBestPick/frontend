@@ -5,8 +5,6 @@ import UserMain from '../screens/UserMain';
 import RouletteScreen from '../screens/RouletteScreen';
 import MatchingScreen from '../screens/MatchScreen';
 import MyPageScreen from '../screens/MyPageScreen';
-import NotificationScreen from '../screens/NotificationScreen';
-
 const Tab = createBottomTabNavigator();
 
 export const UserNavigation = () => {
@@ -71,12 +69,6 @@ export const UserNavigation = () => {
         options={{ tabBarLabel: '마이페이지' }}
       />
 
-      {/* 5. 알림 */}
-      <Tab.Screen
-        name="NotificationTab"
-        component={NotificationScreen}
-        options={{ tabBarLabel: '알림' }}
-      />
     </Tab.Navigator>
   );
 };

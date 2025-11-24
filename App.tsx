@@ -23,7 +23,7 @@ import { ThemeProvider } from "./context/ThemeContext";
 import { useContext } from "react";
 import { ThemeContext } from "./context/ThemeContext";
 import MyPageScreen from './presentation/screens/MyPageScreen';
-
+import UserNotificationScreen from './presentation/screens/UserNotificationScreen';
 const Stack = createStackNavigator<RootStackParamList>();
 
 function AppInner() {
@@ -67,6 +67,7 @@ function AppInner() {
           />
           <Stack.Screen name="RouletteScreen" component={RouletteScreen} />
           <Stack.Screen name="MyPageScreen" component={MyPageScreen} />
+          <Stack.Screen name="UserNotificationScreen" component={UserNotificationScreen} />
         </Stack.Navigator>
       </NavigationContainer>
     </>

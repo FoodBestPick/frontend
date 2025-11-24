@@ -86,7 +86,7 @@ android {
         versionCode 1
         versionName "1.0"
         manifestPlaceholders += [
-            KAKAO_NATIVE_APP_KEY: project.env.get("KAKAO_NATIVE_APP_KEY")
+            KAKAO_NATIVE_APP_KEY: project.env.get("KAKAO_NATIVE_APP_KEY"),
         ]
     }
     signingConfigs {
@@ -123,3 +123,4 @@ dependencies {
     }
 }
 apply from: "../../node_modules/react-native-vector-icons/fonts.gradle"
+apply plugin: 'com.google.gms.google-services'

@@ -29,7 +29,6 @@ export type RootStackParamList = {
   MyPageScreen: undefined;
   NotificationScreen: undefined;
   UserNotificationScreen: undefined;
-
 };
 
 export interface FilterState {

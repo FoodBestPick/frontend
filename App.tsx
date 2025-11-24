@@ -5,13 +5,11 @@ import { createStackNavigator } from '@react-navigation/stack';
 import { AdminMainStack } from '../frontend/presentation/navigation/AdminNavigation';
 import { RootStackParamList } from './presentation/navigation/types/RootStackParamList';
 import { UserNavigation } from '../frontend/presentation/navigation/UserNavigation';
-
 import SplashScreen from '../frontend/presentation/screens/SplashScreen';
 import OnboardingScreen from '../frontend/presentation/screens/OnboardingScreen';
 import LoginScreen from '../frontend/presentation/screens/LoginScreen';
 import SignupScreen from '../frontend/presentation/screens/SignupScreen';
 import FindAccountScreen from '../frontend/presentation/screens/FindAccountScreen';
-import UserMain from '../frontend/presentation/screens/UserMain';
 import SearchScreen from '../frontend/presentation/screens/SearchScreen';
 import SearchResultScreen from '../frontend/presentation/screens/SearchResultScreen';
 import RestaurantDetailScreen from '../frontend/presentation/screens/RestaurantDetailScreen';

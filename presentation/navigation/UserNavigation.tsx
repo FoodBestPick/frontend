@@ -26,6 +26,7 @@ export const UserNavigation = () => {
             />
           );
         },
+
         tabBarActiveTintColor: '#FFA847',
         tabBarInactiveTintColor: '#999',
         tabBarStyle: {

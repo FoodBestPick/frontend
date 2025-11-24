@@ -378,6 +378,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     marginBottom: 10,
   },
+
   radioCircle: {
     width: 20,
     height: 20,
@@ -387,6 +388,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginRight: 12,
   },
+
   radioInner: {
     width: 10,
     height: 10,

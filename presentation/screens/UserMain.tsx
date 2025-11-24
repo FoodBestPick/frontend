@@ -359,6 +359,7 @@ const styles = StyleSheet.create({
     searchIcon: { marginRight: 8 },
     placeholderText: { flex: 1, fontSize: 14, color: "#BBB" },
     notificationButton: { padding: 4 },
+
     stickyCategoryContainer: {
         position: 'absolute',
         top: 0,

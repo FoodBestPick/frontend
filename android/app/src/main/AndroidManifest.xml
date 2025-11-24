@@ -17,9 +17,10 @@
         <meta-data
             android:name="com.kakao.sdk.AppKey"
             android:value="${KAKAO_NATIVE_APP_KEY}" />
-        <meta-data
-            android:name="com.google.android.gms.client_id"
-            android:value="com.googleusercontent.apps.68093902376-lh8s01683dmc2j39or12h13sb4l7k65j" />
+
+        <activity
+            android:name="com.naveridlogin.sdk.oauth.NidOAuthLoginActivity"
+            android:exported="true" />   
 
         <activity
             android:name=".MainActivity"
@@ -41,6 +42,15 @@
                 <data
                     android:scheme="kakao${KAKAO_NATIVE_APP_KEY}"
                     android:host="oauth" />
+            </intent-filter>
+
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data
+                    android:scheme="naverlogin"
+                    android:host="callback" />
             </intent-filter>
         </activity>
     </application>

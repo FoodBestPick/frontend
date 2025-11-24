@@ -410,10 +410,11 @@ export const AdminDashBoardScreen = () => {
           <View style={styles.quickGrid}>
             <QuickLink
               icon="checkmark-done-outline"
-              label="맛집 등록"
+              label="대표메뉴, 태그 관리"
               textColor={isDarkMode ? theme.textPrimary : COLORS.text}
               cardColor={isDarkMode ? theme.card : COLORS.card}
               borderColor={theme.border}
+              onPress={() => navigation.navigate('AdminManageSelect')}
             />
             <QuickLink
               icon="shield-outline"
@@ -421,6 +422,9 @@ export const AdminDashBoardScreen = () => {
               textColor={isDarkMode ? theme.textPrimary : COLORS.text}
               cardColor={isDarkMode ? theme.card : COLORS.card}
               borderColor={theme.border}
+              onPress={() => {
+                /* TODO */
+              }}
             />
             <QuickLink
               icon="megaphone-outline"
@@ -428,6 +432,9 @@ export const AdminDashBoardScreen = () => {
               textColor={isDarkMode ? theme.textPrimary : COLORS.text}
               cardColor={isDarkMode ? theme.card : COLORS.card}
               borderColor={theme.border}
+              onPress={() => {
+                /* TODO */
+              }}
             />
             <QuickLink
               icon="headset-outline"
@@ -435,6 +442,9 @@ export const AdminDashBoardScreen = () => {
               textColor={isDarkMode ? theme.textPrimary : COLORS.text}
               cardColor={isDarkMode ? theme.card : COLORS.card}
               borderColor={theme.border}
+              onPress={() => {
+                /* TODO */
+              }}
             />
           </View>
         </View>
@@ -450,12 +460,20 @@ const FeedItem = ({ icon, color, text, textColor }: any) => (
   </View>
 );
 
-const QuickLink = ({ icon, label, textColor, cardColor, borderColor }: any) => (
+const QuickLink = ({
+  icon,
+  label,
+  textColor,
+  cardColor,
+  borderColor,
+  onPress,
+}: any) => (
   <TouchableOpacity
     style={[
       styles.quickCard,
       { backgroundColor: cardColor, borderColor, borderWidth: 1 },
     ]}
+    onPress={onPress}
   >
     <Ionicons name={icon} size={24} color={COLORS.primary} />
     <Text style={[styles.quickText, { color: textColor }]}>{label}</Text>

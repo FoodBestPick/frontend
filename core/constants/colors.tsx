@@ -1,5 +1,4 @@
 export const COLORS = {
-<<<<<<< HEAD
   primary: '#00BDBD',
   secondary: '#4FC3F7',
 
@@ -12,20 +11,6 @@ export const COLORS = {
   success: '#4CAF50',
   warning: '#FFA000',
   danger: '#E53935',
-=======
-  primary: "#00BDBD",
-  secondary: "#4FC3F7",
-
-  background: "#F7F9FB",
-  card: "#FFFFFF",
-  text: "#222222",
-  subtext: "#666666",
-  border: "#E5E7EB",
-
-  success: "#4CAF50",
-  warning: "#FFA000",
-  danger: "#E53935",
->>>>>>> c38db81f656e957f1fb6a646429163d2a31ba05b
 
   chartBlue: '#2196F3',
   chartOrange: '#FF8A65',

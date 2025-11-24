@@ -15,6 +15,9 @@ import UserNavigation from './presentation/navigation/UserNavigation';
 import { AdminRestaurantAddScreen } from './presentation/screens/AdminRestaurantAddScreen';
 import { AdminNotificationScreen } from './presentation/screens/AdminNotificationScreen';
 import { MapSelectScreen } from './presentation/screens/MapSelectScreen';
+import { AdminManageSelectScreen } from './presentation/screens/AdminManageSelectScreen';
+import { AdminFoodManageScreen } from './presentation/screens/AdminFoodManageScreen';
+import { AdminTagManageScreen } from './presentation/screens/AdminTagManageScreen';
 import { ThemeProvider } from './context/ThemeContext';
 import { useContext } from 'react';
 import { ThemeContext } from './context/ThemeContext';
@@ -57,6 +60,18 @@ function AppInner() {
             name="NotificationScreen"
             component={AdminNotificationScreen}
           />
+          <Stack.Screen
+            name="AdminManageSelect"
+            component={AdminManageSelectScreen}
+          />
+          <Stack.Screen
+            name="AdminFoodManage"
+            component={AdminFoodManageScreen}
+          />
+          <Stack.Screen
+            name="AdminTagManage"
+            component={AdminTagManageScreen}
+          />
 
           {/* 사용자 */}
           <Stack.Screen name="UserMain" component={UserNavigation} />
@@ -64,7 +79,6 @@ function AppInner() {
             name="RestaurantDetail"
             component={RestaurantDetailScreen}
           />
-          <Stack.Screen name="RouletteScreen" component={RouletteScreen} />
           <Stack.Screen name="MyPageScreen" component={MyPageScreen} />
         </Stack.Navigator>
       </NavigationContainer>

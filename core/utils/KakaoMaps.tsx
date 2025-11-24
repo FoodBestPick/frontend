@@ -1,7 +1,7 @@
-import axios from "axios";
-import { KAKAO_REST_API_KEY } from "@env";
+import axios from 'axios';
+import { KAKAO_REST_API_KEY } from '@env';
 
-const BASE_URL = "https://dapi.kakao.com/v2/local";
+const BASE_URL = 'https://dapi.kakao.com/v2/local';
 
 /** 주소 → 좌표 변환 */
 export const getCoordsByAddress = async (query: string) => {
@@ -34,9 +34,9 @@ export const getCoordsByAddress = async (query: string) => {
       };
     }
 
-    return null; 
+    return null;
   } catch (error) {
-    console.error("주소/키워드 → 좌표 변환 오류:", error);
+    console.error('주소/키워드 → 좌표 변환 오류:', error);
     return null;
   }
 };
@@ -55,10 +55,10 @@ export const getAddressByCoords = async (lat: number, lng: number) => {
     return (
       doc.road_address?.address_name ||
       doc.address?.address_name ||
-      "주소를 찾을 수 없습니다"
+      '주소를 찾을 수 없습니다'
     );
   } catch (error) {
-    console.error("좌표 → 주소 변환 오류:", error);
+    console.error('좌표 → 주소 변환 오류:', error);
     return null;
   }
 };

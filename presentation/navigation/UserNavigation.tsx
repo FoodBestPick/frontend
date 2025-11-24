@@ -10,7 +10,8 @@ import NotificationScreen from '../screens/NotificationScreen';
 import SearchScreen from '../screens/SearchScreen';
 import SearchResultScreen from '../screens/SearchResultScreen';
 import RestaurantDetailScreen from '../screens/RestaurantDetailScreen';
-
+import MatchingScreen from '../screens/MatchScreen';
+import MyPageScreen from '../screens/MyPageScreen';
 const Tab = createBottomTabNavigator();
 const HomeStack = createStackNavigator();
 const RouletteStack = createStackNavigator();
@@ -91,10 +92,11 @@ export const UserNavigation = () => {
             />
           );
         },
+
         tabBarActiveTintColor: '#FFA847',
         tabBarInactiveTintColor: '#999',
         tabBarStyle: {
-          height: 65,
+          height: 75,
           paddingBottom: 10,
           paddingTop: 5,
           borderTopLeftRadius: 20,
@@ -120,19 +122,23 @@ export const UserNavigation = () => {
         options={{ tabBarLabel: '룰렛' }}
       />
       <Tab.Screen
-        name="MatchTab"
-        component={MatchStackNavigator}
-        options={{ tabBarLabel: '매칭' }}
-      />
-      <Tab.Screen
-        name="MyPageTab"
-        component={MyPageStackNavigator}
-        options={{ tabBarLabel: '마이페이지' }}
-      />
-      <Tab.Screen
         name="NotificationTab"
         component={NotificationStackNavigator}
         options={{ tabBarLabel: '알림' }}
+      />
+
+      {/* 3. 매칭 */}
+      <Tab.Screen
+        name="MatchingTab"
+        component={MatchingScreen}
+        options={{ tabBarLabel: '매칭' }}
+      />
+
+      {/* 4. 마이페이지 */}
+      <Tab.Screen
+        name="MyPageTab"
+        component={MyPageScreen}
+        options={{ tabBarLabel: '마이페이지' }}
       />
     </Tab.Navigator>
   );

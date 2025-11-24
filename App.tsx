@@ -4,12 +4,17 @@ import { StatusBar } from 'react-native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { AdminMainStack } from '../frontend/presentation/navigation/AdminNavigation';
 import { RootStackParamList } from './presentation/navigation/types/RootStackParamList';
-
+import { UserNavigation } from '../frontend/presentation/navigation/UserNavigation';
 import SplashScreen from '../frontend/presentation/screens/SplashScreen';
 import OnboardingScreen from '../frontend/presentation/screens/OnboardingScreen';
 import LoginScreen from '../frontend/presentation/screens/LoginScreen';
 import SignupScreen from '../frontend/presentation/screens/SignupScreen';
 import FindAccountScreen from '../frontend/presentation/screens/FindAccountScreen';
+<<<<<<< HEAD
+=======
+import SearchScreen from '../frontend/presentation/screens/SearchScreen';
+import SearchResultScreen from '../frontend/presentation/screens/SearchResultScreen';
+>>>>>>> 39001ab0d78b4cb7d69c0b03f0d5a678b7931561
 import RestaurantDetailScreen from '../frontend/presentation/screens/RestaurantDetailScreen';
 import UserNavigation from './presentation/navigation/UserNavigation';
 import { AdminRestaurantAddScreen } from './presentation/screens/AdminRestaurantAddScreen';
@@ -22,7 +27,7 @@ import { ThemeProvider } from './context/ThemeContext';
 import { useContext } from 'react';
 import { ThemeContext } from './context/ThemeContext';
 import MyPageScreen from './presentation/screens/MyPageScreen';
-
+import UserNotificationScreen from './presentation/screens/UserNotificationScreen';
 const Stack = createStackNavigator<RootStackParamList>();
 
 function AppInner() {
@@ -75,11 +80,17 @@ function AppInner() {
 
           {/* 사용자 */}
           <Stack.Screen name="UserMain" component={UserNavigation} />
+<<<<<<< HEAD
+=======
+          <Stack.Screen name="SearchScreen" component={SearchScreen} />
+          <Stack.Screen name="SearchResult" component={SearchResultScreen} />
+>>>>>>> 39001ab0d78b4cb7d69c0b03f0d5a678b7931561
           <Stack.Screen
             name="RestaurantDetail"
             component={RestaurantDetailScreen}
           />
           <Stack.Screen name="MyPageScreen" component={MyPageScreen} />
+          <Stack.Screen name="UserNotificationScreen" component={UserNotificationScreen} />
         </Stack.Navigator>
       </NavigationContainer>
     </>

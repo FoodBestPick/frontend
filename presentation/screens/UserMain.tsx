@@ -14,13 +14,10 @@ import {
   UIManager,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
-
-// 🔥 [수정] 여기가 잘못되어 있었습니다. 이걸로 바꾸세요.
 import { SafeAreaView } from 'react-native-safe-area-context';
-
 import { useNavigation } from '@react-navigation/native';
 import { foodRes, CategoryKey, Store } from '../../data/mock/foodRes';
-import UserTabBar from '../components/UserTabBar';
+import UserNotificationScreen from './UserNotificationScreen';
 
 if (
   Platform.OS === 'android' &&
@@ -80,9 +77,17 @@ const UserMain = () => {
 
   const FixedSearchBar = () => (
     <View style={styles.fixedHeader}>
-      <View style={styles.headerTitleWrap}>
+      <View style={styles.topHeaderRow}>
+        <View style={{ width: 24 }} />
         <Text style={styles.headerTitle}>맛집 찾기</Text>
+        <TouchableOpacity
+          style={styles.notificationButton}
+          onPress={() => navigation.navigate('UserNotificationScreen' as never)}
+        >
+          <Icon name="notifications-outline" size={24} color="#333" />
+        </TouchableOpacity>
       </View>
+
       <TouchableOpacity
         style={styles.searchBox}
         activeOpacity={0.9}
@@ -415,8 +420,6 @@ const UserMain = () => {
           />
         )}
       </View>
-
-      <UserTabBar active="홈" />
     </SafeAreaView>
   );
 };
@@ -428,9 +431,6 @@ const styles = StyleSheet.create({
 
   fixedHeader: {
     backgroundColor: '#fff',
-    paddingTop: 12,
-    paddingBottom: 12,
-    borderBottomWidth: 1,
     borderBottomColor: '#F5F5F5',
     zIndex: 100,
   },
@@ -448,8 +448,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     backgroundColor: '#fff',
   },
+  topHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingTop: 10,
+    marginBottom: 12,
+  },
   searchIcon: { marginRight: 8 },
   placeholderText: { flex: 1, fontSize: 14, color: '#BBB' },
+  notificationButton: { padding: 4 },
 
   stickyCategoryContainer: {
     position: 'absolute',
@@ -469,14 +478,14 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     paddingHorizontal: 16,
     justifyContent: 'space-between',
-    marginTop: 10,
+    marginTop: 6,
   },
   gridItem: {
     width: '18%',
     aspectRatio: 0.85,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 15,
+    marginBottom: 6,
     borderRadius: 12,
   },
   gridItemSelected: { backgroundColor: '#FFF4E6' },
@@ -496,7 +505,7 @@ const styles = StyleSheet.create({
   },
   gridTextSelected: { color: '#FFA847', fontWeight: '700' },
 
-  recommendHeader: { marginTop: 10, marginLeft: 16, marginBottom: 10 },
+  recommendHeader: { marginLeft: 16, marginBottom: 20 },
   recommendTitle: { fontSize: 18, fontWeight: '800', color: '#000' },
   subTitle: {
     fontSize: 16,

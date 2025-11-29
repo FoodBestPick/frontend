@@ -29,6 +29,15 @@ export type RootStackParamList = {
   MyPageScreen: undefined;
   NotificationScreen: undefined;
   UserNotificationScreen: undefined;
+  MatchingSetupScreen: undefined;
+  MatchingFindingScreen: {
+    food: string;
+    size: number;
+  };
+  ChatRoomScreen: {
+    roomTitle: string;
+    peopleCount: number;
+  };
 };
 
 export interface FilterState {

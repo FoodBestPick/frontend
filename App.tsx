@@ -22,6 +22,10 @@ import { useContext } from "react";
 import { ThemeContext } from "./context/ThemeContext";
 import MyPageScreen from './presentation/screens/MyPageScreen';
 import UserNotificationScreen from './presentation/screens/UserNotificationScreen';
+import MatchScreen from './presentation/screens/MatchScreen';
+import MatchingSetupScreen from './presentation/screens/MatchingSetupScreen';
+import MatchingFindingScreen from './presentation/screens/MatchingFindingScreen';
+import ChatRoomScreen from './presentation/screens/ChatRoomScreen';
 const Stack = createStackNavigator<RootStackParamList>();
 
 function AppInner() {
@@ -66,6 +70,10 @@ function AppInner() {
           <Stack.Screen name="RouletteScreen" component={RouletteScreen} />
           <Stack.Screen name="MyPageScreen" component={MyPageScreen} />
           <Stack.Screen name="UserNotificationScreen" component={UserNotificationScreen} />
+          <Stack.Screen name="MatchScreen" component={MatchScreen} />
+          <Stack.Screen name="MatchingSetupScreen" component={MatchingSetupScreen} />
+          <Stack.Screen name="MatchingFindingScreen" component={MatchingFindingScreen} />
+          <Stack.Screen name="ChatRoomScreen" component={ChatRoomScreen} />
         </Stack.Navigator>
       </NavigationContainer>
     </>

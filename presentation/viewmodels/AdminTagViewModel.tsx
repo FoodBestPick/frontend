@@ -52,22 +52,19 @@ export const useAdminTagViewModel = () => {
         return { success: false, message: '로그인이 필요합니다.' };
       }
 
-      // ✅ 카테고리별 접두사 자동 추가
-      const prefix = TAG_PREFIXES[category as keyof typeof TAG_PREFIXES] || '';
-      const tagNameWithPrefix = `${prefix}${name}`;
-
       const response = await fetch(`${API_BASE_URL}/tag`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ name: tagNameWithPrefix, category }),
+        body: JSON.stringify({ name, category }),
       });
 
       const result = await response.json();
 
       if (result.code === 200) {
+        await fetchTags(); // ✅ 생성 후 목록 새로고침
         return { success: true, message: '태그가 추가되었습니다.' };
       } else {
         return { success: false, message: result.message };
@@ -85,24 +82,19 @@ export const useAdminTagViewModel = () => {
         return { success: false, message: '로그인이 필요합니다.' };
       }
 
-      // ✅ 수정 시에도 접두사 유지
-      const prefix = TAG_PREFIXES[category as keyof typeof TAG_PREFIXES] || '';
-      const tagNameWithPrefix = name.startsWith(prefix)
-        ? name
-        : `${prefix}${name}`;
-
       const response = await fetch(`${API_BASE_URL}/tag/${id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ name: tagNameWithPrefix }),
+        body: JSON.stringify({ name, category }),
       });
 
       const result = await response.json();
 
       if (result.code === 200) {
+        await fetchTags(); // ✅ 수정 후 목록 새로고침
         return { success: true, message: '태그가 수정되었습니다.' };
       } else {
         return { success: false, message: result.message };
@@ -130,6 +122,7 @@ export const useAdminTagViewModel = () => {
       const result = await response.json();
 
       if (result.code === 200) {
+        await fetchTags(); // ✅ 삭제 후 목록 새로고침
         return { success: true, message: '태그가 삭제되었습니다.' };
       } else {
         return { success: false, message: result.message };

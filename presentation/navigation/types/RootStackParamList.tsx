@@ -8,11 +8,12 @@ export type RootStackParamList = {
   AdminRestaurantAdd:
     | undefined
     | {
-        selectedLocation: {
+        selectedLocation?: {
           lat: number;
           lng: number;
           address: string;
         };
+        id?: number;
       };
   MapSelectScreen: undefined;
   AdminManageSelect: undefined;
@@ -23,11 +24,13 @@ export type RootStackParamList = {
   RouletteScreen: undefined;
   SearchScreen: undefined;
   SearchResult: {
-    query: string;
-    filters: FilterState;
+    keyword: string;
+    category?: string;
+    tags?: string[];
+    filters?: FilterState;
   };
   RestaurantDetail: {
-    restaurant: RestaurantItem;
+    restaurantId: number;
   };
   MatchScreen: undefined;
   MyPageScreen: undefined;

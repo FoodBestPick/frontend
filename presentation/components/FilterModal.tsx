@@ -6,6 +6,7 @@ import {
   StyleSheet,
   ScrollView,
   Modal,
+  TextInput,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 
@@ -13,6 +14,7 @@ interface FilterState {
   location: string;
   radius: number;
   category: string;
+  tags: string[]; // Added tags
   priceMin: number;
   priceMax: number;
   rating: number;
@@ -21,11 +23,26 @@ interface FilterState {
   delivery: boolean;
 }
 
+interface TagItem {
+  id: number;
+  name: string;
+  category: string;
+}
+
+interface CategoryOption {
+  id: number;
+  name: string;
+}
+
 interface FilterModalProps {
   visible: boolean;
   onClose: () => void;
   selectedFilters: Partial<FilterState>;
   onApply: (filters: FilterState) => void;
+  categoriesData?: CategoryOption[];
+  purposeTags?: TagItem[];
+  facilityTags?: TagItem[];
+  atmosphereTags?: TagItem[];
 }
 
 export const FilterModal = ({
@@ -33,11 +50,16 @@ export const FilterModal = ({
   onClose,
   selectedFilters,
   onApply,
+  categoriesData = [],
+  purposeTags = [],
+  facilityTags = [],
+  atmosphereTags = [],
 }: FilterModalProps) => {
   const [filters, setFilters] = useState<FilterState>({
     location: selectedFilters.location || '현재 위치',
     radius: selectedFilters.radius || 2,
     category: selectedFilters.category || '',
+    tags: selectedFilters.tags || [],
     priceMin: selectedFilters.priceMin || 5000,
     priceMax: selectedFilters.priceMax || 50000,
     rating: selectedFilters.rating || 0,
@@ -45,6 +67,13 @@ export const FilterModal = ({
     parking: selectedFilters.parking || false,
     delivery: selectedFilters.delivery || false,
   });
+
+  const [minPrice, setMinPrice] = useState(
+    selectedFilters.priceMin?.toString() || ''
+  );
+  const [maxPrice, setMaxPrice] = useState(
+    selectedFilters.priceMax?.toString() || ''
+  );
 
   const categories = [
     '한식',
@@ -72,12 +101,57 @@ export const FilterModal = ({
       location: '현재 위치',
       radius: 2,
       category: '',
+      tags: [],
       priceMin: 5000,
       priceMax: 50000,
       rating: 0,
       openNow: false,
       parking: false,
       delivery: false,
+    });
+  };
+
+  const toggleTag = (tagName: string) => {
+    setFilters(prev => ({
+      ...prev,
+      tags: prev.tags.includes(tagName)
+        ? prev.tags.filter(t => t !== tagName)
+        : [...prev.tags, tagName],
+    }));
+  };
+
+  const renderTagSection = (title: string, tags: TagItem[]) => (
+    <View style={styles.section}>
+      <Text style={styles.sectionTitle}>{title}</Text>
+      <View style={styles.categoryGrid}>
+        {tags.map(tag => (
+          <TouchableOpacity
+            key={tag.id}
+            style={[
+              styles.categoryChip,
+              filters.tags.includes(tag.name) && styles.categoryChipActive,
+            ]}
+            onPress={() => toggleTag(tag.name)}
+          >
+            <Text
+              style={[
+                styles.categoryText,
+                filters.tags.includes(tag.name) && styles.categoryTextActive,
+              ]}
+            >
+              {tag.name}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+    </View>
+  );
+
+  const handleApply = () => {
+    onApply({
+      ...selectedFilters,
+      priceMin: minPrice ? parseInt(minPrice) : undefined,
+      priceMax: maxPrice ? parseInt(maxPrice) : undefined,
     });
   };
 
@@ -133,75 +207,61 @@ export const FilterModal = ({
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>음식 종류</Text>
             <View style={styles.categoryGrid}>
-              {categories.map(cat => (
-                <TouchableOpacity
-                  key={cat}
-                  style={[
-                    styles.categoryChip,
-                    filters.category === cat && styles.categoryChipActive,
-                  ]}
-                  onPress={() =>
-                    setFilters({
-                      ...filters,
-                      category: filters.category === cat ? '' : cat,
-                    })
-                  }
-                >
-                  <Text
+              {categoriesData.length > 0 ? (
+                categoriesData.map(cat => (
+                  <TouchableOpacity
+                    key={cat.id}
                     style={[
-                      styles.categoryText,
-                      filters.category === cat && styles.categoryTextActive,
+                      styles.categoryChip,
+                      filters.category === cat.name && styles.categoryChipActive,
                     ]}
+                    onPress={() =>
+                      setFilters({
+                        ...filters,
+                        category: filters.category === cat.name ? '' : cat.name,
+                      })
+                    }
                   >
-                    {cat}
-                  </Text>
-                </TouchableOpacity>
-              ))}
+                    <Text
+                      style={[
+                        styles.categoryText,
+                        filters.category === cat.name && styles.categoryTextActive,
+                      ]}
+                    >
+                      {cat.name}
+                    </Text>
+                  </TouchableOpacity>
+                ))
+              ) : (
+                <Text style={{ color: '#999' }}>카테고리 로딩 중...</Text>
+              )}
             </View>
           </View>
 
+          {/* 태그 섹션들 */}
+          {purposeTags.length > 0 && renderTagSection('방문 목적', purposeTags)}
+          {facilityTags.length > 0 && renderTagSection('편의 시설', facilityTags)}
+          {atmosphereTags.length > 0 && renderTagSection('분위기', atmosphereTags)}
+
           {/* 가격대 */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>가격대</Text>
-            <View style={styles.priceRow}>
-              <View style={styles.priceBox}>
-                <Text style={styles.priceLabel}>최소</Text>
-                <Text style={styles.priceValue}>
-                  {filters.priceMin.toLocaleString()}원
-                </Text>
-              </View>
-              <Text style={styles.priceSeparator}>~</Text>
-              <View style={styles.priceBox}>
-                <Text style={styles.priceLabel}>최대</Text>
-                <Text style={styles.priceValue}>
-                  {filters.priceMax.toLocaleString()}원
-                </Text>
-              </View>
-            </View>
-            <View style={styles.priceButtons}>
-              {priceRanges.map(range => (
-                <TouchableOpacity
-                  key={range.value}
-                  style={[
-                    styles.priceButton,
-                    filters.priceMax === range.value &&
-                      styles.priceButtonActive,
-                  ]}
-                  onPress={() =>
-                    setFilters({ ...filters, priceMax: range.value })
-                  }
-                >
-                  <Text
-                    style={[
-                      styles.priceButtonText,
-                      filters.priceMax === range.value &&
-                        styles.priceButtonTextActive,
-                    ]}
-                  >
-                    {range.label}
-                  </Text>
-                </TouchableOpacity>
-              ))}
+            <Text style={styles.sectionTitle}>가격대 (메뉴 기준)</Text>
+            <View style={styles.row}>
+              <TextInput
+                style={styles.input}
+                placeholder="최소 가격"
+                keyboardType="numeric"
+                value={minPrice}
+                onChangeText={setMinPrice}
+              />
+              <Text> ~ </Text>
+              <TextInput
+                style={styles.input}
+                placeholder="최대 가격"
+                keyboardType="numeric"
+                value={maxPrice}
+                onChangeText={setMaxPrice}
+              />
             </View>
           </View>
 
@@ -273,8 +333,8 @@ export const FilterModal = ({
         {/* 하단 버튼 */}
         <View style={styles.footer}>
           <TouchableOpacity
-            style={styles.applyButton}
-            onPress={() => onApply(filters)}
+            style={styles.applyBtn}
+            onPress={handleApply}
           >
             <Text style={styles.applyText}>적용하기</Text>
           </TouchableOpacity>
@@ -466,15 +526,23 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: '#F0F0F0',
   },
-  applyButton: {
+  applyBtn: {
     backgroundColor: '#FFA847',
-    paddingVertical: 14,
-    borderRadius: 10,
+    padding: 16,
+    borderRadius: 12,
     alignItems: 'center',
   },
   applyText: {
     color: '#fff',
     fontSize: 16,
     fontWeight: '700',
+  },
+  row: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  input: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    padding: 10,
   },
 });

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
 import {
   View,
   Text,
@@ -8,62 +8,80 @@ import {
   Image,
   StatusBar,
   Dimensions,
+  ActivityIndicator,
+  Share,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
+import { RootStackParamList } from '../navigation/types/RootStackParamList';
+import { useRestaurantDetailViewModel } from '../viewmodels/RestaurantDetailViewModel';
+import { ThemeContext } from '../../context/ThemeContext';
 
 const { width } = Dimensions.get('window');
 
-interface RestaurantItem {
-  id: number;
-  name: string;
-  category: string;
-  rating: number;
-  reviews: number;
-  distance: string;
-  image: string;
-  tags: string[];
-}
-
-type RootStackParamList = {
-  RestaurantDetail: {
-    restaurant: RestaurantItem;
-  };
-};
-
-type NavigationProp = StackNavigationProp<
-  RootStackParamList,
-  'RestaurantDetail'
->;
+type NavigationProp = StackNavigationProp<RootStackParamList, 'RestaurantDetail'>;
 type RouteParamsProp = RouteProp<RootStackParamList, 'RestaurantDetail'>;
 
 const RestaurantDetailScreen = () => {
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<RouteParamsProp>();
-  const { restaurant } = route.params;
+  const { restaurantId } = route.params;
+  const { theme } = useContext(ThemeContext);
+
+  // ViewModel 연결
+  const { restaurant, loading, error, toggleLike } = useRestaurantDetailViewModel(restaurantId);
 
   const [activeTab, setActiveTab] = useState('정보');
 
+  const handleShare = async () => {
+    try {
+      await Share.share({
+        message: `${restaurant?.name} - ${restaurant?.address}`,
+      });
+    } catch (error: any) {
+      Alert.alert(error.message);
+    }
+  };
+
+  if (loading) {
+    return (
+      <View style={[styles.container, styles.center]}>
+        <ActivityIndicator size="large" color="#FFA847" />
+      </View>
+    );
+  }
+
+  if (error || !restaurant) {
+    return (
+      <View style={[styles.container, styles.center]}>
+        <Text>정보를 불러올 수 없습니다.</Text>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={{ marginTop: 20 }}>
+          <Text style={{ color: '#FFA847' }}>돌아가기</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  // 데이터 매핑
   const detailData = {
     name: restaurant.name,
-    rating: restaurant.rating,
-    reviews: restaurant.reviews,
-    address: '서울시 마포구 어울마당로 123, 1층',
-    phone: '02-123-4567',
-    hours: [
-      { day: '평일', time: '11:30 - 22:00' },
-      { day: '주말', time: '11:30 - 23:00' },
-    ],
-    restTime: '브레이크타임 15:00 - 17:00',
-    images: [restaurant.image],
-    menus: [
-      { name: '기본 떡볶이', price: '20,000원' },
-      { name: '마라 떡볶이', price: '12,000원' },
-      { name: '로제 떡볶이', price: '10,000원' },
-    ],
-    facilities: ['주차 가능', 'Wi-Fi 제공', '예약 가능', '포장 가능'],
+    rating: 0.0, // 백엔드 데이터 없음
+    reviews: 0, // 백엔드 데이터 없음
+    address: restaurant.address,
+    phone: '전화번호 정보 없음', // 백엔드 데이터 없음
+    hours: restaurant.times.map(t => ({
+      day: t.week,
+      time: `${t.startTime} - ${t.endTime}`,
+    })),
+    restTime: restaurant.times.find(t => t.restTime)?.restTime 
+      ? `브레이크타임 ${restaurant.times.find(t => t.restTime)?.restTime}` 
+      : '',
+    images: restaurant.images.length > 0 ? restaurant.images : ['https://via.placeholder.com/400'],
+    menus: restaurant.menus.map(m => ({ name: m.name, price: `${m.price}원` })),
+    facilities: restaurant.tags, // 태그를 편의시설 섹션에 표시
   };
 
   return (
@@ -92,10 +110,14 @@ const RestaurantDetailScreen = () => {
                 <Icon name="arrow-back" size={24} color="#fff" />
               </TouchableOpacity>
               <View style={styles.rightButtons}>
-                <TouchableOpacity style={styles.iconButton}>
-                  <Icon name="heart-outline" size={24} color="#fff" />
+                <TouchableOpacity style={styles.iconButton} onPress={toggleLike}>
+                  <Icon 
+                    name={restaurant.isLiked ? "heart" : "heart-outline"} 
+                    size={24} 
+                    color={restaurant.isLiked ? "#FF6B6B" : "#fff"} 
+                  />
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.iconButton}>
+                <TouchableOpacity style={styles.iconButton} onPress={handleShare}>
                   <Icon name="share-social-outline" size={24} color="#fff" />
                 </TouchableOpacity>
               </View>
@@ -145,24 +167,34 @@ const RestaurantDetailScreen = () => {
             <View style={styles.detailRow}>
               <Icon name="time-outline" size={20} color="#666" />
               <View style={styles.timeInfo}>
-                {detailData.hours.map((h, idx) => (
-                  <Text key={idx} style={styles.detailText}>
-                    {h.day} {h.time}
-                  </Text>
-                ))}
-                <Text style={styles.restTimeText}>{detailData.restTime}</Text>
+                {detailData.hours.length > 0 ? (
+                  detailData.hours.map((h, idx) => (
+                    <Text key={idx} style={styles.detailText}>
+                      {h.day} {h.time}
+                    </Text>
+                  ))
+                ) : (
+                  <Text style={styles.detailText}>운영 시간 정보 없음</Text>
+                )}
+                {detailData.restTime ? (
+                  <Text style={styles.restTimeText}>{detailData.restTime}</Text>
+                ) : null}
               </View>
             </View>
 
             <View style={styles.facilitiesSection}>
-              <Text style={styles.sectionTitle}>편의 시설</Text>
+              <Text style={styles.sectionTitle}>편의 시설 / 태그</Text>
               <View style={styles.facilitiesGrid}>
-                {detailData.facilities.map((facility, idx) => (
-                  <View key={idx} style={styles.facilityChip}>
-                    <Icon name="checkmark-circle" size={16} color="#4CAF50" />
-                    <Text style={styles.facilityText}>{facility}</Text>
-                  </View>
-                ))}
+                {detailData.facilities.length > 0 ? (
+                  detailData.facilities.map((facility, idx) => (
+                    <View key={idx} style={styles.facilityChip}>
+                      <Icon name="checkmark-circle" size={16} color="#4CAF50" />
+                      <Text style={styles.facilityText}>{facility}</Text>
+                    </View>
+                  ))
+                ) : (
+                  <Text style={{ color: '#999' }}>등록된 태그가 없습니다.</Text>
+                )}
               </View>
             </View>
 
@@ -180,18 +212,22 @@ const RestaurantDetailScreen = () => {
         {activeTab === '메뉴' && (
           <View style={styles.contentSection}>
             <Text style={styles.sectionTitle}>대표 메뉴</Text>
-            {detailData.menus.map((menu, idx) => (
-              <View key={idx} style={styles.menuItem}>
-                <Image
-                  source={{ uri: 'https://via.placeholder.com/80' }}
-                  style={styles.menuImage}
-                />
-                <View style={styles.menuInfo}>
-                  <Text style={styles.menuName}>{menu.name}</Text>
-                  <Text style={styles.menuPrice}>{menu.price}</Text>
+            {detailData.menus.length > 0 ? (
+              detailData.menus.map((menu, idx) => (
+                <View key={idx} style={styles.menuItem}>
+                  <Image
+                    source={{ uri: 'https://via.placeholder.com/80' }}
+                    style={styles.menuImage}
+                  />
+                  <View style={styles.menuInfo}>
+                    <Text style={styles.menuName}>{menu.name}</Text>
+                    <Text style={styles.menuPrice}>{menu.price}</Text>
+                  </View>
                 </View>
-              </View>
-            ))}
+              ))
+            ) : (
+              <Text style={styles.emptyText}>등록된 메뉴가 없습니다.</Text>
+            )}
           </View>
         )}
 
@@ -228,6 +264,10 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#fff',
+  },
+  center: {
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   imageContainer: {
     position: 'relative',

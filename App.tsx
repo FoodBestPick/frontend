@@ -2,6 +2,7 @@ import 'react-native-gesture-handler';
 import { NavigationContainer } from '@react-navigation/native';
 import { StatusBar } from 'react-native';
 import { createStackNavigator } from '@react-navigation/stack';
+import AsyncStorage from '@react-native-async-storage/async-storage'; // 추가
 import { AdminMainStack } from '../frontend/presentation/navigation/AdminNavigation';
 import { RootStackParamList } from './presentation/navigation/types/RootStackParamList';
 import { UserNavigation } from '../frontend/presentation/navigation/UserNavigation';
@@ -10,13 +11,9 @@ import OnboardingScreen from '../frontend/presentation/screens/OnboardingScreen'
 import LoginScreen from '../frontend/presentation/screens/LoginScreen';
 import SignupScreen from '../frontend/presentation/screens/SignupScreen';
 import FindAccountScreen from '../frontend/presentation/screens/FindAccountScreen';
-<<<<<<< HEAD
-=======
 import SearchScreen from '../frontend/presentation/screens/SearchScreen';
 import SearchResultScreen from '../frontend/presentation/screens/SearchResultScreen';
->>>>>>> 39001ab0d78b4cb7d69c0b03f0d5a678b7931561
 import RestaurantDetailScreen from '../frontend/presentation/screens/RestaurantDetailScreen';
-import UserNavigation from './presentation/navigation/UserNavigation';
 import { AdminRestaurantAddScreen } from './presentation/screens/AdminRestaurantAddScreen';
 import { AdminNotificationScreen } from './presentation/screens/AdminNotificationScreen';
 import { MapSelectScreen } from './presentation/screens/MapSelectScreen';
@@ -24,7 +21,7 @@ import { AdminManageSelectScreen } from './presentation/screens/AdminManageSelec
 import { AdminFoodManageScreen } from './presentation/screens/AdminFoodManageScreen';
 import { AdminTagManageScreen } from './presentation/screens/AdminTagManageScreen';
 import { ThemeProvider } from './context/ThemeContext';
-import { useContext } from 'react';
+import { useContext, useEffect } from 'react';
 import { ThemeContext } from './context/ThemeContext';
 import MyPageScreen from './presentation/screens/MyPageScreen';
 import UserNotificationScreen from './presentation/screens/UserNotificationScreen';
@@ -80,17 +77,17 @@ function AppInner() {
 
           {/* 사용자 */}
           <Stack.Screen name="UserMain" component={UserNavigation} />
-<<<<<<< HEAD
-=======
           <Stack.Screen name="SearchScreen" component={SearchScreen} />
           <Stack.Screen name="SearchResult" component={SearchResultScreen} />
->>>>>>> 39001ab0d78b4cb7d69c0b03f0d5a678b7931561
           <Stack.Screen
             name="RestaurantDetail"
             component={RestaurantDetailScreen}
           />
           <Stack.Screen name="MyPageScreen" component={MyPageScreen} />
-          <Stack.Screen name="UserNotificationScreen" component={UserNotificationScreen} />
+          <Stack.Screen
+            name="UserNotificationScreen"
+            component={UserNotificationScreen}
+          />
         </Stack.Navigator>
       </NavigationContainer>
     </>
@@ -98,6 +95,17 @@ function AppInner() {
 }
 
 export default function App() {
+  // 임시 토큰 값 (여기에 긴 JWT 토큰 문자열을 붙여넣으세요)
+  const TEMP_TOKEN = "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ0ZXN0dXNlciIsImV4cCI6MTc2NDM4ND..."; 
+
+  useEffect(() => {
+    const setToken = async () => {
+      await AsyncStorage.setItem('accessToken', TEMP_TOKEN);
+      console.log("✅ 테스트용 임시 토큰이 설정되었습니다.");
+    };
+    setToken();
+  }, []);
+
   return (
     <ThemeProvider>
       <AppInner />

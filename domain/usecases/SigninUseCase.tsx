@@ -1,4 +1,3 @@
-// domain/usecases/SigninUseCase.tsx
 import { UserAuthRepository } from "../repositories/UserAuthRepository";
 
 export class SigninUseCase {
@@ -10,6 +9,7 @@ export class SigninUseCase {
     }): Promise<{
         accessToken: string;
         refreshToken?: string;
+        isAdmin: boolean; // ⭐
     }> {
         return this.repo.signin(payload);
     }

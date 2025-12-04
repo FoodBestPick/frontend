@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   ScrollView,
   Switch,
+  Alert
 } from "react-native";
 import MaterialIcons from "react-native-vector-icons/MaterialIcons";
 import { Header } from "../components/Header";
@@ -13,31 +14,56 @@ import { ThemeContext } from "../../context/ThemeContext";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../navigation/types/RootStackParamList";
-import { CacheResetModal } from "../components/CacheResetModal"; 
+import { CacheResetModal } from "../components/CacheResetModal";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+
+// ⭐ [추가] AuthContext 가져오기
+import { useAuth } from "../../context/AuthContext";
 
 type Navigation = NativeStackNavigationProp<RootStackParamList>;
 
 export const AdminSettingScreen = () => {
   const navigation = useNavigation<Navigation>();
   const { isDarkMode, toggleDarkMode, theme } = useContext(ThemeContext);
+
+  // ⭐ [추가] AuthContext에서 logout 함수 가져오기
+  const { logout } = useAuth();
+
   const [modalVisible, setModalVisible] = useState(false);
 
   const handlePress = (label: string) => {
     console.log(`${label} 클릭됨`);
   };
 
-  const handleLogout = () => {
-    navigation.reset({
-      index: 0,
-      routes: [{ name: "Login" }],
-    });
+  // ⭐ [수정] 로그아웃 로직 변경
+  const handleLogout = async () => {
+    Alert.alert(
+      "로그아웃",
+      "정말 로그아웃 하시겠습니까?",
+      [
+        { text: "취소", style: "cancel" },
+        {
+          text: "로그아웃",
+          style: "destructive",
+          onPress: async () => {
+            // Context의 logout 함수 호출 -> App.tsx에서 상태 감지 -> 로그인 화면으로 자동 전환
+            await logout();
+          }
+        }
+      ]
+    );
   };
 
-
   const handleCacheReset = async () => {
+    // 주의: AsyncStorage.clear()는 로그인 토큰까지 다 날릴 수 있으니 조심해야 함
+    // 여기서는 캐시 초기화 의도에 맞게 필요한 키만 지우거나, clear 후 재로그인 유도 등 정책 필요
+    // 일단 기존 로직 유지하되, 로그아웃 될 수 있음을 인지해야 함
     await AsyncStorage.clear();
-    toggleDarkMode(false); 
+    toggleDarkMode(false);
+
+    // clear() 하면 토큰도 날아가므로 로그아웃 처리와 동일하게 동작하게 됨
+    // 안전하게 logout() 호출해서 상태 동기화
+    await logout();
   };
 
   return (

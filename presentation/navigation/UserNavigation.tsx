@@ -11,6 +11,7 @@ import NotificationScreen from '../screens/NotificationScreen';
 import SearchScreen from '../screens/SearchScreen';
 import SearchResultScreen from '../screens/SearchResultScreen';
 import RestaurantDetailScreen from '../screens/RestaurantDetailScreen';
+import ReviewWriteScreen from '../screens/ReviewWriteScreen';
 
 const Tab = createBottomTabNavigator();
 const HomeStack = createStackNavigator();
@@ -31,6 +32,7 @@ const HomeStackNavigator = () => (
       name="RestaurantDetail"
       component={RestaurantDetailScreen}
     />
+    <HomeStack.Screen name="ReviewWrite" component={ReviewWriteScreen} />
   </HomeStack.Navigator>
 );
 
@@ -43,6 +45,7 @@ const RouletteStackNavigator = () => (
       name="RestaurantDetail"
       component={RestaurantDetailScreen}
     />
+    <RouletteStack.Screen name="ReviewWrite" component={ReviewWriteScreen} />
   </RouletteStack.Navigator>
 );
 

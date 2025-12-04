@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_BASE_URL } from '@env';
 
@@ -15,6 +15,18 @@ interface TimeData {
   restTime: string;
 }
 
+interface Review {
+  id: number;
+  userId: number;
+  userNickname: string;
+  userProfileImage: string;
+  content: string;
+  rating: number;
+  images: string[];
+  createdAt: string;
+  isMine: boolean;
+}
+
 interface RestaurantDetail {
   id: number;
   name: string;
@@ -29,6 +41,9 @@ interface RestaurantDetail {
   tags: string[];
   isFavorite: boolean;
   isLiked: boolean;
+  reviews: Review[];
+  reviewCount: number;
+  averageRating: number;
 }
 
 export const useRestaurantDetailViewModel = (restaurantId: number) => {
@@ -36,33 +51,61 @@ export const useRestaurantDetailViewModel = (restaurantId: number) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    fetchRestaurantDetail();
-  }, [restaurantId]);
-
-  const fetchRestaurantDetail = async () => {
+  const fetchRestaurantDetail = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
 
+      // 1. 식당 상세 정보 조회
       const response = await fetch(`${API_BASE_URL}/restaurant/${restaurantId}`);
       const result = await response.json();
 
       if (result.code === 200) {
         const data = result.data;
 
+        // 2. 리뷰 조회
+        let reviews: Review[] = [];
+        let reviewCount = 0;
+        let averageRating = 0.0;
+
+        try {
+          const token = await AsyncStorage.getItem('accessToken');
+          const reviewRes = await fetch(`${API_BASE_URL}/review/restaurant/${restaurantId}`, {
+             headers: token ? { Authorization: `Bearer ${token}` } : {}
+          });
+          const reviewResult = await reviewRes.json();
+          if (reviewResult.code === 200) {
+            reviews = reviewResult.data.content;
+            reviewCount = reviewResult.data.totalElements;
+            // 평균 평점 계산 (백엔드에서 안주면 여기서 계산)
+            if (reviews.length > 0) {
+              const sum = reviews.reduce((acc, r) => acc + r.rating, 0);
+              averageRating = parseFloat((sum / reviews.length).toFixed(1));
+            }
+          }
+        } catch (e) {
+          console.error('리뷰 조회 실패', e);
+        }
+
+        // 3. 좋아요/즐겨찾기 상태 조회 (로그인 시)
+        let isLiked = false;
+        let isFavorite = false;
+        const token = await AsyncStorage.getItem('accessToken');
+        
+        // TODO: 백엔드에 상태 조회 API가 없으므로, 일단 false로 둠.
+        // 실제로는 GET /api/like/status/{id} 같은게 필요함.
+        // 현재는 toggle만 구현되어 있어서 상태를 알 수 없음.
+        // 임시로 로컬 상태나 별도 API가 필요하지만, 일단 false.
+
         setRestaurant({
           id: data.id,
           name: data.name,
           address: data.address,
-          // 백엔드 DTO의 category 필드 우선 사용
           category: data.category || (data.categories?.[0]?.name) || '카테고리 없음',
           description: data.description || data.introduce || '',
           latitude: parseFloat(data.latitude || '0'),
           longitude: parseFloat(data.longitude || '0'),
-          // 백엔드 DTO의 images 필드 우선 사용
           images: data.images || (data.pictures ? data.pictures.map((p: any) => p.url) : []),
-          // 메뉴 매핑 (price가 숫자여도 문자열로 변환하여 표시 가능)
           menus: data.menus ? data.menus.map((m: any) => ({
              id: m.id,
              name: m.name,
@@ -75,8 +118,11 @@ export const useRestaurantDetailViewModel = (restaurantId: number) => {
              restTime: t.restTime || ''
           })) : [],
           tags: data.tags ? data.tags.map((t: any) => t.name) : [],
-          isFavorite: false, // 추후 API 연동 필요
-          isLiked: false,    // 추후 API 연동 필요
+          isFavorite: isFavorite,
+          isLiked: isLiked,
+          reviews: reviews,
+          reviewCount: reviewCount,
+          averageRating: averageRating,
         });
       } else {
         setError(result.message || '식당 정보를 불러오는데 실패했습니다.');
@@ -87,7 +133,11 @@ export const useRestaurantDetailViewModel = (restaurantId: number) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [restaurantId]);
+
+  useEffect(() => {
+    fetchRestaurantDetail();
+  }, [fetchRestaurantDetail]);
 
   const toggleFavorite = async (): Promise<{
     success: boolean;
@@ -100,7 +150,7 @@ export const useRestaurantDetailViewModel = (restaurantId: number) => {
       }
 
       const response = await fetch(`${API_BASE_URL}/favorite/${restaurantId}`, {
-        method: restaurant?.isFavorite ? 'DELETE' : 'POST',
+        method: 'POST', // Toggle 방식
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -109,10 +159,11 @@ export const useRestaurantDetailViewModel = (restaurantId: number) => {
       const result = await response.json();
 
       if (result.code === 200) {
-        await fetchRestaurantDetail(); // 상태 새로고침
+        // 상태 반전
+        setRestaurant(prev => prev ? { ...prev, isFavorite: !prev.isFavorite } : null);
         return {
           success: true,
-          message: restaurant?.isFavorite ? '즐겨찾기 해제' : '즐겨찾기 추가',
+          message: !restaurant?.isFavorite ? '즐겨찾기 추가' : '즐겨찾기 해제',
         };
       } else {
         return { success: false, message: result.message };
@@ -134,7 +185,7 @@ export const useRestaurantDetailViewModel = (restaurantId: number) => {
       }
 
       const response = await fetch(`${API_BASE_URL}/like/${restaurantId}`, {
-        method: restaurant?.isLiked ? 'DELETE' : 'POST',
+        method: 'POST', // Toggle 방식
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -143,10 +194,10 @@ export const useRestaurantDetailViewModel = (restaurantId: number) => {
       const result = await response.json();
 
       if (result.code === 200) {
-        await fetchRestaurantDetail(); // 상태 새로고침
+        setRestaurant(prev => prev ? { ...prev, isLiked: !prev.isLiked } : null);
         return {
           success: true,
-          message: restaurant?.isLiked ? '좋아요 취소' : '좋아요',
+          message: !restaurant?.isLiked ? '좋아요' : '좋아요 취소',
         };
       } else {
         return { success: false, message: result.message };
@@ -157,12 +208,37 @@ export const useRestaurantDetailViewModel = (restaurantId: number) => {
     }
   };
 
+  const deleteReview = async (reviewId: number): Promise<boolean> => {
+    try {
+      const token = await AsyncStorage.getItem('accessToken');
+      if (!token) return false;
+
+      const response = await fetch(`${API_BASE_URL}/review/${reviewId}`, {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      const result = await response.json();
+      if (result.code === 200) {
+        await fetchRestaurantDetail(); // 목록 갱신
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error('리뷰 삭제 오류:', error);
+      return false;
+    }
+  };
+
   return {
     restaurant,
     loading,
     error,
     toggleFavorite,
     toggleLike,
+    deleteReview,
     refresh: fetchRestaurantDetail,
   };
 };

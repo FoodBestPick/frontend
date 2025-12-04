@@ -1,4 +1,4 @@
-import React, { useState, useContext } from 'react';
+import React, { useState, useContext, useCallback } from 'react';
 import {
   View,
   Text,
@@ -14,7 +14,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
-import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
+import { useNavigation, useRoute, RouteProp, useFocusEffect } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../navigation/types/RootStackParamList';
 import { useRestaurantDetailViewModel } from '../viewmodels/RestaurantDetailViewModel';
@@ -32,7 +32,13 @@ const RestaurantDetailScreen = () => {
   const { theme } = useContext(ThemeContext);
 
   // ViewModel 연결
-  const { restaurant, loading, error, toggleLike } = useRestaurantDetailViewModel(restaurantId);
+  const { restaurant, loading, error, toggleLike, deleteReview, refresh } = useRestaurantDetailViewModel(restaurantId);
+
+  useFocusEffect(
+    useCallback(() => {
+      refresh();
+    }, [refresh])
+  );
 
   const [activeTab, setActiveTab] = useState('정보');
 
@@ -41,9 +47,35 @@ const RestaurantDetailScreen = () => {
       await Share.share({
         message: `${restaurant?.name} - ${restaurant?.address}`,
       });
-    } catch (error: any) {
-      Alert.alert(error.message);
+    } catch (err: any) {
+      Alert.alert(err.message);
     }
+  };
+
+  const handleDeleteReview = (reviewId: number) => {
+    Alert.alert('리뷰 삭제', '정말로 삭제하시겠습니까?', [
+      { text: '취소', style: 'cancel' },
+      {
+        text: '삭제',
+        style: 'destructive',
+        onPress: async () => {
+          const success = await deleteReview(reviewId);
+          if (success) {
+            Alert.alert('알림', '리뷰가 삭제되었습니다.');
+          } else {
+            Alert.alert('오류', '리뷰 삭제에 실패했습니다.');
+          }
+        },
+      },
+    ]);
+  };
+
+  const handleEditReview = (review: any) => {
+    navigation.navigate('ReviewWrite', {
+      restaurantId: restaurantId,
+      restaurantName: restaurant?.name || '',
+      review: review,
+    });
   };
 
   if (loading) {
@@ -58,8 +90,8 @@ const RestaurantDetailScreen = () => {
     return (
       <View style={[styles.container, styles.center]}>
         <Text>정보를 불러올 수 없습니다.</Text>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={{ marginTop: 20 }}>
-          <Text style={{ color: '#FFA847' }}>돌아가기</Text>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.goBackButton}>
+          <Text style={styles.goBackText}>돌아가기</Text>
         </TouchableOpacity>
       </View>
     );
@@ -68,8 +100,8 @@ const RestaurantDetailScreen = () => {
   // 데이터 매핑
   const detailData = {
     name: restaurant.name,
-    rating: 0.0, // 백엔드 데이터 없음
-    reviews: 0, // 백엔드 데이터 없음
+    rating: restaurant.averageRating || 0.0,
+    reviews: restaurant.reviewCount || 0,
     address: restaurant.address,
     phone: '전화번호 정보 없음', // 백엔드 데이터 없음
     hours: restaurant.times.map(t => ({
@@ -82,6 +114,7 @@ const RestaurantDetailScreen = () => {
     images: restaurant.images.length > 0 ? restaurant.images : ['https://via.placeholder.com/400'],
     menus: restaurant.menus.map(m => ({ name: m.name, price: `${m.price}원` })),
     facilities: restaurant.tags, // 태그를 편의시설 섹션에 표시
+    reviewsList: restaurant.reviews || [],
   };
 
   return (
@@ -94,7 +127,7 @@ const RestaurantDetailScreen = () => {
 
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: activeTab === '리뷰' ? 80 : 0 }}
+        contentContainerStyle={[styles.scrollContent, activeTab === '리뷰' && styles.scrollContentWithFooter]}
       >
         <View style={styles.imageContainer}>
           <Image
@@ -193,7 +226,7 @@ const RestaurantDetailScreen = () => {
                     </View>
                   ))
                 ) : (
-                  <Text style={{ color: '#999' }}>등록된 태그가 없습니다.</Text>
+                  <Text style={styles.emptyTagText}>등록된 태그가 없습니다.</Text>
                 )}
               </View>
             </View>
@@ -234,7 +267,47 @@ const RestaurantDetailScreen = () => {
         {activeTab === '리뷰' && (
           <View style={styles.contentSection}>
             <Text style={styles.sectionTitle}>리뷰 ({detailData.reviews})</Text>
-            <Text style={styles.emptyText}>리뷰가 없습니다</Text>
+            {detailData.reviewsList.length > 0 ? (
+              detailData.reviewsList.map((review) => (
+                <View key={review.id} style={styles.reviewContainer}>
+                  <View style={styles.reviewHeader}>
+                    <Image 
+                      source={{ uri: review.userProfileImage || 'https://via.placeholder.com/40' }} 
+                      style={styles.reviewerImage} 
+                    />
+                    <View style={styles.reviewerInfo}>
+                      <Text style={styles.reviewerName}>{review.userNickname}</Text>
+                      <View style={styles.reviewRatingRow}>
+                        {[1,2,3,4,5].map(s => (
+                          <Icon key={s} name={s <= review.rating ? "star" : "star-outline"} size={12} color="#FFA847" />
+                        ))}
+                        <Text style={styles.reviewDate}>{review.createdAt}</Text>
+                      </View>
+                    </View>
+                    {review.isMine && (
+                      <View style={styles.reviewActions}>
+                        <TouchableOpacity onPress={() => handleEditReview(review)} style={styles.actionButton}>
+                          <Text style={styles.actionText}>수정</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity onPress={() => handleDeleteReview(review.id)} style={styles.actionButton}>
+                          <Text style={styles.deleteActionText}>삭제</Text>
+                        </TouchableOpacity>
+                      </View>
+                    )}
+                  </View>
+                  <Text style={styles.reviewContent}>{review.content}</Text>
+                  {review.images && review.images.length > 0 && (
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.reviewImageScroll}>
+                      {review.images.map((img, i) => (
+                        <Image key={i} source={{ uri: img }} style={styles.reviewImage} />
+                      ))}
+                    </ScrollView>
+                  )}
+                </View>
+              ))
+            ) : (
+              <Text style={styles.emptyText}>리뷰가 없습니다</Text>
+            )}
           </View>
         )}
       </ScrollView>
@@ -245,8 +318,10 @@ const RestaurantDetailScreen = () => {
           <TouchableOpacity
             style={styles.writeReviewButton}
             onPress={() => {
-              // TODO: 리뷰 작성 화면으로 이동
-              console.log('리뷰 작성하기');
+              navigation.navigate('ReviewWrite', {
+                restaurantId: restaurant.id,
+                restaurantName: restaurant.name,
+              });
             }}
           >
             <Icon name="create-outline" size={20} color="#fff" />
@@ -475,5 +550,89 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 15,
     fontWeight: '700',
+  },
+  reviewContainer: {
+    marginBottom: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
+    paddingBottom: 16,
+  },
+  reviewHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  reviewerImage: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    marginRight: 10,
+    backgroundColor: '#eee',
+  },
+  reviewerInfo: {
+    flex: 1,
+  },
+  reviewerName: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 2,
+  },
+  reviewRatingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  reviewDate: {
+    fontSize: 12,
+    color: '#999',
+    marginLeft: 6,
+  },
+  reviewContent: {
+    fontSize: 14,
+    color: '#444',
+    lineHeight: 20,
+    marginBottom: 10,
+  },
+  reviewImageScroll: {
+    flexDirection: 'row',
+    marginTop: 8,
+  },
+  reviewImage: {
+    width: 100,
+    height: 100,
+    borderRadius: 8,
+    marginRight: 8,
+    backgroundColor: '#f0f0f0',
+  },
+  reviewActions: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  actionButton: {
+    padding: 4,
+  },
+  actionText: {
+    fontSize: 12,
+    color: '#999',
+  },
+  deleteActionText: {
+    fontSize: 12,
+    color: '#FF6B6B',
+  },
+  goBackButton: {
+    marginTop: 20,
+  },
+  goBackText: {
+    color: '#FFA847',
+  },
+  scrollContent: {
+    paddingBottom: 0,
+  },
+  scrollContentWithFooter: {
+    paddingBottom: 80,
+  },
+  emptyTagText: {
+    color: '#999',
   },
 });

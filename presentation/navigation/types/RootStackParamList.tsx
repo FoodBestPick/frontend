@@ -36,6 +36,25 @@ export type RootStackParamList = {
   MyPageScreen: undefined;
   NotificationScreen: undefined;
   UserNotificationScreen: undefined;
+  MatchingSetupScreen: undefined;
+  MatchingFindingScreen: {
+    food: string;
+    size: number;
+  };
+  ChatRoomScreen: {
+    roomTitle: string;
+    peopleCount: number;
+  };
+  ReviewWrite: {
+    restaurantId: number;
+    restaurantName: string;
+    review?: {
+      id: number;
+      content: string;
+      rating: number;
+      images: string[];
+    };
+  };
 };
 
 export interface FilterState {

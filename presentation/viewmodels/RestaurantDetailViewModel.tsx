@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_BASE_URL } from '@env';
+import { useAuth } from '../../context/AuthContext';
 
 interface Menu {
   id: number;
@@ -25,6 +25,8 @@ interface Review {
   images: string[];
   createdAt: string;
   isMine: boolean;
+  isLiked: boolean;
+  likeCount: number;
 }
 
 interface RestaurantDetail {
@@ -47,6 +49,7 @@ interface RestaurantDetail {
 }
 
 export const useRestaurantDetailViewModel = (restaurantId: number) => {
+  const { token } = useAuth();
   const [restaurant, setRestaurant] = useState<RestaurantDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -65,22 +68,31 @@ export const useRestaurantDetailViewModel = (restaurantId: number) => {
 
         // 2. 리뷰 조회
         let reviews: Review[] = [];
-        let reviewCount = 0;
-        let averageRating = 0.0;
+        // 백엔드에서 제공하는 값 우선 사용, 없으면 0
+        let reviewCount = data.reviewCount || 0;
+        let averageRating = data.averageRating || 0.0;
 
         try {
-          const token = await AsyncStorage.getItem('accessToken');
-          const reviewRes = await fetch(`${API_BASE_URL}/review/restaurant/${restaurantId}`, {
+          const reviewRes = await fetch(`${API_BASE_URL}/api/review/restaurant/${restaurantId}`, {
              headers: token ? { Authorization: `Bearer ${token}` } : {}
           });
           const reviewResult = await reviewRes.json();
           if (reviewResult.code === 200) {
-            reviews = reviewResult.data.content;
-            reviewCount = reviewResult.data.totalElements;
-            // 평균 평점 계산 (백엔드에서 안주면 여기서 계산)
-            if (reviews.length > 0) {
-              const sum = reviews.reduce((acc, r) => acc + r.rating, 0);
-              averageRating = parseFloat((sum / reviews.length).toFixed(1));
+            // 백엔드에서 isMine이 mine으로 올 수도 있으므로 매핑 처리
+            reviews = reviewResult.data.content.map((r: any) => ({
+              ...r,
+              isMine: r.isMine !== undefined ? r.isMine : (r.mine !== undefined ? r.mine : false),
+              isLiked: r.isLiked || false,
+              likeCount: r.likeCount || 0
+            }));
+            
+            // 만약 백엔드 RestaurantResponse에 값이 없다면 리뷰 목록에서 계산 (fallback)
+            if (reviewCount === 0 && reviewResult.data.totalElements > 0) {
+                reviewCount = reviewResult.data.totalElements;
+            }
+            if (averageRating === 0.0 && reviews.length > 0) {
+               const sum = reviews.reduce((acc, r) => acc + r.rating, 0);
+               averageRating = parseFloat((sum / reviews.length).toFixed(1));
             }
           }
         } catch (e) {
@@ -90,7 +102,6 @@ export const useRestaurantDetailViewModel = (restaurantId: number) => {
         // 3. 좋아요/즐겨찾기 상태 조회 (로그인 시)
         let isLiked = false;
         let isFavorite = false;
-        const token = await AsyncStorage.getItem('accessToken');
         
         // TODO: 백엔드에 상태 조회 API가 없으므로, 일단 false로 둠.
         // 실제로는 GET /api/like/status/{id} 같은게 필요함.
@@ -133,7 +144,7 @@ export const useRestaurantDetailViewModel = (restaurantId: number) => {
     } finally {
       setLoading(false);
     }
-  }, [restaurantId]);
+  }, [restaurantId, token]);
 
   useEffect(() => {
     fetchRestaurantDetail();
@@ -144,12 +155,11 @@ export const useRestaurantDetailViewModel = (restaurantId: number) => {
     message: string;
   }> => {
     try {
-      const token = await AsyncStorage.getItem('accessToken');
       if (!token) {
         return { success: false, message: '로그인이 필요합니다.' };
       }
 
-      const response = await fetch(`${API_BASE_URL}/favorite/${restaurantId}`, {
+      const response = await fetch(`${API_BASE_URL}/api/favorite/${restaurantId}`, {
         method: 'POST', // Toggle 방식
         headers: {
           Authorization: `Bearer ${token}`,
@@ -179,12 +189,11 @@ export const useRestaurantDetailViewModel = (restaurantId: number) => {
     message: string;
   }> => {
     try {
-      const token = await AsyncStorage.getItem('accessToken');
       if (!token) {
         return { success: false, message: '로그인이 필요합니다.' };
       }
 
-      const response = await fetch(`${API_BASE_URL}/like/${restaurantId}`, {
+      const response = await fetch(`${API_BASE_URL}/api/like/${restaurantId}`, {
         method: 'POST', // Toggle 방식
         headers: {
           Authorization: `Bearer ${token}`,
@@ -210,10 +219,9 @@ export const useRestaurantDetailViewModel = (restaurantId: number) => {
 
   const deleteReview = async (reviewId: number): Promise<boolean> => {
     try {
-      const token = await AsyncStorage.getItem('accessToken');
       if (!token) return false;
 
-      const response = await fetch(`${API_BASE_URL}/review/${reviewId}`, {
+      const response = await fetch(`${API_BASE_URL}/api/review/${reviewId}`, {
         method: 'DELETE',
         headers: {
           Authorization: `Bearer ${token}`,
@@ -232,6 +240,43 @@ export const useRestaurantDetailViewModel = (restaurantId: number) => {
     }
   };
 
+  const toggleReviewLike = async (reviewId: number): Promise<boolean> => {
+    try {
+      if (!token) return false;
+
+      const response = await fetch(`${API_BASE_URL}/api/review/${reviewId}/like`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      const result = await response.json();
+      if (result.code === 200) {
+        // 로컬 상태 업데이트 (낙관적 업데이트)
+        setRestaurant(prev => {
+          if (!prev) return null;
+          const updatedReviews = prev.reviews.map(r => {
+            if (r.id === reviewId) {
+              return {
+                ...r,
+                isLiked: !r.isLiked,
+                likeCount: r.isLiked ? r.likeCount - 1 : r.likeCount + 1
+              };
+            }
+            return r;
+          });
+          return { ...prev, reviews: updatedReviews };
+        });
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error('리뷰 좋아요 오류:', error);
+      return false;
+    }
+  };
+
   return {
     restaurant,
     loading,
@@ -239,6 +284,7 @@ export const useRestaurantDetailViewModel = (restaurantId: number) => {
     toggleFavorite,
     toggleLike,
     deleteReview,
+    toggleReviewLike,
     refresh: fetchRestaurantDetail,
   };
 };

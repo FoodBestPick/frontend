@@ -228,6 +228,13 @@ const SearchScreen = () => {
         onApply={filters => {
           setSelectedFilters(filters);
           setFilterVisible(false);
+          // 필터 적용 시 바로 검색 결과로 이동
+          navigation.navigate('SearchResult', {
+            keyword: searchQuery,
+            category: filters.category,
+            tags: filters.tags,
+            filters: filters,
+          });
         }}
         categoriesData={categories}
         purposeTags={purposeTags}

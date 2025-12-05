@@ -243,6 +243,24 @@ export const FilterModal = ({
           {facilityTags.length > 0 && renderTagSection('편의 시설', facilityTags)}
           {atmosphereTags.length > 0 && renderTagSection('분위기', atmosphereTags)}
 
+          {/* 영업 상태 */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>영업 상태</Text>
+            <TouchableOpacity
+              style={styles.checkboxRow}
+              onPress={() =>
+                setFilters({ ...filters, openNow: !filters.openNow })
+              }
+            >
+              <Icon
+                name={filters.openNow ? 'checkbox' : 'square-outline'}
+                size={22}
+                color={filters.openNow ? '#FFA847' : '#999'}
+              />
+              <Text style={styles.checkboxText}>영업 중</Text>
+            </TouchableOpacity>
+          </View>
+
           {/* 가격대 */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>가격대 (메뉴 기준)</Text>
@@ -285,49 +303,7 @@ export const FilterModal = ({
             </View>
           </View>
 
-          {/* 편의 시설 */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>편의 시설</Text>
-            <TouchableOpacity
-              style={styles.checkboxRow}
-              onPress={() =>
-                setFilters({ ...filters, openNow: !filters.openNow })
-              }
-            >
-              <Icon
-                name={filters.openNow ? 'checkbox' : 'square-outline'}
-                size={22}
-                color={filters.openNow ? '#FFA847' : '#999'}
-              />
-              <Text style={styles.checkboxText}>영업 중</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.checkboxRow}
-              onPress={() =>
-                setFilters({ ...filters, parking: !filters.parking })
-              }
-            >
-              <Icon
-                name={filters.parking ? 'checkbox' : 'square-outline'}
-                size={22}
-                color={filters.parking ? '#FFA847' : '#999'}
-              />
-              <Text style={styles.checkboxText}>주차 가능</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.checkboxRow}
-              onPress={() =>
-                setFilters({ ...filters, delivery: !filters.delivery })
-              }
-            >
-              <Icon
-                name={filters.delivery ? 'checkbox' : 'square-outline'}
-                size={22}
-                color={filters.delivery ? '#FFA847' : '#999'}
-              />
-              <Text style={styles.checkboxText}>배달 가능</Text>
-            </TouchableOpacity>
-          </View>
+          {/* 편의 시설 - 삭제됨 */}
         </ScrollView>
 
         {/* 하단 버튼 */}

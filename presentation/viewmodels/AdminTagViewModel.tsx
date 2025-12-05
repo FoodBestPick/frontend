@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_BASE_URL } from '@env';
+import { useAuth } from '../../context/AuthContext';
 
 interface Tag {
   id: number;
@@ -16,6 +16,7 @@ export const TAG_PREFIXES = {
 } as const;
 
 export const useAdminTagViewModel = () => {
+  const { token } = useAuth();
   const [tags, setTags] = useState<Tag[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -47,7 +48,6 @@ export const useAdminTagViewModel = () => {
 
   const createTag = async (name: string, category: string) => {
     try {
-      const token = await AsyncStorage.getItem('accessToken');
       if (!token) {
         return { success: false, message: '로그인이 필요합니다.' };
       }
@@ -77,7 +77,6 @@ export const useAdminTagViewModel = () => {
 
   const updateTag = async (id: number, name: string, category: string) => {
     try {
-      const token = await AsyncStorage.getItem('accessToken');
       if (!token) {
         return { success: false, message: '로그인이 필요합니다.' };
       }
@@ -107,7 +106,6 @@ export const useAdminTagViewModel = () => {
 
   const deleteTag = async (id: number) => {
     try {
-      const token = await AsyncStorage.getItem('accessToken');
       if (!token) {
         return { success: false, message: '로그인이 필요합니다.' };
       }

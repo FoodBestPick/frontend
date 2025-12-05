@@ -9,18 +9,22 @@ interface Restaurant {
   images?: string[];
   latitude?: number;
   longitude?: number;
+  rating?: number;
+  reviews?: number;
 }
 
 export const useSearchViewModel = () => {
   const [results, setResults] = useState<Restaurant[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [sortBy, setSortBy] = useState<'rating' | 'review'>('rating');
 
   const searchRestaurants = async (
     keyword?: string,
     category?: string,
     tags?: string[],
-    filters?: any // { priceMin, priceMax }
+    filters?: any, // { priceMin, priceMax }
+    sort?: 'rating' | 'review'
   ): Promise<void> => {
     try {
       setLoading(true);
@@ -37,6 +41,12 @@ export const useSearchViewModel = () => {
       }
       if (filters?.priceMin) params.append('minPrice', filters.priceMin.toString());
       if (filters?.priceMax) params.append('maxPrice', filters.priceMax.toString());
+      if (filters?.rating) params.append('minRating', filters.rating.toString());
+      if (filters?.openNow) params.append('openNow', 'true');
+      
+      // 정렬 파라미터 추가 (함수 인자로 받거나 상태값 사용)
+      const sortValue = sort || sortBy;
+      params.append('sort', sortValue);
 
       const queryString = params.toString();
       const fullUrl = queryString ? `${url}?${queryString}` : url;
@@ -61,6 +71,8 @@ export const useSearchViewModel = () => {
               images: item.images || (item.pictures ? item.pictures.map((p: any) => p.url) : []),
               latitude: item.latitude ? parseFloat(item.latitude) : 0,
               longitude: item.longitude ? parseFloat(item.longitude) : 0,
+              rating: item.averageRating || 0.0,
+              reviews: item.reviewCount || 0,
             }))
           : [];
 
@@ -87,6 +99,8 @@ export const useSearchViewModel = () => {
     results,
     loading,
     error,
+    sortBy,
+    setSortBy,
     searchRestaurants,
     clearResults,
   };

@@ -14,9 +14,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { launchImageLibrary } from 'react-native-image-picker';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_BASE_URL } from '@env';
 import { RootStackParamList } from '../navigation/types/RootStackParamList';
+import { useAuth } from '../../context/AuthContext';
 
 type RouteParams = RouteProp<RootStackParamList, 'ReviewWrite'>;
 
@@ -24,6 +24,7 @@ const ReviewWriteScreen = () => {
   const navigation = useNavigation();
   const route = useRoute<RouteParams>();
   const { restaurantId, restaurantName, review } = route.params;
+  const { token } = useAuth();
 
   const [rating, setRating] = useState(review ? review.rating : 5);
   const [content, setContent] = useState(review ? review.content : '');
@@ -58,7 +59,6 @@ const ReviewWriteScreen = () => {
 
     try {
       setLoading(true);
-      const token = await AsyncStorage.getItem('accessToken');
       if (!token) {
         Alert.alert('오류', '로그인이 필요합니다.');
         return;
@@ -88,14 +88,13 @@ const ReviewWriteScreen = () => {
         }
       });
 
-      const url = review ? `${API_BASE_URL}/review/${review.id}` : `${API_BASE_URL}/review`;
+      const url = review ? `${API_BASE_URL}/api/review/${review.id}` : `${API_BASE_URL}/api/review`;
       const method = review ? 'PUT' : 'POST';
 
       const response = await fetch(url, {
         method: method,
         headers: {
           Authorization: `Bearer ${token}`,
-          'Content-Type': 'multipart/form-data',
         },
         body: formData,
       });

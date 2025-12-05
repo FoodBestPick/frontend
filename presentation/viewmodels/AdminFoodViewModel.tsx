@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_BASE_URL } from '@env';
+import { useAuth } from '../../context/AuthContext';
 
 interface Food {
   id: number;
@@ -8,6 +8,7 @@ interface Food {
 }
 
 export const useAdminFoodViewModel = () => {
+  const { token } = useAuth();
   const [foods, setFoods] = useState<Food[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -39,8 +40,6 @@ export const useAdminFoodViewModel = () => {
 
   const createFood = async (name: string) => {
     try {
-      const token = await AsyncStorage.getItem('accessToken');
-
       const response = await fetch(`${API_BASE_URL}/food`, {
         method: 'POST',
         headers: {
@@ -66,7 +65,6 @@ export const useAdminFoodViewModel = () => {
 
   const updateFood = async (id: number, name: string) => {
     try {
-      const token = await AsyncStorage.getItem('accessToken');
       if (!token) {
         return { success: false, message: '로그인이 필요합니다.' };
       }
@@ -96,7 +94,6 @@ export const useAdminFoodViewModel = () => {
 
   const deleteFood = async (id: number) => {
     try {
-      const token = await AsyncStorage.getItem('accessToken');
       if (!token) {
         return { success: false, message: '로그인이 필요합니다.' };
       }

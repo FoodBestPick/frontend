@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_BASE_URL } from '@env';
+import { useAuth } from '../../context/AuthContext';
 
 interface Restaurant {
   id: number;
@@ -11,6 +11,7 @@ interface Restaurant {
 }
 
 export const useAdminRestaurantViewModel = () => {
+  const { token } = useAuth();
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -30,11 +31,12 @@ export const useAdminRestaurantViewModel = () => {
         setSelectedIds([]);
       }
 
-      const token = await AsyncStorage.getItem('accessToken');
       if (!token) {
         setError('로그인이 필요합니다.');
         return;
       }
+
+      console.log(token);
 
       let url = `${API_BASE_URL}/restaurant`;
       if (searchKeyword) {
@@ -97,7 +99,6 @@ export const useAdminRestaurantViewModel = () => {
     id: number,
   ): Promise<{ success: boolean; message: string }> => {
     try {
-      const token = await AsyncStorage.getItem('accessToken');
       if (!token) {
         return { success: false, message: '로그인이 필요합니다.' };
       }

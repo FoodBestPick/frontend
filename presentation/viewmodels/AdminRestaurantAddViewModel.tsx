@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_BASE_URL } from '@env';
+import { useAuth } from '../../context/AuthContext';
 
 interface TagItem {
   id: number;
@@ -39,6 +39,7 @@ interface RestaurantCreateData {
 }
 
 export const useAdminRestaurantAddViewModel = () => {
+  const { token } = useAuth();
   const [purposeTags, setPurposeTags] = useState<TagItem[]>([]);
   const [atmosphereTags, setAtmosphereTags] = useState<TagItem[]>([]);
   const [facilityTags, setFacilityTags] = useState<TagItem[]>([]);
@@ -86,7 +87,6 @@ export const useAdminRestaurantAddViewModel = () => {
     imageFiles: any[],
   ): Promise<{ success: boolean; message: string; restaurantId?: number }> => {
     try {
-      const token = await AsyncStorage.getItem('accessToken');
       // if (!token) {
       //   return { success: false, message: '로그인이 필요합니다.' };
       // }
@@ -227,7 +227,6 @@ export const useAdminRestaurantAddViewModel = () => {
     imageFiles: any[],
   ): Promise<{ success: boolean; message: string }> => {
     try {
-      const token = await AsyncStorage.getItem('accessToken');
       let uploadedUrls: string[] = [];
 
       // 1. 새 이미지 업로드
@@ -269,6 +268,35 @@ export const useAdminRestaurantAddViewModel = () => {
       // 현재 백엔드 구조상 PUT /restaurant는 기본 정보만 수정하는 것으로 보임 (RestaurantController.update)
       // 하지만 RestaurantController.update가 모든 필드를 받는지 확인 필요. 
       // 일단 기본 정보 전송.
+
+      // [수정] 메뉴 데이터 전송
+      if (data.menus && data.menus.length > 0) {
+        const validMenus = data.menus
+          .filter(menu => menu.menu_name && menu.menu_name.trim() !== '')
+          .map(menu => ({
+            menu_name: menu.menu_name,
+            menu_price: menu.menu_price ? parseInt(menu.menu_price) : 0,
+          }));
+
+        if (validMenus.length > 0) {
+          formData.append('menus', JSON.stringify(validMenus));
+        }
+      }
+
+      // [수정] 운영시간 데이터 전송
+      if (data.times && data.times.length > 0) {
+        const validTimes = data.times.filter(t => t.week && t.startTime && t.endTime);
+        if (validTimes.length > 0) {
+          formData.append('times', JSON.stringify(validTimes));
+        }
+      }
+
+      // [수정] 태그 데이터 전송
+      if (data.tags && data.tags.length > 0) {
+        data.tags.forEach(tag => {
+          formData.append('tags', tag);
+        });
+      }
       
       const response = await fetch(`${API_BASE_URL}/restaurant/${id}`, {
         method: 'PUT',

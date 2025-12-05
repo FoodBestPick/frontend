@@ -9,7 +9,6 @@ import {
   StatusBar,
   Dimensions,
   ActivityIndicator,
-  Share,
   Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -32,7 +31,7 @@ const RestaurantDetailScreen = () => {
   const { theme } = useContext(ThemeContext);
 
   // ViewModel 연결
-  const { restaurant, loading, error, toggleLike, deleteReview, refresh } = useRestaurantDetailViewModel(restaurantId);
+  const { restaurant, loading, error, toggleLike, deleteReview, toggleReviewLike, refresh } = useRestaurantDetailViewModel(restaurantId);
 
   useFocusEffect(
     useCallback(() => {
@@ -41,16 +40,6 @@ const RestaurantDetailScreen = () => {
   );
 
   const [activeTab, setActiveTab] = useState('정보');
-
-  const handleShare = async () => {
-    try {
-      await Share.share({
-        message: `${restaurant?.name} - ${restaurant?.address}`,
-      });
-    } catch (err: any) {
-      Alert.alert(err.message);
-    }
-  };
 
   const handleDeleteReview = (reviewId: number) => {
     Alert.alert('리뷰 삭제', '정말로 삭제하시겠습니까?', [
@@ -149,9 +138,6 @@ const RestaurantDetailScreen = () => {
                     size={24} 
                     color={restaurant.isLiked ? "#FF6B6B" : "#fff"} 
                   />
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.iconButton} onPress={handleShare}>
-                  <Icon name="share-social-outline" size={24} color="#fff" />
                 </TouchableOpacity>
               </View>
             </View>
@@ -303,6 +289,23 @@ const RestaurantDetailScreen = () => {
                       ))}
                     </ScrollView>
                   )}
+                  
+                  {/* ✅ 리뷰 좋아요 버튼 추가 */}
+                  <View style={styles.reviewFooter}>
+                    <TouchableOpacity 
+                      style={styles.likeButton} 
+                      onPress={() => toggleReviewLike(review.id)}
+                    >
+                      <Icon 
+                        name={review.isLiked ? "heart" : "heart-outline"} 
+                        size={16} 
+                        color={review.isLiked ? "#FF6B6B" : "#999"} 
+                      />
+                      <Text style={[styles.likeCount, review.isLiked && { color: "#FF6B6B" }]}>
+                        {review.likeCount > 0 ? review.likeCount : '좋아요'}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
                 </View>
               ))
             ) : (
@@ -604,6 +607,24 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginRight: 8,
     backgroundColor: '#f0f0f0',
+  },
+  reviewFooter: {
+    marginTop: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  likeButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: 12,
+    backgroundColor: '#F5F5F5',
+    gap: 4,
+  },
+  likeCount: {
+    fontSize: 12,
+    color: '#666',
   },
   reviewActions: {
     flexDirection: 'row',

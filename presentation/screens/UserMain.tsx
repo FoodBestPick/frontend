@@ -16,8 +16,8 @@ import {
 import Icon from 'react-native-vector-icons/Ionicons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
-import { foodRes, CategoryKey, Store } from '../../data/mock/foodRes';
-import UserNotificationScreen from './UserNotificationScreen';
+// import { foodRes, CategoryKey, Store } from '../../data/mock/foodRes'; // Mock data removed
+import { useUserMainViewModel, Store } from '../viewmodels/UserMainViewModel';
 
 if (
   Platform.OS === 'android' &&
@@ -34,9 +34,14 @@ const SCROLL_THRESHOLD = 220;
 // 스크롤바 트랙의 길이 (화면 너비의 75%)
 const TRACK_WIDTH = width * 0.75;
 
+type CategoryKey = string; // Define CategoryKey locally or import if needed
+
 const UserMain = () => {
   const [selectedCategory, setSelectedCategory] = useState<CategoryKey>('전체');
   const navigation = useNavigation();
+  
+  // ✅ ViewModel 연결
+  const { groupedStores, getStoresByCategory, loading } = useUserMainViewModel();
 
   const scrollY = useRef(new Animated.Value(0)).current;
   const [isStickyActive, setIsStickyActive] = useState(false);
@@ -65,14 +70,8 @@ const UserMain = () => {
     { key: '일식', icon: require('../../assets/icons/japanese.png') },
   ];
 
-  const getStoresByCategory = (category: CategoryKey): Store[] => {
-    if (category === '전체') return [];
-    const stores = foodRes[category] || [];
-    return [...stores].sort((a, b) => {
-      const ratingA = parseFloat(String(a.rating).replace(/[^\d.]/g, ''));
-      const ratingB = parseFloat(String(b.rating).replace(/[^\d.]/g, ''));
-      return ratingB - ratingA;
-    });
+  const getStoresByCategoryWrapper = (category: CategoryKey): Store[] => {
+    return getStoresByCategory(category);
   };
 
   const FixedSearchBar = () => (
@@ -391,7 +390,7 @@ const UserMain = () => {
               { useNativeDriver: true },
             )}
             scrollEventThrottle={16}
-            data={Object.entries(foodRes)}
+            data={Object.entries(groupedStores)}
             keyExtractor={item => item[0]}
             showsVerticalScrollIndicator={false}
             contentContainerStyle={{ paddingBottom: 100, paddingTop: 10 }}
@@ -403,6 +402,17 @@ const UserMain = () => {
                 stores={[...item[1]].sort((a, b) => b.rating - a.rating)}
               />
             )}
+            ListEmptyComponent={
+              loading ? (
+                <View style={{ padding: 20, alignItems: 'center' }}>
+                  <Text>맛집 정보를 불러오는 중입니다...</Text>
+                </View>
+              ) : (
+                <View style={{ padding: 20, alignItems: 'center' }}>
+                  <Text>등록된 맛집이 없습니다.</Text>
+                </View>
+              )
+            }
           />
         ) : (
           <Animated.FlatList<Store>
@@ -411,12 +421,17 @@ const UserMain = () => {
               { useNativeDriver: true },
             )}
             scrollEventThrottle={16}
-            data={getStoresByCategory(selectedCategory)}
+            data={getStoresByCategoryWrapper(selectedCategory)}
             keyExtractor={item => item.id.toString()}
             showsVerticalScrollIndicator={false}
             contentContainerStyle={{ paddingBottom: 100, paddingTop: 10 }}
             ListHeaderComponent={MainGridHeader}
             renderItem={renderStoreListItem}
+            ListEmptyComponent={
+              <View style={{ padding: 20, alignItems: 'center' }}>
+                <Text>해당 카테고리의 맛집이 없습니다.</Text>
+              </View>
+            }
           />
         )}
       </View>

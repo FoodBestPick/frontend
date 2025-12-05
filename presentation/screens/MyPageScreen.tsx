@@ -15,19 +15,19 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { launchImageLibrary } from 'react-native-image-picker';
 
-// 🔥 [수정] Navigation 및 CommonActions Import
-import { useNavigation, CommonActions } from '@react-navigation/native';
+import { useNavigation } from '@react-navigation/native';
+import { useAuth } from "../../context/AuthContext";   // 🔥 추가: AuthContext
 
 const MAIN_COLOR = '#FFA847';
 const DESTRUCTIVE_COLOR = '#E53935';
 
-// Mock 중복 체크 함수 (기존 유지)
+
+// Mock 중복 체크 함수
 const checkUsernameDuplication = async (username: string): Promise<boolean> => {
   if (username.trim().length < 2) return false;
   const reservedNames = ['test', 'gounn'];
   return !reservedNames.includes(username.toLowerCase());
 };
-
 
 interface MenuItemProps {
   text: string;
@@ -35,58 +35,55 @@ interface MenuItemProps {
   isLogout?: boolean;
 }
 
+/* -------------------------------------------------------
+ * 🔥 로그아웃 기능 포함된 MenuItem 컴포넌트
+ * -----------------------------------------------------*/
 const MenuItem = ({ text, onPress, isLogout = false }: MenuItemProps) => {
-  const iconColor = isLogout ? DESTRUCTIVE_COLOR : '#CCC';
-  const textColor = isLogout ? DESTRUCTIVE_COLOR : styles.menuText.color;
-
-  // 🔥 Navigation hook은 MyPageScreen에서 가져오고, 여기서는 함수만 정의
   const navigation = useNavigation<any>();
+  const { logout } = useAuth(); // 🔥 AuthContext 사용
 
+  // 로그아웃 처리
   const handleLogout = () => {
     Alert.alert(
-      "로그아웃 확인",
+      "로그아웃",
       "정말 로그아웃 하시겠습니까?",
       [
         { text: "취소", style: "cancel" },
         {
           text: "확인",
-          onPress: () => {
-            console.log('--- User Logged Out ---');
-            // 1. 사용자 데이터 및 토큰 삭제 로직 (AsyncStorage.clear() 등)
-
-            // 2. 스택 초기화 후 로그인 화면으로 이동
-            navigation.dispatch(
-              CommonActions.reset({
-                index: 0,
-                routes: [{ name: 'Login' }], // Login은 Stack Navigator에 등록된 이름이어야 함
-              })
-            );
+          onPress: async () => {
+            console.log("--- User Logged Out ---");
+            await logout();  // 🔥 자동로그인 토큰 삭제 + isLoggedIn=false 전환
+            // ❗ navigation.reset 필요 없음 (AuthContext가 네비 자동 변경)
           }
         }
       ]
     );
   };
 
-
-  const handlePress = isLogout
-    ? handleLogout
-    : (onPress || (() => console.log(`Navigating to ${text}`)));
+  const handlePress = isLogout ? handleLogout : onPress;
 
   return (
     <TouchableOpacity style={styles.menuItem} activeOpacity={0.7} onPress={handlePress}>
-      <Text style={[styles.menuText, { color: textColor }]}>{text}</Text>
+      <Text style={[styles.menuText, { color: isLogout ? DESTRUCTIVE_COLOR : '#000' }]}>
+        {text}
+      </Text>
       <Icon
         name={isLogout ? 'log-out-outline' : 'chevron-forward'}
         size={20}
-        color={iconColor}
-        style={isLogout && { marginRight: -2 }}
+        color={isLogout ? DESTRUCTIVE_COLOR : '#CCC'}
       />
     </TouchableOpacity>
   );
 };
 
 
+/* -------------------------------------------------------
+ * 🔥 MyPageScreen (전체)
+ * -----------------------------------------------------*/
 const MyPageScreen = () => {
+  const navigation = useNavigation<any>();
+
   const [savedUsername, setSavedUsername] = useState('abcdefg');
   const [tempUsername, setTempUsername] = useState('abcdefg');
   const [isEditing, setIsEditing] = useState(false);
@@ -95,10 +92,12 @@ const MyPageScreen = () => {
 
   const inputRef = useRef<TextInput>(null);
 
-  // 🔥 Navigation hook은 여기에 정의 (컴포넌트 스코프)
-  const navigation = useNavigation<any>();
+  // 프로필 이미지 (Mock)
+  const [profileImage, setProfileImage] = useState<string>(
+    'https://via.placeholder.com/150/FFF4E6/FFA847?text=Snowman'
+  );
 
-  // Debounce 및 유효성 검사 로직 (기존 유지)
+  /* 🔥 Debounce 닉네임 중복 체크 */
   useEffect(() => {
     if (tempUsername === savedUsername || !tempUsername.trim()) {
       setIsValid(true);
@@ -109,21 +108,21 @@ const MyPageScreen = () => {
     setIsChecking(true);
     setIsValid(false);
 
-    const delayDebounceFn = setTimeout(async () => {
+    const timeout = setTimeout(async () => {
       const isUnique = await checkUsernameDuplication(tempUsername);
 
       if (!isUnique) {
-        Alert.alert("닉네임 중복", `"${tempUsername}"는 이미 사용 중이거나 너무 짧습니다.`);
+        Alert.alert("닉네임 중복", `"${tempUsername}"는 이미 사용 중입니다.`);
       }
 
       setIsValid(isUnique);
       setIsChecking(false);
-    }, 1000);
+    }, 800);
 
-    return () => clearTimeout(delayDebounceFn);
+    return () => clearTimeout(timeout);
   }, [tempUsername]);
 
-  // 저장 로직 (onBlur 시 실행)
+  /* 🔥 닉네임 저장 */
   const handleSave = () => {
     if (isChecking || !isValid) {
       setIsEditing(false);
@@ -132,73 +131,66 @@ const MyPageScreen = () => {
 
     if (tempUsername.trim() !== savedUsername) {
       setSavedUsername(tempUsername.trim());
-      setIsEditing(false);
-      Alert.alert("저장 완료", `닉네임이 "${tempUsername.trim()}"으로 변경되었습니다.`);
-    } else {
-      setIsEditing(false);
+      Alert.alert("변경 완료", "닉네임이 변경되었습니다.");
     }
+
+    setIsEditing(false);
   };
 
-  // 프로필 이미지 로직 (기존 유지)
-  const [profileImage, setProfileImage] = useState<string>(
-    'https://via.placeholder.com/150/FFF4E6/FFA847?text=Snowman'
-  );
-
+  /* 🔥 프로필 이미지 변경 */
   const handleImageEdit = () => {
     Alert.alert("프로필 사진 변경", "앨범에서 사진을 선택하시겠습니까?", [
       { text: "취소", style: "cancel" },
       {
         text: "선택하기",
         onPress: async () => {
-          // launchImageLibrary 로직
+          const res = await launchImageLibrary({ mediaType: "photo" });
+          if (res.assets && res.assets[0]?.uri) {
+            setProfileImage(res.assets[0].uri);
+          }
         }
       }
     ]);
   };
 
-
+  /* 🔥 닉네임 옆 아이콘 출력 */
   const renderEditIcon = () => {
-    let iconColor = '#000';
-
-    if (isChecking) {
-      return <ActivityIndicator size="small" color={MAIN_COLOR} />;
-    }
+    if (isChecking) return <ActivityIndicator size="small" color={MAIN_COLOR} />;
 
     if (tempUsername.trim() !== savedUsername && isValid && !isChecking) {
       return (
         <TouchableOpacity onPress={handleSave}>
-          <Icon name="pencil-outline" size={20} color="#00C853" />
+          <Icon name="checkmark-circle-outline" size={22} color="#00C853" />
         </TouchableOpacity>
       );
     }
 
-    if (tempUsername.trim() !== savedUsername && !isValid) {
-      iconColor = DESTRUCTIVE_COLOR;
-    }
-
     return (
-      <TouchableOpacity onPress={() => {
-        if (!isEditing) {
-          setIsEditing(true);
-          setTimeout(() => inputRef.current?.focus(), 50);
-        }
-      }}>
-        <Icon name="pencil-outline" size={18} color={iconColor} />
+      <TouchableOpacity
+        onPress={() => {
+          if (!isEditing) {
+            setIsEditing(true);
+            setTimeout(() => inputRef.current?.focus(), 50);
+          }
+        }}
+      >
+        <Icon name="pencil-outline" size={18} color="#444" />
       </TouchableOpacity>
     );
   };
-
 
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#fff" />
 
+      {/* 헤더 */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>마이 페이지</Text>
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
 
+        {/* 프로필 이미지 */}
         <View style={styles.profileImageContainer}>
           <TouchableOpacity
             style={styles.imageWrapper}
@@ -212,8 +204,9 @@ const MyPageScreen = () => {
           </TouchableOpacity>
         </View>
 
-        {/* 유저 정보 섹션 */}
+        {/* 유저 정보 */}
         <View style={styles.infoSection}>
+          {/* 닉네임 */}
           <View style={styles.nameRow}>
             <TextInput
               ref={inputRef}
@@ -227,7 +220,6 @@ const MyPageScreen = () => {
               onFocus={() => setIsEditing(true)}
               onBlur={handleSave}
               editable={isEditing}
-              placeholder="닉네임"
             />
 
             <View style={styles.editIconContainer}>
@@ -235,17 +227,19 @@ const MyPageScreen = () => {
             </View>
           </View>
 
-          {/* 유효성 경고 메시지 */}
+          {/* 닉네임 경고 */}
           {tempUsername.trim() !== savedUsername && !isValid && !isChecking && (
             <Text style={styles.warningText}>사용할 수 없는 닉네임입니다.</Text>
           )}
 
+          {/* 이메일 */}
           <View style={styles.emailRow}>
-            <Text style={styles.userEmail}>abcdefg@email.com</Text>
+            <Text style={styles.userEmail}>abcdefg@email.com
+            </Text>
           </View>
         </View>
 
-        {/* 메뉴 리스트 */}
+        {/* 메뉴 */}
         <View style={styles.menuSection}>
           <MenuItem text="본인 리뷰 작성 조회" />
           <MenuItem text="맛집 즐겨찾기" />
@@ -255,7 +249,8 @@ const MyPageScreen = () => {
           <MenuItem text="개인정보 처리방침" />
           <MenuItem text="서비스 이용약관" />
 
-          <MenuItem text="로그아웃" isLogout={true} />
+          {/* 🔥 로그아웃 버튼 */}
+          <MenuItem text="로그아웃" isLogout />
         </View>
 
       </ScrollView>
@@ -263,9 +258,12 @@ const MyPageScreen = () => {
   );
 };
 
-
 export default MyPageScreen;
 
+
+/* -------------------------------------------------------
+ * 스타일
+ * -----------------------------------------------------*/
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#fff' },
 
@@ -279,7 +277,7 @@ const styles = StyleSheet.create({
     width: 110, height: 110, borderRadius: 55, borderWidth: 2, borderColor: MAIN_COLOR, padding: 4,
     justifyContent: 'center', alignItems: 'center', position: 'relative',
   },
-  profileImage: { width: '100%', height: '100%', borderRadius: 50, backgroundColor: '#FFF4E6' },
+  profileImage: { width: '100%', height: '100%', borderRadius: 55, backgroundColor: '#FFF4E6' },
   cameraBadge: {
     position: 'absolute', bottom: 0, right: 0, backgroundColor: MAIN_COLOR,
     width: 30, height: 30, borderRadius: 15, justifyContent: 'center', alignItems: 'center',
@@ -291,8 +289,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
     paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: MAIN_COLOR,
   },
+
   userName: { fontSize: 17, fontWeight: '700', color: '#000' },
-  // Input Style
+
   nameInput: {
     flex: 1,
     height: 24,
@@ -304,23 +303,14 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#000',
   },
-  editIconContainer: {
-    width: 24,
-    height: 24,
-    justifyContent: 'center',
-    alignItems: 'flex-end',
-  },
-  warningText: {
-    color: DESTRUCTIVE_COLOR,
-    fontSize: 12,
-    marginTop: 5,
-  },
-  inputError: {
-    color: DESTRUCTIVE_COLOR,
-  },
-  emailRow: {
-    paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: MAIN_COLOR,
-  },
+
+  editIconContainer: { width: 24, justifyContent: 'center', alignItems: 'flex-end' },
+
+  warningText: { color: DESTRUCTIVE_COLOR, fontSize: 12, marginTop: 5 },
+
+  inputError: { color: DESTRUCTIVE_COLOR },
+
+  emailRow: { paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: MAIN_COLOR },
   userEmail: { fontSize: 14, color: '#999' },
 
   menuSection: { paddingHorizontal: 20 },

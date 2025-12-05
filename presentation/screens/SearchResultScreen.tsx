@@ -32,15 +32,18 @@ const SearchResultScreen = () => {
   const { theme } = useContext(ThemeContext);
 
   // ✅ ViewModel 연결
-  const { results, loading, error, searchRestaurants } = useSearchViewModel();
+  const { results, loading, error, searchRestaurants, sortBy, setSortBy } = useSearchViewModel();
   const { keyword, category, tags, filters } = route.params || {};
 
-  const [sortBy, setSortBy] = useState('추천순');
-
   useEffect(() => {
-    // 필터 파라미터까지 전달
-    searchRestaurants(keyword, category, tags, filters);
-  }, [keyword, category, tags, filters]);
+    // 필터 파라미터 및 정렬 옵션 전달
+    searchRestaurants(keyword, category, tags, filters, sortBy);
+  }, [keyword, category, tags, filters, sortBy]);
+
+  const handleSortToggle = () => {
+    const newSort = sortBy === 'rating' ? 'review' : 'rating';
+    setSortBy(newSort);
+  };
 
   const renderRestaurant = ({
     item,
@@ -134,9 +137,11 @@ const SearchResultScreen = () => {
 
       <View style={styles.sortRow}>
         <Text style={[styles.resultCount, { color: theme.textPrimary }]}>총 {results.length}개</Text>
-        <TouchableOpacity style={styles.sortButton}>
-          <Text style={[styles.sortText, { color: theme.textSecondary }]}>{sortBy}</Text>
-          <MaterialIcons name="keyboard-arrow-down" size={16} color={theme.textSecondary} />
+        <TouchableOpacity style={styles.sortButton} onPress={handleSortToggle}>
+          <Text style={[styles.sortText, { color: theme.textSecondary }]}>
+            {sortBy === 'rating' ? '추천순' : '리뷰순'}
+          </Text>
+          <MaterialIcons name="sort" size={16} color={theme.textSecondary} />
         </TouchableOpacity>
       </View>
 

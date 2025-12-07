@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { API_BASE_URL } from '@env';
 import { useAuth } from '../../context/AuthContext';
+import { ReportApi } from '../../data/api/ReportApi';
+import { Alert } from 'react-native';
 
 interface Menu {
   id: number;
@@ -60,7 +62,9 @@ export const useRestaurantDetailViewModel = (restaurantId: number) => {
       setError(null);
 
       // 1. 식당 상세 정보 조회
-      const response = await fetch(`${API_BASE_URL}/restaurant/${restaurantId}`);
+      const response = await fetch(`${API_BASE_URL}/restaurant/${restaurantId}`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {}
+      });
       const result = await response.json();
 
       if (result.code === 200) {
@@ -100,13 +104,9 @@ export const useRestaurantDetailViewModel = (restaurantId: number) => {
         }
 
         // 3. 좋아요/즐겨찾기 상태 조회 (로그인 시)
-        let isLiked = false;
-        let isFavorite = false;
-        
-        // TODO: 백엔드에 상태 조회 API가 없으므로, 일단 false로 둠.
-        // 실제로는 GET /api/like/status/{id} 같은게 필요함.
-        // 현재는 toggle만 구현되어 있어서 상태를 알 수 없음.
-        // 임시로 로컬 상태나 별도 API가 필요하지만, 일단 false.
+        // 백엔드에서 isLiked 필드를 내려주므로 그것을 사용
+        let isLiked = data.isLiked || false;
+        let isFavorite = isLiked;
 
         setRestaurant({
           id: data.id,
@@ -277,6 +277,46 @@ export const useRestaurantDetailViewModel = (restaurantId: number) => {
     }
   };
 
+  const reportRestaurant = async (reason: string, reasonDetail: string) => {
+    if (!token || !restaurant) return;
+    try {
+      const result = await ReportApi.sendReport(token, {
+        targetType: 'RESTAURANT',
+        targetId: restaurant.id,
+        reason,
+        reasonDetail,
+      });
+      if (result.code === 200) {
+        Alert.alert('알림', '신고가 접수되었습니다.');
+      } else {
+        Alert.alert('오류', result.message || '신고 접수에 실패했습니다.');
+      }
+    } catch (error) {
+      console.error('신고 오류:', error);
+      Alert.alert('오류', '신고 중 문제가 발생했습니다.');
+    }
+  };
+
+  const reportReview = async (reviewId: number, reason: string, reasonDetail: string) => {
+    if (!token) return;
+    try {
+      const result = await ReportApi.sendReport(token, {
+        targetType: 'REVIEW',
+        targetId: reviewId,
+        reason,
+        reasonDetail,
+      });
+      if (result.code === 200) {
+        Alert.alert('알림', '리뷰 신고가 접수되었습니다.');
+      } else {
+        Alert.alert('오류', result.message || '신고 접수에 실패했습니다.');
+      }
+    } catch (err) {
+      console.error('리뷰 신고 오류:', err);
+      Alert.alert('오류', '신고 중 문제가 발생했습니다.');
+    }
+  };
+
   return {
     restaurant,
     loading,
@@ -286,5 +326,7 @@ export const useRestaurantDetailViewModel = (restaurantId: number) => {
     deleteReview,
     toggleReviewLike,
     refresh: fetchRestaurantDetail,
+    reportRestaurant,
+    reportReview,
   };
 };

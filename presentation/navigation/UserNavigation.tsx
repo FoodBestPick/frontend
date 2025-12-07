@@ -12,6 +12,8 @@ import SearchScreen from '../screens/SearchScreen';
 import SearchResultScreen from '../screens/SearchResultScreen';
 import RestaurantDetailScreen from '../screens/RestaurantDetailScreen';
 import ReviewWriteScreen from '../screens/ReviewWriteScreen';
+import MyLikesScreen from '../screens/MyLikesScreen';
+import MyReviewsScreen from '../screens/MyReviewsScreen';
 
 const Tab = createBottomTabNavigator();
 const HomeStack = createStackNavigator();
@@ -60,6 +62,9 @@ const MatchStackNavigator = () => (
 const MyPageStackNavigator = () => (
   <MyPageStack.Navigator screenOptions={stackOptions}>
     <MyPageStack.Screen name="MyPageScreen" component={MyPageScreen} />
+    <MyPageStack.Screen name="MyLikesScreen" component={MyLikesScreen} />
+    <MyPageStack.Screen name="MyReviewsScreen" component={MyReviewsScreen} />
+    <MyPageStack.Screen name="RestaurantDetail" component={RestaurantDetailScreen} />
   </MyPageStack.Navigator>
 );
 

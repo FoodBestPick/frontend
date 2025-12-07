@@ -1,4 +1,4 @@
-import React, { useState, useContext, useEffect } from 'react';
+import React, { useState, useContext, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
-import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
+import { useNavigation, useRoute, RouteProp, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/types/RootStackParamList';
 import { ThemeContext } from '../../context/ThemeContext';
@@ -35,10 +35,12 @@ const SearchResultScreen = () => {
   const { results, loading, error, searchRestaurants, sortBy, setSortBy } = useSearchViewModel();
   const { keyword, category, tags, filters } = route.params || {};
 
-  useEffect(() => {
-    // 필터 파라미터 및 정렬 옵션 전달
-    searchRestaurants(keyword, category, tags, filters, sortBy);
-  }, [keyword, category, tags, filters, sortBy]);
+  useFocusEffect(
+    useCallback(() => {
+      // 필터 파라미터 및 정렬 옵션 전달
+      searchRestaurants(keyword, category, tags, filters, sortBy);
+    }, [keyword, category, tags, filters, sortBy])
+  );
 
   const handleSortToggle = () => {
     const newSort = sortBy === 'rating' ? 'review' : 'rating';

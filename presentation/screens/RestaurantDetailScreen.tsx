@@ -18,6 +18,8 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../navigation/types/RootStackParamList';
 import { useRestaurantDetailViewModel } from '../viewmodels/RestaurantDetailViewModel';
 import { ThemeContext } from '../../context/ThemeContext';
+import ReportModal from '../components/ReportModal';
+import { COLORS } from '../../core/constants/Colors';
 
 const { width } = Dimensions.get('window');
 
@@ -31,7 +33,7 @@ const RestaurantDetailScreen = () => {
   const { theme } = useContext(ThemeContext);
 
   // ViewModel 연결
-  const { restaurant, loading, error, toggleLike, deleteReview, toggleReviewLike, refresh } = useRestaurantDetailViewModel(restaurantId);
+  const { restaurant, loading, error, toggleLike, deleteReview, toggleReviewLike, refresh, reportRestaurant, reportReview } = useRestaurantDetailViewModel(restaurantId);
 
   useFocusEffect(
     useCallback(() => {
@@ -40,6 +42,20 @@ const RestaurantDetailScreen = () => {
   );
 
   const [activeTab, setActiveTab] = useState('정보');
+  const [reportModalVisible, setReportModalVisible] = useState(false);
+  const [selectedReviewId, setSelectedReviewId] = useState<number | null>(null);
+  const [reportTargetName, setReportTargetName] = useState('');
+
+  const handleReportClick = (reviewId?: number, targetName?: string) => {
+    if (reviewId) {
+      setSelectedReviewId(reviewId);
+      setReportTargetName(targetName || '리뷰');
+    } else {
+      setSelectedReviewId(null);
+      setReportTargetName(restaurant?.name || '');
+    }
+    setReportModalVisible(true);
+  };
 
   const handleDeleteReview = (reviewId: number) => {
     Alert.alert('리뷰 삭제', '정말로 삭제하시겠습니까?', [
@@ -132,6 +148,12 @@ const RestaurantDetailScreen = () => {
                 <Icon name="arrow-back" size={24} color="#fff" />
               </TouchableOpacity>
               <View style={styles.rightButtons}>
+                <TouchableOpacity 
+                  style={[styles.iconButton, { marginRight: 8 }]} 
+                  onPress={() => handleReportClick()}
+                >
+                  <Icon name="alert-circle-outline" size={24} color="#FFA847" />
+                </TouchableOpacity>
                 <TouchableOpacity style={styles.iconButton} onPress={toggleLike}>
                   <Icon 
                     name={restaurant.isLiked ? "heart" : "heart-outline"} 
@@ -270,13 +292,19 @@ const RestaurantDetailScreen = () => {
                         <Text style={styles.reviewDate}>{review.createdAt}</Text>
                       </View>
                     </View>
-                    {review.isMine && (
+                    {review.isMine ? (
                       <View style={styles.reviewActions}>
                         <TouchableOpacity onPress={() => handleEditReview(review)} style={styles.actionButton}>
                           <Text style={styles.actionText}>수정</Text>
                         </TouchableOpacity>
                         <TouchableOpacity onPress={() => handleDeleteReview(review.id)} style={styles.actionButton}>
                           <Text style={styles.deleteActionText}>삭제</Text>
+                        </TouchableOpacity>
+                      </View>
+                    ) : (
+                      <View style={styles.reviewActions}>
+                        <TouchableOpacity onPress={() => handleReportClick(review.id, `${review.userNickname}님의 리뷰`)} style={styles.actionButton}>
+                          <Text style={[styles.actionText, { color: '#FF6B6B' }]}>신고</Text>
                         </TouchableOpacity>
                       </View>
                     )}
@@ -332,6 +360,20 @@ const RestaurantDetailScreen = () => {
           </TouchableOpacity>
         </SafeAreaView>
       )}
+
+      <ReportModal
+        visible={reportModalVisible}
+        onClose={() => setReportModalVisible(false)}
+        onSubmit={(reason, detail) => {
+          if (selectedReviewId) {
+            reportReview(selectedReviewId, reason, detail);
+          } else {
+            reportRestaurant(reason, detail);
+          }
+          setReportModalVisible(false);
+        }}
+        targetName={reportTargetName}
+      />
     </View>
   );
 };

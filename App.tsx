@@ -35,6 +35,7 @@ import ChatRoomScreen from './presentation/screens/ChatRoomScreen';
 // Screens - Admin
 import { AdminRestaurantAddScreen } from './presentation/screens/AdminRestaurantAddScreen';
 import { AdminNotificationScreen } from './presentation/screens/AdminNotificationScreen';
+import AdminReportScreen from './presentation/screens/AdminReportScreen';
 
 // Contexts
 import { ThemeProvider, ThemeContext } from "./context/ThemeContext";
@@ -106,6 +107,7 @@ function AppInner() {
             {/* 관리자 추가 화면들 */}
             <Stack.Screen name="AdminRestaurantAdd" component={AdminRestaurantAddScreen} />
             <Stack.Screen name="NotificationScreen" component={AdminNotificationScreen} />
+            <Stack.Screen name="AdminReportScreen" component={AdminReportScreen} />
             <Stack.Screen name="AdminManageSelect" component={AdminManageSelectScreen} />
             <Stack.Screen name="AdminFoodManage" component={AdminFoodManageScreen} />
             <Stack.Screen name="AdminTagManage" component={AdminTagManageScreen} />

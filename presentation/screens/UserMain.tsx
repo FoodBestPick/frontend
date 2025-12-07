@@ -245,7 +245,11 @@ const UserMain = () => {
           onContentSizeChange={w => setContentWidth(w)}
           onLayout={e => setScrollViewWidth(e.nativeEvent.layout.width)}
           renderItem={({ item, index }) => (
-            <TouchableOpacity style={styles.cardContainer} activeOpacity={0.8}>
+            <TouchableOpacity 
+              style={styles.cardContainer} 
+              activeOpacity={0.8}
+              onPress={() => navigation.navigate('RestaurantDetail' as never, { restaurantId: item.id } as never)}
+            >
               <View style={styles.cardImageWrapper}>
                 {index < 3 && (
                   <View

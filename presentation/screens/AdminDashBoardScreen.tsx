@@ -422,9 +422,7 @@ export const AdminDashBoardScreen = () => {
               textColor={isDarkMode ? theme.textPrimary : COLORS.text}
               cardColor={isDarkMode ? theme.card : COLORS.card}
               borderColor={theme.border}
-              onPress={() => {
-                /* TODO */
-              }}
+              onPress={() => navigation.navigate('AdminReportScreen')}
             />
             <QuickLink
               icon="megaphone-outline"

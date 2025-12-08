@@ -14,18 +14,24 @@ export const useSigninViewModel = () => {
         setLoading(true);
 
         try {
-            // 1. API 호출
             const result = await useCase.execute({ email, password });
 
-            // 2. Context 업데이트 (isAdmin 전달)
-            // 여기서 false가 넘어가면 UserMain으로 가게 됩니다.
-            await contextLogin(result.accessToken, result.isAdmin, saveToStorage);
+            // ⭐ [수정] refreshToken 전달 삭제 (Context와 맞춤)
+            // AuthContext.login(token, isAdmin, refreshToken, saveToStorage) 순서임
+            await contextLogin(
+                result.accessToken,
+                result.isAdmin,
+                undefined, // refreshToken (현재 없음)
+                saveToStorage
+            );
             return true;
 
         } catch (error: any) {
             console.log("[로그인 실패]", error.response?.data);
+
             const serverMessage = error.response?.data?.message;
             const fallbackMessage = "이메일 또는 비밀번호를 확인해주세요.";
+
             Alert.alert("로그인 실패", serverMessage || fallbackMessage);
             return false;
         } finally {

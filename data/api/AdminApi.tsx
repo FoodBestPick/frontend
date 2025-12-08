@@ -1,13 +1,12 @@
 import { AdminUser, AdminUserList } from "../../domain/entities/AdminUserList";
 import axios from "axios";
-import { LOCAL_HOST } from "@env";
+import { API_BASE_URL } from "@env";
 
-const BASE_URL = LOCAL_HOST;
 
 export const AdminApi = {
   async getStats(token: string) {
     try {
-      const response = await axios.get(`${BASE_URL}/admin/user/dashboard`, {
+      const response = await axios.get(`${API_BASE_URL}/admin/user/dashboard`, {
         headers: { Authorization: `Bearer ${token}` },
         timeout: 10000,
       });
@@ -30,7 +29,7 @@ export const AdminApi = {
       if (startDate) params.startDate = startDate;
       if (endDate) params.endDate = endDate;
 
-      const response = await axios.get(`${BASE_URL}/admin/user/dashboard/detail`, {
+      const response = await axios.get(`${API_BASE_URL}/admin/user/dashboard/detail`, {
         headers: { Authorization: `Bearer ${token}` },
         params,
         timeout: 10000,
@@ -51,10 +50,7 @@ export const AdminApi = {
       const params: any = { page, size };
       if (keyword) params.keyword = keyword;
       
-      const response = await axios.get(`${LOCAL_HOST}/restaurant`, { 
-        params,
-        timeout: 10000,
-      });
+      const response = await axios.get(`${API_BASE_URL}/restaurant`, { params });
       return response.data;
     } catch (error) {
       console.error("Error fetching restaurant list:", error);

@@ -39,7 +39,7 @@ type CategoryKey = string; // Define CategoryKey locally or import if needed
 const UserMain = () => {
   const [selectedCategory, setSelectedCategory] = useState<CategoryKey>('전체');
   const navigation = useNavigation();
-  
+
   // ✅ ViewModel 연결
   const { groupedStores, getStoresByCategory, loading, refresh } = useUserMainViewModel();
 

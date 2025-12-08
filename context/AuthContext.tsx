@@ -1,13 +1,22 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
+import { LogBox } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import messaging, { AuthorizationStatus } from '@react-native-firebase/messaging';
+import { UserAuthRepositoryImpl } from "../data/repositoriesImpl/UserAuthRepositoryImpl";
+
+// 🔇 노란색 경고창 무시 (Firebase 관련)
+LogBox.ignoreLogs([
+    "This method is deprecated",
+    "React Native Firebase",
+]);
 
 interface AuthState {
     isLoggedIn: boolean;
     isAdmin: boolean;
     token: string | null;
-    login: (token: string, isAdmin: boolean, saveToStorage?: boolean) => Promise<void>;
-    logout: () => Promise<void>;
     loading: boolean;
+    login: (token: string, isAdmin: boolean, refreshToken?: string, saveToStorage?: boolean) => Promise<void>;
+    logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthState | null>(null);
@@ -17,63 +26,127 @@ export const AuthProvider = ({ children }: any) => {
     const [isAdmin, setIsAdmin] = useState(false);
     const [loading, setLoading] = useState(true);
 
-    // 앱 시작 시 저장된 정보 불러오기
+    // 🛠️ [FCM] 토큰 동기화
+    const syncFcmToken = async () => {
+        try {
+            const authStatus = await messaging().requestPermission();
+            const enabled =
+                authStatus === AuthorizationStatus.AUTHORIZED ||
+                authStatus === AuthorizationStatus.PROVISIONAL;
+
+            if (enabled) {
+                const fcmToken = await messaging().getToken();
+                if (fcmToken) {
+                    console.log("📲 [FCM] 기기 토큰 획득:", fcmToken);
+                    await UserAuthRepositoryImpl.registerFcmToken(fcmToken);
+                    console.log("✅ [FCM] 서버 등록 완료");
+                }
+            }
+        } catch (e) {
+            console.log("⚠️ [FCM] 토큰 연동 실패 (로그인은 유지됨):", e);
+        }
+    };
+
+    // 🚀 1. 앱 실행 시 초기화
     useEffect(() => {
-        const loadAuthData = async () => {
+        const initAuth = async () => {
             try {
+                const isAutoLogin = await AsyncStorage.getItem("isAutoLogin");
                 const storedToken = await AsyncStorage.getItem("accessToken");
                 const storedIsAdmin = await AsyncStorage.getItem("isAdmin");
 
-                if (storedToken) {
-                    setToken(storedToken);
-                    // "true" 문자열일 때만 true, 그 외엔 false
-                    setIsAdmin(storedIsAdmin === "true");
+                if (isAutoLogin !== "true" || !storedToken) {
+                    await logout();
+                    return;
                 }
+
+                setToken(storedToken);
+                setIsAdmin(storedIsAdmin === "true");
+
+                console.log("🔄 [Auth] 자동 로그인 & 토큰 검사 중...");
+                await UserAuthRepositoryImpl.getMyProfile();
+
+                console.log("✅ [Auth] 자동 로그인 성공");
+                syncFcmToken();
+
             } catch (e) {
-                console.error("Auth loading error", e);
+                console.error("❌ [Auth] 자동 로그인 실패 (재로그인 필요)", e);
+                await logout();
             } finally {
                 setLoading(false);
             }
         };
-        loadAuthData();
+
+        initAuth();
     }, []);
 
-    // 로그인 함수
-    const login = async (token: string, isAdmin: boolean, saveToStorage: boolean = true) => {
-        // 1. 메모리 상태 우선 업데이트 (화면 전환 속도 향상)
-        setToken(token);
-        setIsAdmin(isAdmin);
+    // 🚀 2. 로그인 (안전장치 포함)
+    const login = async (
+        newToken: string,
+        newIsAdmin: boolean,
+        refreshToken?: string,
+        saveToStorage: boolean = true
+    ) => {
+        try {
+            console.log("📥 로그인 시도 데이터:", { newToken, newIsAdmin, saveToStorage });
 
-        // 2. 스토리지 처리
-        if (saveToStorage) {
-            await AsyncStorage.setItem("accessToken", token);
-            await AsyncStorage.setItem("isAdmin", isAdmin ? "true" : "false");
-        } else {
-            // ⭐ [중요] 자동로그인 아니면 좀비 데이터 삭제!
-            await AsyncStorage.removeItem("accessToken");
-            await AsyncStorage.removeItem("isAdmin");
+            if (!newToken) {
+                console.error("❌ [Auth] Error: 로그인 토큰이 비어있습니다.");
+                return;
+            }
+
+            setToken(newToken);
+            setIsAdmin(newIsAdmin);
+
+            const tasks: [string, string][] = [
+                ["accessToken", String(newToken)],
+                ["isAdmin", newIsAdmin ? "true" : "false"],
+                ["isAutoLogin", saveToStorage ? "true" : "false"]
+            ];
+
+            if (refreshToken) {
+                tasks.push(["refreshToken", String(refreshToken)]);
+            }
+
+            await AsyncStorage.multiSet(tasks);
+            console.log("✅ [Auth] 토큰 저장 완료");
+
+            await syncFcmToken();
+
+        } catch (e) {
+            console.error("❌ [Auth] 토큰 저장 중 예외 발생:", e);
         }
     };
 
-    // 로그아웃 함수
+    // 🚀 3. 로그아웃 (🔥 강력한 확인사살 버전)
     const logout = async () => {
-        await AsyncStorage.removeItem("accessToken");
-        await AsyncStorage.removeItem("isAdmin");
-        setToken(null);
-        setIsAdmin(false);
+        console.log("🚪 [Auth] 로그아웃 프로세스 시작...");
+        try {
+            // 1. 핵심 키 삭제 시도
+            await AsyncStorage.multiRemove(["accessToken", "refreshToken", "isAdmin", "isAutoLogin"]);
+
+            // 2. 🔍 [확인사살] 진짜 지워졌는지 조회
+            const checkToken = await AsyncStorage.getItem("accessToken");
+
+            if (!checkToken) {
+                console.log("✅ [Auth] 저장소 토큰 삭제 완료 (Clean)");
+            } else {
+                console.error("😱 [Auth] 경고: 토큰이 안 지워지고 살아있음! 강제 초기화 진행.");
+                // 키 지정 삭제가 실패했으면, 저장소 전체를 날려버림 (최후의 수단)
+                await AsyncStorage.clear();
+            }
+
+            // 3. 앱 상태 초기화
+            setToken(null);
+            setIsAdmin(false);
+
+        } catch (e) {
+            console.error("❌ [Auth] 로그아웃 중 치명적 에러:", e);
+        }
     };
 
     return (
-        <AuthContext.Provider
-            value={{
-                isLoggedIn: !!token,
-                isAdmin,
-                token,
-                login,
-                logout,
-                loading,
-            }}
-        >
+        <AuthContext.Provider value={{ isLoggedIn: !!token, isAdmin, token, login, logout, loading }}>
             {children}
         </AuthContext.Provider>
     );

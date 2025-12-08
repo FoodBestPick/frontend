@@ -2,7 +2,7 @@ import { AdminRepository } from "../../domain/repositories/AdminRepository";
 import { AdminApi } from "../api/AdminApi";
 
 export const AdminRepositoryImpl: AdminRepository = {
-  async getStats(token: string) {
+  async getStats(token : string) {
     return await AdminApi.getStats(token);
   },
 

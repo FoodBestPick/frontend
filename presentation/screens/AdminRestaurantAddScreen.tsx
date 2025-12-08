@@ -55,7 +55,7 @@ export const AdminRestaurantAddScreen = () => {
   const [menus, setMenus] = useState<
     { id: string; image?: string; name: string; price: string }[]
   >([{ id: '1', image: '', name: '', price: '' }]);
-  
+
   // ✅ 운영시간 상태 추가
   const [times, setTimes] = useState<
     { id: string; week: string; startTime: string; endTime: string; restTime: string }[]

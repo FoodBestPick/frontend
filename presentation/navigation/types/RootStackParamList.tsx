@@ -6,15 +6,15 @@ export type RootStackParamList = {
   FindAccount: undefined;
   AdminMain: undefined;
   AdminRestaurantAdd:
-    | undefined
-    | {
-        selectedLocation?: {
-          lat: number;
-          lng: number;
-          address: string;
-        };
-        id?: number;
-      };
+  | undefined
+  | {
+    selectedLocation?: {
+      lat: number;
+      lng: number;
+      address: string;
+    };
+    id?: number;
+  };
   MapSelectScreen: undefined;
   AdminManageSelect: undefined;
   AdminFoodManage: undefined;
@@ -46,6 +46,9 @@ export type RootStackParamList = {
     roomTitle: string;
     peopleCount: number;
   };
+  ChangePassword: undefined;
+  DeleteAccount: undefined;
+  NotificationSetting: undefined;
   ReviewWrite: {
     restaurantId: number;
     restaurantName: string;

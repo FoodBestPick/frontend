@@ -15,7 +15,9 @@ import OnboardingScreen from '../frontend/presentation/screens/OnboardingScreen'
 import LoginScreen from '../frontend/presentation/screens/LoginScreen';
 import SignupScreen from '../frontend/presentation/screens/SignupScreen';
 import FindAccountScreen from '../frontend/presentation/screens/FindAccountScreen';
-
+// ⭐ [추가됨] 비밀번호 변경 스크린 import
+import ChangePasswordScreen from './presentation/screens/ChangePasswordScreen';
+import DeleteAccountScreen from './presentation/screens/DeleteAccountScreen'; // 경로 확인
 // Screens - User & Common
 import SearchScreen from '../frontend/presentation/screens/SearchScreen';
 import SearchResultScreen from '../frontend/presentation/screens/SearchResultScreen';
@@ -31,7 +33,7 @@ import MatchScreen from './presentation/screens/MatchScreen';
 import MatchingSetupScreen from './presentation/screens/MatchingSetupScreen';
 import MatchingFindingScreen from './presentation/screens/MatchingFindingScreen';
 import ChatRoomScreen from './presentation/screens/ChatRoomScreen';
-
+import NotificationSettingScreen from "./presentation/screens/NotificationSettingScreen"; // 경로 맞춰서 import
 // Screens - Admin
 import { AdminRestaurantAddScreen } from './presentation/screens/AdminRestaurantAddScreen';
 import { AdminNotificationScreen } from './presentation/screens/AdminNotificationScreen';
@@ -103,7 +105,14 @@ function AppInner() {
             <Stack.Screen name="MatchingSetupScreen" component={MatchingSetupScreen} />
             <Stack.Screen name="MatchingFindingScreen" component={MatchingFindingScreen} />
             <Stack.Screen name="ChatRoomScreen" component={ChatRoomScreen} />
-
+            <Stack.Screen
+              name="NotificationSetting"
+              component={NotificationSettingScreen}
+              options={{ headerShown: false }}
+            />
+            {/* ⭐ [추가됨] 비밀번호 변경 화면 등록 (옵션은 Screen 파일에서 제어) */}
+            <Stack.Screen name="ChangePassword" component={ChangePasswordScreen} />
+            <Stack.Screen name="DeleteAccount" component={DeleteAccountScreen} />
             {/* 관리자 추가 화면들 */}
             <Stack.Screen name="AdminRestaurantAdd" component={AdminRestaurantAddScreen} />
             <Stack.Screen name="NotificationScreen" component={AdminNotificationScreen} />

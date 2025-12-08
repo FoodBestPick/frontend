@@ -11,7 +11,7 @@ import {
   TextInput,
 } from 'react-native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/types/RootStackParamList';
 import { Header } from '../components/Header';
@@ -37,6 +37,12 @@ export const AdminRestaurantScreen = () => {
     deleteRestaurant,
     refresh,
   } = useAdminRestaurantViewModel();
+
+  useFocusEffect(
+    React.useCallback(() => {
+      refresh();
+    }, [])
+  );
 
   const handleDelete = (id: number, name: string) => {
     Alert.alert('삭제 확인', `"${name}"을(를) 삭제하시겠습니까?`, [

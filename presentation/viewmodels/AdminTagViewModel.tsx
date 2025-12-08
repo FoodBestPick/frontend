@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { API_BASE_URL } from '@env';
 import { useAuth } from '../../context/AuthContext';
+import axios from 'axios';
 
 interface Tag {
   id: number;
@@ -30,8 +31,10 @@ export const useAdminTagViewModel = () => {
       setLoading(true);
       setError(null);
 
-      const response = await fetch(`${API_BASE_URL}/tag`);
-      const result = await response.json();
+      const response = await axios.get(`${API_BASE_URL}/tag`, {
+        timeout: 10000,
+      });
+      const result = response.data;
 
       if (result.code === 200) {
         setTags(result.data);
@@ -52,16 +55,15 @@ export const useAdminTagViewModel = () => {
         return { success: false, message: '로그인이 필요합니다.' };
       }
 
-      const response = await fetch(`${API_BASE_URL}/tag`, {
-        method: 'POST',
+      const response = await axios.post(`${API_BASE_URL}/tag`, { name, category }, {
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ name, category }),
+        timeout: 10000,
       });
 
-      const result = await response.json();
+      const result = response.data;
 
       if (result.code === 200) {
         await fetchTags(); // ✅ 생성 후 목록 새로고침
@@ -81,16 +83,15 @@ export const useAdminTagViewModel = () => {
         return { success: false, message: '로그인이 필요합니다.' };
       }
 
-      const response = await fetch(`${API_BASE_URL}/tag/${id}`, {
-        method: 'PUT',
+      const response = await axios.put(`${API_BASE_URL}/tag/${id}`, { name, category }, {
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ name, category }),
+        timeout: 10000,
       });
 
-      const result = await response.json();
+      const result = response.data;
 
       if (result.code === 200) {
         await fetchTags(); // ✅ 수정 후 목록 새로고침
@@ -110,14 +111,14 @@ export const useAdminTagViewModel = () => {
         return { success: false, message: '로그인이 필요합니다.' };
       }
 
-      const response = await fetch(`${API_BASE_URL}/tag/${id}`, {
-        method: 'DELETE',
+      const response = await axios.delete(`${API_BASE_URL}/tag/${id}`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
+        timeout: 10000,
       });
 
-      const result = await response.json();
+      const result = response.data;
 
       if (result.code === 200) {
         await fetchTags(); // ✅ 삭제 후 목록 새로고침

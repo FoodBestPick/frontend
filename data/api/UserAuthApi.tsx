@@ -1,8 +1,9 @@
 // data/api/UserAuthApi.tsx
 import axios from "axios";
+import { LOCAL_HOST } from "@env";
 
 export const authApi = axios.create({
-    baseURL: "http://10.0.2.2:8080", // TODO: 백엔드 주소로 교체
+    baseURL: LOCAL_HOST,
     withCredentials: true,
 });
 

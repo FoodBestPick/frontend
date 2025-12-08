@@ -10,6 +10,8 @@ import {
   Dimensions,
   ActivityIndicator,
   Alert,
+  Linking,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
@@ -19,7 +21,7 @@ import { RootStackParamList } from '../navigation/types/RootStackParamList';
 import { useRestaurantDetailViewModel } from '../viewmodels/RestaurantDetailViewModel';
 import { ThemeContext } from '../../context/ThemeContext';
 import ReportModal from '../components/ReportModal';
-import { COLORS } from '../../core/constants/Colors';
+import Swiper from 'react-native-swiper';
 
 const { width } = Dimensions.get('window');
 
@@ -122,6 +124,35 @@ const RestaurantDetailScreen = () => {
     reviewsList: restaurant.reviews || [],
   };
 
+  const openKakaoMap = () => {
+    if (!restaurant.latitude || !restaurant.longitude) {
+      Alert.alert('알림', '위치 정보가 없습니다.');
+      return;
+    }
+    
+    const lat = Number(restaurant.latitude);
+    const lng = Number(restaurant.longitude);
+    const label = encodeURIComponent(restaurant.name);
+    
+    // 카카오맵 URL 스킴 (검색으로 마커 표시 시도)
+    const kakaoMapUrl = `kakaomap://search?q=${label}&p=${lat},${lng}`;
+    // 웹 URL (설치 안되어 있을 경우 대비)
+    const webUrl = `https://map.kakao.com/link/map/${label},${lat},${lng}`;
+
+    Linking.canOpenURL(kakaoMapUrl)
+      .then(supported => {
+        if (supported) {
+          return Linking.openURL(kakaoMapUrl);
+        } else {
+          return Linking.openURL(webUrl);
+        }
+      })
+      .catch(err => {
+        console.error('An error occurred', err);
+        Linking.openURL(webUrl);
+      });
+  };
+
   return (
     <View style={styles.container}>
       <StatusBar
@@ -135,10 +166,30 @@ const RestaurantDetailScreen = () => {
         contentContainerStyle={[styles.scrollContent, activeTab === '리뷰' && styles.scrollContentWithFooter]}
       >
         <View style={styles.imageContainer}>
-          <Image
-            source={{ uri: detailData.images[0] }}
-            style={styles.bannerImage}
-          />
+          {detailData.images.length > 1 ? (
+            <Swiper
+              style={styles.wrapper}
+              showsButtons={false}
+              autoplay={true}
+              autoplayTimeout={4}
+              dotStyle={{ backgroundColor: 'rgba(255,255,255,0.3)', width: 8, height: 8 }}
+              activeDotStyle={{ backgroundColor: '#FFA847', width: 8, height: 8 }}
+            >
+              {detailData.images.map((img, index) => (
+                <Image
+                  key={index}
+                  source={{ uri: img }}
+                  style={styles.bannerImage}
+                />
+              ))}
+            </Swiper>
+          ) : (
+            <Image
+              source={{ uri: detailData.images[0] }}
+              style={styles.bannerImage}
+            />
+          )}
+          
           <SafeAreaView edges={['top']} style={styles.headerOverlay}>
             <View style={styles.headerButtons}>
               <TouchableOpacity
@@ -173,6 +224,10 @@ const RestaurantDetailScreen = () => {
             <Text style={styles.ratingText}>
               {detailData.rating} ({detailData.reviews})
             </Text>
+            <TouchableOpacity style={styles.mapButton} onPress={openKakaoMap}>
+              <Icon name="map-outline" size={16} color="#FFA847" />
+              <Text style={styles.mapButtonText}>지도 보기</Text>
+            </TouchableOpacity>
           </View>
         </View>
 
@@ -241,7 +296,7 @@ const RestaurantDetailScreen = () => {
 
             <View style={styles.mapSection}>
               <Text style={styles.sectionTitle}>위치</Text>
-              <TouchableOpacity style={styles.mapPlaceholder}>
+              <TouchableOpacity style={styles.mapPlaceholder} onPress={openKakaoMap}>
                 <Icon name="map-outline" size={40} color="#FFA847" />
                 <Text style={styles.mapText}>지도 보기</Text>
                 <Text style={styles.addressText}>{detailData.address}</Text>
@@ -391,10 +446,12 @@ const styles = StyleSheet.create({
   },
   imageContainer: {
     position: 'relative',
+    height: 250,
   },
   bannerImage: {
     width: width,
     height: 250,
+    resizeMode: 'cover',
   },
   headerOverlay: {
     position: 'absolute',
@@ -440,6 +497,24 @@ const styles = StyleSheet.create({
   ratingText: {
     fontSize: 15,
     color: '#333',
+  },
+  wrapper: {
+    height: 250,
+  },
+  mapButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginLeft: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    backgroundColor: 'rgba(255, 168, 71, 0.1)',
+    borderRadius: 12,
+  },
+  mapButtonText: {
+    fontSize: 12,
+    color: '#FFA847',
+    marginLeft: 4,
+    fontWeight: '600',
   },
   tabContainer: {
     flexDirection: 'row',

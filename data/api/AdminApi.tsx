@@ -2,14 +2,14 @@ import { AdminUser, AdminUserList } from "../../domain/entities/AdminUserList";
 import axios from "axios";
 import { LOCAL_HOST } from "@env";
 
-// LOCAL_HOST가 설정되지 않았을 경우를 대비한 기본값
-const BASE_URL = LOCAL_HOST || "http://10.0.2.2:8080";
+const BASE_URL = LOCAL_HOST;
 
 export const AdminApi = {
   async getStats(token: string) {
     try {
       const response = await axios.get(`${BASE_URL}/admin/user/dashboard`, {
         headers: { Authorization: `Bearer ${token}` },
+        timeout: 10000,
       });
       
       // 백엔드 응답에 allRestaurantData가 없을 경우를 대비해 기본값 추가
@@ -33,6 +33,7 @@ export const AdminApi = {
       const response = await axios.get(`${BASE_URL}/admin/user/dashboard/detail`, {
         headers: { Authorization: `Bearer ${token}` },
         params,
+        timeout: 10000,
       });
       return response.data;
     } catch (error) {
@@ -50,7 +51,10 @@ export const AdminApi = {
       const params: any = { page, size };
       if (keyword) params.keyword = keyword;
       
-      const response = await axios.get(`${LOCAL_HOST}/restaurant`, { params });
+      const response = await axios.get(`${LOCAL_HOST}/restaurant`, { 
+        params,
+        timeout: 10000,
+      });
       return response.data;
     } catch (error) {
       console.error("Error fetching restaurant list:", error);

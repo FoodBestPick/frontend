@@ -8,22 +8,30 @@ export type RootStackParamList = {
   AdminRestaurantAdd:
   | undefined
   | {
-    selectedLocation: {
+    selectedLocation?: {
       lat: number;
       lng: number;
       address: string;
     };
+    id?: number;
   };
   MapSelectScreen: undefined;
+  AdminManageSelect: undefined;
+  AdminFoodManage: undefined;
+  AdminTagManage: undefined;
+  AdminReportScreen: undefined;
+
   UserMain: undefined;
   RouletteScreen: undefined;
   SearchScreen: undefined;
   SearchResult: {
-    query: string;
-    filters: FilterState;
+    keyword: string;
+    category?: string;
+    tags?: string[];
+    filters?: FilterState;
   };
   RestaurantDetail: {
-    restaurant: RestaurantItem;
+    restaurantId: number;
   };
   MatchScreen: undefined;
   MyPageScreen: undefined;
@@ -37,6 +45,19 @@ export type RootStackParamList = {
   ChatRoomScreen: {
     roomTitle: string;
     peopleCount: number;
+  };
+  ChangePassword: undefined;
+  DeleteAccount: undefined;
+  NotificationSetting: undefined;
+  ReviewWrite: {
+    restaurantId: number;
+    restaurantName: string;
+    review?: {
+      id: number;
+      content: string;
+      rating: number;
+      images: string[];
+    };
   };
 };
 

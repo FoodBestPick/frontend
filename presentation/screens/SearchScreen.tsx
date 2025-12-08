@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -9,23 +9,20 @@ import {
   StatusBar,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Icon from 'react-native-vector-icons/Ionicons';
+import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { FilterModal } from '../components/FilterModal';
+import { RootStackParamList } from '../navigation/types/RootStackParamList';
 
-type RootStackParamList = {
-  SearchScreen: undefined;
-  SearchResult: {
-    query: string;
-    filters: FilterState;
-  };
-};
+import { useAdminRestaurantAddViewModel } from '../viewmodels/AdminRestaurantAddViewModel';
 
 interface FilterState {
   location: string;
   radius: number;
   category: string;
+  tags: string[];
   priceMin: number;
   priceMax: number;
   rating: number;
@@ -43,9 +40,12 @@ const SearchScreen = () => {
   const [selectedFilters, setSelectedFilters] = useState<Partial<FilterState>>(
     {},
   );
+  const [recentSearches, setRecentSearches] = useState<string[]>([]);
 
-  const recentSearches = ['떡볶이', '김치찌개', '파스타', '초밥'];
+  // ✅ 백엔드 데이터 로드
+  const { categories, purposeTags, facilityTags, atmosphereTags } = useAdminRestaurantAddViewModel();
 
+  // 인기 검색어 (Mock Data - 백엔드 API 필요 시 구현)
   const popularSearches = [
     { rank: 1, term: '떡볶이', trend: 'up' as const },
     { rank: 2, term: '김치찌개', trend: 'same' as const },
@@ -53,10 +53,61 @@ const SearchScreen = () => {
     { rank: 4, term: '초밥', trend: 'down' as const },
   ];
 
-  const handleSearch = () => {
-    if (searchQuery.trim()) {
+  useEffect(() => {
+    loadRecentSearches();
+  }, []);
+
+  const loadRecentSearches = async () => {
+    try {
+      const savedSearches = await AsyncStorage.getItem('recentSearches');
+      if (savedSearches) {
+        setRecentSearches(JSON.parse(savedSearches));
+      }
+    } catch (error) {
+      console.error('Failed to load recent searches', error);
+    }
+  };
+
+  const saveRecentSearch = async (term: string) => {
+    try {
+      const newSearches = [
+        term,
+        ...recentSearches.filter(item => item !== term),
+      ].slice(0, 10); // 최대 10개 유지
+      setRecentSearches(newSearches);
+      await AsyncStorage.setItem('recentSearches', JSON.stringify(newSearches));
+    } catch (error) {
+      console.error('Failed to save recent search', error);
+    }
+  };
+
+  const removeRecentSearch = async (term: string) => {
+    try {
+      const newSearches = recentSearches.filter(item => item !== term);
+      setRecentSearches(newSearches);
+      await AsyncStorage.setItem('recentSearches', JSON.stringify(newSearches));
+    } catch (error) {
+      console.error('Failed to remove recent search', error);
+    }
+  };
+
+  const clearAllRecentSearches = async () => {
+    try {
+      setRecentSearches([]);
+      await AsyncStorage.removeItem('recentSearches');
+    } catch (error) {
+      console.error('Failed to clear recent searches', error);
+    }
+  };
+
+  const handleSearch = (term?: string) => {
+    const query = term || searchQuery;
+    if (query.trim()) {
+      saveRecentSearch(query);
       navigation.navigate('SearchResult', {
-        query: searchQuery,
+        keyword: query,
+        category: selectedFilters.category,
+        tags: selectedFilters.tags,
         filters: selectedFilters as FilterState,
       });
     }
@@ -68,25 +119,25 @@ const SearchScreen = () => {
 
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Icon name="arrow-back" size={24} color="#000" />
+          <MaterialIcons name="arrow-back" size={24} color="#000" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>검색</Text>
         <View style={{ width: 24 }} />
       </View>
 
       <View style={styles.searchBar}>
-        <Icon name="search-outline" size={20} color="#999" />
+        <MaterialIcons name="search" size={20} color="#999" />
         <TextInput
           style={styles.searchInput}
           placeholder="맛집 메뉴를 검색해보세요"
           placeholderTextColor="#999"
           value={searchQuery}
           onChangeText={setSearchQuery}
-          onSubmitEditing={handleSearch}
+          onSubmitEditing={() => handleSearch()}
         />
         {searchQuery.length > 0 && (
           <TouchableOpacity onPress={() => setSearchQuery('')}>
-            <Icon name="close-circle" size={20} color="#999" />
+            <MaterialIcons name="cancel" size={20} color="#999" />
           </TouchableOpacity>
         )}
       </View>
@@ -95,33 +146,38 @@ const SearchScreen = () => {
         style={styles.filterButton}
         onPress={() => setFilterVisible(true)}
       >
-        <Icon name="options-outline" size={18} color="#FFA847" />
+        <MaterialIcons name="tune" size={18} color="#FFA847" />
         <Text style={styles.filterText}>상세 검색</Text>
       </TouchableOpacity>
 
       <ScrollView showsVerticalScrollIndicator={false}>
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>최근 검색어</Text>
-            <TouchableOpacity>
-              <Text style={styles.clearText}>전체 삭제</Text>
-            </TouchableOpacity>
-          </View>
-          <View style={styles.chipContainer}>
-            {recentSearches.map((term, index) => (
-              <TouchableOpacity
-                key={index}
-                style={styles.chip}
-                onPress={() => {
-                  setSearchQuery(term);
-                }}
-              >
-                <Text style={styles.chipText}>{term}</Text>
-                <Icon name="close" size={14} color="#666" />
+        {recentSearches.length > 0 && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>최근 검색어</Text>
+              <TouchableOpacity onPress={clearAllRecentSearches}>
+                <Text style={styles.clearText}>전체 삭제</Text>
               </TouchableOpacity>
-            ))}
+            </View>
+            <View style={styles.chipContainer}>
+              {recentSearches.map((term, index) => (
+                <TouchableOpacity
+                  key={index}
+                  style={styles.chip}
+                  onPress={() => {
+                    setSearchQuery(term);
+                    handleSearch(term);
+                  }}
+                >
+                  <Text style={styles.chipText}>{term}</Text>
+                  <TouchableOpacity onPress={() => removeRecentSearch(term)}>
+                    <MaterialIcons name="close" size={14} color="#666" />
+                  </TouchableOpacity>
+                </TouchableOpacity>
+              ))}
+            </View>
           </View>
-        </View>
+        )}
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>인기 검색어</Text>
@@ -131,6 +187,7 @@ const SearchScreen = () => {
               style={styles.rankItem}
               onPress={() => {
                 setSearchQuery(item.term);
+                handleSearch(item.term);
               }}
             >
               <Text
@@ -142,21 +199,21 @@ const SearchScreen = () => {
                 {item.rank}
               </Text>
               <Text style={styles.rankTerm}>{item.term}</Text>
-              <Icon
+              <MaterialIcons
                 name={
                   item.trend === 'up'
-                    ? 'arrow-up'
+                    ? 'arrow-upward'
                     : item.trend === 'down'
-                      ? 'arrow-down'
-                      : 'remove'
+                    ? 'arrow-downward'
+                    : 'remove'
                 }
                 size={16}
                 color={
                   item.trend === 'up'
                     ? '#2ECC71'
                     : item.trend === 'down'
-                      ? '#E74C3C'
-                      : '#999'
+                    ? '#E74C3C'
+                    : '#999'
                 }
               />
             </TouchableOpacity>
@@ -171,7 +228,18 @@ const SearchScreen = () => {
         onApply={filters => {
           setSelectedFilters(filters);
           setFilterVisible(false);
+          // 필터 적용 시 바로 검색 결과로 이동
+          navigation.navigate('SearchResult', {
+            keyword: searchQuery,
+            category: filters.category,
+            tags: filters.tags,
+            filters: filters,
+          });
         }}
+        categoriesData={categories}
+        purposeTags={purposeTags}
+        facilityTags={facilityTags}
+        atmosphereTags={atmosphereTags}
       />
     </SafeAreaView>
   );

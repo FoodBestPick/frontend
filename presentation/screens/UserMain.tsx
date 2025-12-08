@@ -245,10 +245,11 @@ const UserMain = () => {
           onContentSizeChange={w => setContentWidth(w)}
           onLayout={e => setScrollViewWidth(e.nativeEvent.layout.width)}
           renderItem={({ item, index }) => (
-            <TouchableOpacity
-              style={styles.cardContainer}
+            <TouchableOpacity 
+              style={styles.cardContainer} 
               activeOpacity={0.8}
-              onPress={() => (navigation as any).navigate('RestaurantDetail', { restaurantId: item.id })}            >
+              onPress={() => navigation.navigate('RestaurantDetail' as never, { restaurantId: item.id } as never)}
+            >
               <View style={styles.cardImageWrapper}>
                 {index < 3 && (
                   <View
@@ -257,8 +258,8 @@ const UserMain = () => {
                       index === 0
                         ? { backgroundColor: '#FFD700' }
                         : index === 1
-                          ? { backgroundColor: '#C0C0C0' }
-                          : { backgroundColor: '#CD7F32' },
+                        ? { backgroundColor: '#C0C0C0' }
+                        : { backgroundColor: '#CD7F32' },
                     ]}
                   >
                     <Text style={styles.rankTextWhite}>{index + 1}</Text>
@@ -322,8 +323,8 @@ const UserMain = () => {
               index === 0
                 ? { backgroundColor: '#FFD700' }
                 : index === 1
-                  ? { backgroundColor: '#C0C0C0' }
-                  : { backgroundColor: '#CD7F32' },
+                ? { backgroundColor: '#C0C0C0' }
+                : { backgroundColor: '#CD7F32' },
             ]}
           >
             <Text style={styles.rankTextWhite}>{index + 1}</Text>

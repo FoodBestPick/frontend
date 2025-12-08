@@ -74,8 +74,8 @@ export const AdminRestaurantAddScreen = () => {
     if (route.params?.selectedLocation) {
       const {
         address: addr,
-        lat,
-        lng,
+        latitude: lat,
+        longitude: lng,
       } = route.params.selectedLocation;
       setAddress(addr);
       setLatitude(lat?.toString() || '');
@@ -87,7 +87,7 @@ export const AdminRestaurantAddScreen = () => {
   useEffect(() => {
     if (isEditMode) {
       const loadData = async () => {
-        const data = await getRestaurantDetail(route.params?.id!);
+        const data = await getRestaurantDetail(route.params.id!);
         if (data) {
           setName(data.name);
           setCategory(data.category);
@@ -95,7 +95,7 @@ export const AdminRestaurantAddScreen = () => {
           setLatitude(data.latitude?.toString() || '');
           setLongitude(data.longitude?.toString() || '');
           setDescription(data.description || '');
-
+          
           // 이미지 설정 (기존 이미지는 uri로 설정)
           if (data.images && data.images.length > 0) {
             setMainImages(data.images.map((url: string) => ({ uri: url })));
@@ -115,16 +115,16 @@ export const AdminRestaurantAddScreen = () => {
           if (data.tags) {
             setSelectedTags(data.tags);
           }
-
+          
           // 운영시간 설정 (데이터 구조에 따라 다름, 여기서는 예시)
           if (data.times && data.times.length > 0) {
-            setTimes(data.times.map((t: any, idx: number) => ({
-              id: t.id?.toString() || idx.toString(),
-              week: t.week,
-              startTime: t.startTime,
-              endTime: t.endTime,
-              restTime: t.restTime || ''
-            })));
+             setTimes(data.times.map((t: any, idx: number) => ({
+               id: t.id?.toString() || idx.toString(),
+               week: t.week,
+               startTime: t.startTime,
+               endTime: t.endTime,
+               restTime: t.restTime || ''
+             })));
           }
         }
       };
@@ -313,7 +313,7 @@ export const AdminRestaurantAddScreen = () => {
                     style={styles.imagePreviewSmall}
                   />
                 ))}
-              </View>
+              </View> 
             ) : (
               <>
                 <MaterialIcons

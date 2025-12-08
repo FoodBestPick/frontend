@@ -36,6 +36,16 @@ export const AdminDashBoardScreen = () => {
     setRefreshing(false);
   }, []);
 
+  const safeChartArray = (arr?: number[]) => {
+    const safe = (arr ?? []).map(v =>
+      Number.isFinite(v) ? v : 0
+    );
+
+    const hasNonZero = safe.some(v => v !== 0);
+
+    return hasNonZero ? safe : safe.length ? safe : [0, 0, 0, 0, 0, 0, 0];
+  };
+
   if (!stats) {
     return (
       <View
@@ -62,12 +72,12 @@ export const AdminDashBoardScreen = () => {
 
   const lineData = {
     labels: ['월', '화', '수', '목', '금', '토', '일'],
-    datasets: [{ data: stats.data.weekUserData ?? [] }],
+    datasets: [{ data: safeChartArray(stats.data.weekUserData) ?? [] }],
   };
 
   const barData = {
     labels: ['월', '화', '수', '목', '금', '토', '일'],
-    datasets: [{ data: stats.data.barData ?? [] }],
+    datasets: [{ data: safeChartArray(stats.data.barData) ?? [] }],
   };
 
   const miniChartStyle = {
@@ -141,7 +151,7 @@ export const AdminDashBoardScreen = () => {
             <LineChart
               data={{
                 labels: ['', '', '', '', '', '', ''],
-                datasets: [{ data: stats.data.allUserData ?? [] }],
+                datasets: [{ data: safeChartArray(stats.data.allUserData) ?? [] }],
               }}
               width={miniChartStyle.width}
               height={60}
@@ -199,7 +209,7 @@ export const AdminDashBoardScreen = () => {
             <LineChart
               data={{
                 labels: ['', '', '', '', '', '', ''],
-                datasets: [{ data: stats.data.allRestaurantData ?? [] }],
+                datasets: [{ data: safeChartArray(stats.data.allRestaurantData) ?? [] }],
               }}
               width={miniChartStyle.width}
               height={60}
@@ -394,6 +404,7 @@ export const AdminDashBoardScreen = () => {
             xAxisLabel=""
             yAxisLabel=""
             yAxisSuffix=""
+            fromZero
           />
         </ChartSection>
 

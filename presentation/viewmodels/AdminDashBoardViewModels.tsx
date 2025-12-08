@@ -13,6 +13,9 @@ export const AdminDashBoardViewModel = () => {
     const usecase = new GetAdminStats(AdminRepositoryImpl);
     try {
       const result = await usecase.execute(token);
+      console.log("weekUserData =", result.data.weekUserData);
+      console.log("barData      =", result.data.barData);
+      console.log("pieData      =", result.data.pieData);
       setStats(result);
     } catch (error) {
       console.error("Failed to fetch stats", error);

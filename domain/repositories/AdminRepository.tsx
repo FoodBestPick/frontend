@@ -5,7 +5,7 @@ import { AdminUserList } from "../entities/AdminUserList";
 import { AdminNotificationList } from "../entities/AdminNotificationList";
 
 export interface AdminRepository {
-  getStats(): Promise<AdminStats>;
+  getStats(token : String): Promise<AdminStats>;
   getDetailStats(): Promise<AdminDetailStats>;
   getRestaurantList(page: number, size: number, status?: string, keyword?: string): Promise<AdminRestaurantList>;
   getUserList(

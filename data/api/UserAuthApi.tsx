@@ -1,9 +1,10 @@
 import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { API_BASE_URL } from "@env";
 
 // 1. Axios 인스턴스 생성
 export const authApi = axios.create({
-    baseURL: "http://13.125.213.115:8080", // 에뮬레이터 기준 (실기기라면 IP 주소로 변경)
+    baseURL: API_BASE_URL,            
     withCredentials: true,
 });
 

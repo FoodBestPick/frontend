@@ -241,8 +241,14 @@ const MyPageScreen = () => {
 
         {/* 메뉴 */}
         <View style={styles.menuSection}>
-          <MenuItem text="본인 리뷰 작성 조회" />
-          <MenuItem text="맛집 즐겨찾기" />
+          <MenuItem 
+            text="본인 리뷰 작성 조회" 
+            onPress={() => navigation.navigate('MyReviewsScreen')} 
+          />
+          <MenuItem 
+            text="맛집 즐겨찾기" 
+            onPress={() => navigation.navigate('MyLikesScreen')} 
+          />
           <MenuItem text="알림 설정" />
           <MenuItem text="고객센터" />
           <MenuItem text="앱 버전 정보" />

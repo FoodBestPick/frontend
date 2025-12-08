@@ -221,8 +221,8 @@ export default function RouletteScreen() {
     setShowOverlay(false);
     if (currentResult) {
       navigation.navigate("SearchResult", {
-        query: currentResult,
-        filters: mode === 'category' ? { category: currentResult } : {},
+        keyword: mode === 'menu' ? currentResult : undefined,
+        category: mode === 'category' ? currentResult : undefined,
       });
     }
   };

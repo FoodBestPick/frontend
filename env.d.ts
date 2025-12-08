@@ -8,6 +8,5 @@ declare module '@env' {
   export const NAVER_CLIENT_SECRET: string;
   export const NAVER_APP_NAME: string;
   export const LOCAL_HOST: string;
-  export const API_URL: string;
-
+  export const API_BASE_URL: string;
 }

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useContext, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -7,100 +7,59 @@ import {
   FlatList,
   Image,
   StatusBar,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Icon from 'react-native-vector-icons/Ionicons';
-import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
-import { StackNavigationProp } from '@react-navigation/stack';
+import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
+import { useNavigation, useRoute, RouteProp, useFocusEffect } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { RootStackParamList } from '../navigation/types/RootStackParamList';
+import { ThemeContext } from '../../context/ThemeContext';
+import { useSearchViewModel } from '../viewmodels/SearchViewModel';
 
-interface FilterState {
-  location?: string;
-  radius?: number;
-  category?: string;
-  priceMin?: number;
-  priceMax?: number;
-  rating?: number;
-  openNow?: boolean;
-  parking?: boolean;
-  delivery?: boolean;
-}
-
-interface RestaurantItem {
-  id: number;
-  name: string;
-  category: string;
-  rating: number;
-  reviews: number;
-  distance: string;
-  image: string;
-  tags: string[];
-}
-
-type RootStackParamList = {
-  SearchResult: {
-    query: string;
-    filters: FilterState;
-  };
-  RestaurantDetail: {
-    restaurant: RestaurantItem;
-  };
-};
-
-type NavigationProp = StackNavigationProp<RootStackParamList, 'SearchResult'>;
-type RouteParamsProp = RouteProp<RootStackParamList, 'SearchResult'>;
+type Navigation = NativeStackNavigationProp<
+  RootStackParamList,
+  'SearchResultScreen'
+>;
+type SearchResultRouteProp = RouteProp<
+  RootStackParamList,
+  'SearchResultScreen'
+>;
 
 const SearchResultScreen = () => {
-  const navigation = useNavigation<NavigationProp>();
-  const route = useRoute<RouteParamsProp>();
-  const { query, filters } = route.params || { query: '', filters: {} };
+  const navigation = useNavigation<Navigation>();
+  const route = useRoute<SearchResultRouteProp>();
+  const { theme } = useContext(ThemeContext);
 
-  const [sortBy, setSortBy] = useState('추천순');
+  // ✅ ViewModel 연결
+  const { results, loading, error, searchRestaurants, sortBy, setSortBy } = useSearchViewModel();
+  const { keyword, category, tags, filters } = route.params || {};
 
-  const results: RestaurantItem[] = [
-    {
-      id: 1,
-      name: '엽기 떡볶이',
-      category: '떡볶이',
-      rating: 4.5,
-      reviews: 215,
-      distance: '0.8km',
-      image: 'https://via.placeholder.com/150',
-      tags: ['주차', '예약'],
-    },
-    {
-      id: 2,
-      name: '두끼',
-      category: '떡볶이',
-      rating: 4.7,
-      reviews: 342,
-      distance: '1.2km',
-      image: 'https://via.placeholder.com/150',
-      tags: ['배달', '포장'],
-    },
-    {
-      id: 3,
-      name: '스텔라 떡볶이',
-      category: '떡볶이',
-      rating: 4.3,
-      reviews: 128,
-      distance: '2.1km',
-      image: 'https://via.placeholder.com/150',
-      tags: ['24시간'],
-    },
-  ];
+  useFocusEffect(
+    useCallback(() => {
+      // 필터 파라미터 및 정렬 옵션 전달
+      searchRestaurants(keyword, category, tags, filters, sortBy);
+    }, [keyword, category, tags, filters, sortBy])
+  );
+
+  const handleSortToggle = () => {
+    const newSort = sortBy === 'rating' ? 'review' : 'rating';
+    setSortBy(newSort);
+  };
 
   const renderRestaurant = ({
     item,
     index,
   }: {
-    item: RestaurantItem;
+    item: any;
     index: number;
   }) => (
     <TouchableOpacity
-      style={styles.card}
+      style={[styles.card, { backgroundColor: theme.card }]}
       onPress={() =>
-        navigation.navigate('RestaurantDetail', { restaurant: item })
+        navigation.navigate('RestaurantDetail', { restaurantId: item.id })
       }
+      activeOpacity={0.9}
     >
       {index < 3 && (
         <View
@@ -116,68 +75,96 @@ const SearchResultScreen = () => {
         </View>
       )}
 
-      <Image source={{ uri: item.image }} style={styles.cardImage} />
+      {item.images && item.images.length > 0 ? (
+        <Image source={{ uri: item.images[0] }} style={styles.cardImage} />
+      ) : (
+        <View style={[styles.cardImage, styles.placeholderImage]}>
+          <MaterialIcons name="restaurant" size={40} color="#ccc" />
+        </View>
+      )}
+      
       <View style={styles.cardContent}>
-        <Text style={styles.cardTitle}>{item.name}</Text>
-        <Text style={styles.cardCategory}>{item.category}</Text>
+        <Text style={[styles.cardTitle, { color: theme.textPrimary }]}>{item.name}</Text>
+        <Text style={[styles.cardCategory, { color: theme.textSecondary }]}>{item.category}</Text>
         <View style={styles.cardRow}>
           <View style={styles.ratingRow}>
-            <Icon name="star" size={14} color="#FFA847" />
-            <Text style={styles.ratingText}>
-              {item.rating} ({item.reviews}+)
+            <MaterialIcons name="star" size={14} color="#FFA847" />
+            <Text style={[styles.ratingText, { color: theme.textPrimary }]}>
+              {item.rating || '0.0'} ({item.reviews || 0}+)
             </Text>
           </View>
-          <Text style={styles.distanceText}>📍 {item.distance}</Text>
+          <Text style={[styles.distanceText, { color: theme.textSecondary }]}>
+             📍 {item.address || '위치 정보 없음'}
+          </Text>
         </View>
-        <View style={styles.tagRow}>
-          {item.tags.map((tag, idx) => (
-            <View key={idx} style={styles.tag}>
-              <Text style={styles.tagText}>{tag}</Text>
-            </View>
-          ))}
-        </View>
+        
+        {/* 태그가 있다면 표시 (현재 API에는 없지만 UI 유지) */}
+        {item.tags && item.tags.length > 0 && (
+          <View style={styles.tagRow}>
+            {item.tags.map((tag: string, idx: number) => (
+              <View key={idx} style={styles.tag}>
+                <Text style={styles.tagText}>{tag}</Text>
+              </View>
+            ))}
+          </View>
+        )}
       </View>
     </TouchableOpacity>
   );
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#fff" />
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
+      <StatusBar barStyle={theme.isDark ? "light-content" : "dark-content"} backgroundColor={theme.background} />
 
-      <View style={styles.header}>
+      <View style={[styles.header, { borderBottomColor: theme.border }]}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Icon name="arrow-back" size={24} color="#000" />
+          <MaterialIcons name="arrow-back" size={24} color={theme.textPrimary} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle} numberOfLines={1}>
-          "{query}"
+        <Text style={[styles.headerTitle, { color: theme.textPrimary }]} numberOfLines={1}>
+          "{keyword || category || '검색 결과'}"
         </Text>
         <View style={{ width: 24 }} />
       </View>
 
-      {filters && Object.keys(filters).length > 0 && (
-        <View style={styles.filterSummary}>
+      {/* 필터 요약 */}
+      {(category || (filters && Object.keys(filters).length > 0)) && (
+        <View style={[styles.filterSummary, { backgroundColor: theme.isDark ? '#333' : '#FFF4E6' }]}>
           <Text style={styles.filterText}>
-            {filters.category || '전체'} · {filters.radius || 0}km · ⭐
-            {filters.rating || 0}점
+            {category || '전체'} 
+            {filters?.radius ? ` · ${filters.radius}km` : ''} 
+            {filters?.rating ? ` · ⭐${filters.rating}점` : ''}
           </Text>
         </View>
       )}
 
       <View style={styles.sortRow}>
-        <Text style={styles.resultCount}>총 {results.length}개</Text>
-        <TouchableOpacity style={styles.sortButton}>
-          <Text style={styles.sortText}>{sortBy}</Text>
-          <Icon name="chevron-down" size={16} color="#666" />
+        <Text style={[styles.resultCount, { color: theme.textPrimary }]}>총 {results.length}개</Text>
+        <TouchableOpacity style={styles.sortButton} onPress={handleSortToggle}>
+          <Text style={[styles.sortText, { color: theme.textSecondary }]}>
+            {sortBy === 'rating' ? '추천순' : '리뷰순'}
+          </Text>
+          <MaterialIcons name="sort" size={16} color={theme.textSecondary} />
         </TouchableOpacity>
       </View>
 
-      <FlatList
-        data={results}
-        keyExtractor={item => item.id.toString()}
-        renderItem={renderRestaurant}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.list}
-      />
+      {loading ? (
+        <View style={styles.centerContainer}>
+          <ActivityIndicator size="large" color="#FFA847" />
+        </View>
+      ) : (
+        <FlatList
+          data={results}
+          keyExtractor={item => item.id.toString()}
+          renderItem={renderRestaurant}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.list}
+          ListEmptyComponent={
+            <View style={styles.centerContainer}>
+              <Text style={{ color: theme.textSecondary, marginTop: 50 }}>검색 결과가 없습니다.</Text>
+            </View>
+          }
+        />
+      )}
     </SafeAreaView>
   );
 };
@@ -187,7 +174,6 @@ export default SearchResultScreen;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
   },
   header: {
     flexDirection: 'row',
@@ -196,18 +182,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
   },
   headerTitle: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#000',
     flex: 1,
     textAlign: 'center',
     marginHorizontal: 8,
   },
   filterSummary: {
-    backgroundColor: '#FFF4E6',
     paddingHorizontal: 16,
     paddingVertical: 10,
   },
@@ -225,7 +208,6 @@ const styles = StyleSheet.create({
   resultCount: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#000',
   },
   sortButton: {
     flexDirection: 'row',
@@ -234,13 +216,11 @@ const styles = StyleSheet.create({
   },
   sortText: {
     fontSize: 14,
-    color: '#666',
   },
   list: {
     padding: 16,
   },
   card: {
-    backgroundColor: '#fff',
     borderRadius: 12,
     marginBottom: 16,
     shadowColor: '#000',
@@ -269,6 +249,12 @@ const styles = StyleSheet.create({
   cardImage: {
     width: '100%',
     height: 150,
+    resizeMode: 'cover',
+  },
+  placeholderImage: {
+    backgroundColor: '#f0f0f0',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   cardContent: {
     padding: 12,
@@ -276,12 +262,10 @@ const styles = StyleSheet.create({
   cardTitle: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#000',
     marginBottom: 4,
   },
   cardCategory: {
     fontSize: 13,
-    color: '#999',
     marginBottom: 8,
   },
   cardRow: {
@@ -297,11 +281,12 @@ const styles = StyleSheet.create({
   },
   ratingText: {
     fontSize: 13,
-    color: '#333',
   },
   distanceText: {
     fontSize: 13,
-    color: '#777',
+    flex: 1,
+    textAlign: 'right',
+    marginLeft: 8,
   },
   tagRow: {
     flexDirection: 'row',
@@ -317,5 +302,10 @@ const styles = StyleSheet.create({
   tagText: {
     fontSize: 11,
     color: '#666',
+  },
+  centerContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });

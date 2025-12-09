@@ -150,8 +150,8 @@ export const FilterModal = ({
   const handleApply = () => {
     onApply({
       ...selectedFilters,
-      priceMin: minPrice ? parseInt(minPrice) : undefined,
-      priceMax: maxPrice ? parseInt(maxPrice) : undefined,
+      priceMin: minPrice ? parseInt(minPrice) : 0,
+      priceMax: maxPrice ? parseInt(maxPrice) : 0,
     });
   };
 

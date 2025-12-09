@@ -7,7 +7,7 @@ import UserMain from '../screens/UserMain';
 import RouletteScreen from '../screens/RouletteScreen';
 import MyPageScreen from '../screens/MyPageScreen';
 import MatchScreen from '../screens/MatchScreen';
-import NotificationScreen from '../screens/NotificationScreen';
+// import NotificationScreen from '../screens/NotificationScreen'; // ❌ 제거됨
 import SearchScreen from '../screens/SearchScreen';
 import SearchResultScreen from '../screens/SearchResultScreen';
 import RestaurantDetailScreen from '../screens/RestaurantDetailScreen';
@@ -20,7 +20,7 @@ const HomeStack = createStackNavigator();
 const RouletteStack = createStackNavigator();
 const MatchStack = createStackNavigator();
 const MyPageStack = createStackNavigator();
-const NotificationStack = createStackNavigator();
+// const NotificationStack = createStackNavigator(); // ❌ 제거됨
 
 const stackOptions = { headerShown: false };
 
@@ -68,15 +68,7 @@ const MyPageStackNavigator = () => (
   </MyPageStack.Navigator>
 );
 
-// 5. 알림 스택
-const NotificationStackNavigator = () => (
-  <NotificationStack.Navigator screenOptions={stackOptions}>
-    <NotificationStack.Screen
-      name="NotificationScreen"
-      component={NotificationScreen}
-    />
-  </NotificationStack.Navigator>
-);
+// ❌ 5. 알림 스택 (제거됨)
 
 export const UserNavigation = () => {
   return (
@@ -90,7 +82,7 @@ export const UserNavigation = () => {
             RouletteTab: 'refresh-outline',
             MatchingTab: 'people-outline',
             MyPageTab: 'person-outline',
-            NotificationTab: 'notifications-outline',
+            // NotificationTab: 'notifications-outline', // ❌ 제거됨
           };
           return (
             <Icon
@@ -121,11 +113,7 @@ export const UserNavigation = () => {
         component={RouletteStackNavigator}
         options={{ tabBarLabel: '룰렛' }}
       />
-      <Tab.Screen
-        name="NotificationTab"
-        component={NotificationStackNavigator}
-        options={{ tabBarLabel: '알림' }}
-      />
+      {/* ❌ NotificationTab 제거됨 */}
       <Tab.Screen
         name="MatchingTab"
         component={MatchStackNavigator}

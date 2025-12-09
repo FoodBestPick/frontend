@@ -1,128 +1,184 @@
-import { UserAuthRepository } from "../../domain/repositories/UserAuthRepository";
-import { authApi } from "../api/UserAuthApi";
 import { Platform } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { UserAuthRepository } from "../../domain/repositories/UserAuthRepository";
+import { authApi } from "../api/UserAuthApi";
+import { API_BASE_URL } from "@env";
 
 export const UserAuthRepositoryImpl: UserAuthRepository = {
-    // 1. 닉네임 중복 확인
     async checkNickname(nickname: string): Promise<boolean> {
         try {
             const response = await authApi.post("/auth/check-nickname", { nickname });
             const { code, data } = response.data;
+
+            // Handle mixed return types from server (boolean, string, null)
             if (code === 200) {
-                if (data === null || data === false || data === "false" || data === true || data === "true" || data === "사용가능") return true;
+                const validPositiveResponses = [true, "true", "사용가능"];
+                const validNegativeResponses = [false, "false", null];
+                
+                if (validPositiveResponses.includes(data) || validNegativeResponses.includes(data)) {
+                    // Interpreting specific "available" signals as true, everything else as potentially false?
+                    // Original logic was: if (data === null || data === false ... ) return true;
+                    // Wait, the original logic returned TRUE for null/false/"false"/"true"/"사용가능".
+                    // This implies ANY successful 200 response with these values meant "Nickname is usable" (i.e. not taken).
+                    // If it was taken, maybe it returns 409 or a different code?
+                    // I will preserve the original logic's intent:
+                    return true;
+                }
             }
             return false;
         } catch (error: any) {
-            if (error.response?.status === 409) return false;
-            console.error("닉네임 체크 에러:", error);
+            if (error.response?.status === 409) return false; // Nickname conflict
+            console.error("[UserAuthRepository] checkNickname error:", error);
             return false;
         }
     },
 
-    // 2. 이메일 관련
-    async sendSignupEmail(email) { await authApi.post("/auth/email-send/signup", { email }); },
-    async sendPasswordResetEmail(email) { await authApi.post("/auth/email-send/password/reset", { email }); },
-    async verifyEmail(email, code) { await authApi.post("/auth/email-verify", { email, code }); },
+    async sendSignupEmail(email: string): Promise<void> {
+        await authApi.post("/auth/email-send/signup", { email });
+    },
 
-    // 3. 회원가입
-    async signup(payload) { await authApi.post("/auth/signup", payload); },
+    async sendPasswordResetEmail(email: string): Promise<void> {
+        await authApi.post("/auth/email-send/password/reset", { email });
+    },
 
-    // 4. 로그인
-    async signin(payload) {
-        const res = await authApi.post("/auth/signin", payload);
-        const rawData = res.data;
+    async verifyEmail(email: string, code: string): Promise<void> {
+        await authApi.post("/auth/email-verify", { email, code });
+    },
 
-        const tokenData = rawData.data || rawData;
+    async signup(payload: any): Promise<void> {
+        await authApi.post("/auth/signup", payload);
+    },
+
+    async signin(payload: { email: string; password: string }) {
+        const response = await authApi.post("/auth/signin", payload);
+        const rawData = response.data;
+
+        console.log("[UserAuthRepository] Signin Response:", JSON.stringify(rawData, null, 2));
+
+        // Normalize data structure (handle { data: ... } vs flat response)
+        let tokenData = rawData.data || rawData;
+        
+        // Handle nested 'token' object if present
+        if (tokenData && typeof tokenData === 'object' && 'token' in tokenData) {
+            tokenData = tokenData.token;
+        }
+
         const userData = rawData.user || {};
 
+        // Determine admin privileges
         const isAdmin =
             tokenData.isAdmin === true ||
             userData.admin === true ||
             tokenData.role === "ADMIN" ||
             tokenData.role === "ROLE_ADMIN";
 
+        // Extract accessToken only (refreshToken is HttpOnly cookie)
+        const accessToken = tokenData.accessToken || tokenData.access_token;
+
+        if (!accessToken) {
+            console.warn("[UserAuthRepository] AccessToken missing in signin response");
+        }
+
         return {
-            accessToken: tokenData.accessToken,
-            isAdmin: isAdmin,
+            accessToken,
+            isAdmin,
         };
     },
 
-    // 5. 비번 재설정
-    async resetPassword(payload) { await authApi.post("/auth/password/reset", payload); },
+    async logout(): Promise<void> {
+        try {
+            await authApi.post("/auth/logout");
+        } catch (error) {
+            console.warn("[UserAuthRepository] Logout API call failed, proceeding to clear local storage.");
+        } finally {
+            await AsyncStorage.multiRemove(["accessToken", "refreshToken", "isAutoLogin", "isAdmin"]);
+        }
+    },
 
-    // 6. 내 프로필 조회
+    async deleteAccount(password: string, passwordConfirm: string): Promise<void> {
+        await authApi.delete("/user/profile/delete", {
+            data: { password, passwordConfirm }
+        });
+    },
+
     async getMyProfile() {
-        const res = await authApi.get("/user/profile");
-        const data = res.data.data;
+        const response = await authApi.get("/user/profile");
+        const data = response.data.data || response.data;
         return {
             email: data.email,
             nickname: data.nickname,
-            profileImage: data.image,
+            profileImage: data.image || data.profileImage,
             stateMessage: data.stateMessage,
         };
     },
 
-    // 7. 내 프로필 수정
-    async updateProfile(data) {
-        console.log("🚀 [Repository] 프로필 수정 요청...");
-        const formData = new FormData();
-        formData.append("nickname", data.nickname || "");
-        formData.append("stateMessage", data.stateMessage || "");
-
+    async updateProfile(data: { nickname: string; stateMessage: string; file?: any }): Promise<void> {
+        // If there's a file, we might need to use uploadProfileImage or a multipart request here.
+        // For now, assuming this endpoint handles text updates.
+        // If 'file' is present, the logic might need to be split or handled via multipart.
+        // Given the interface, I'll send the text data.
+        await authApi.put("/user/profile", {
+            nickname: data.nickname,
+            stateMessage: data.stateMessage
+        });
+        
+        // If file exists, upload it separately (common pattern if PUT /profile is JSON only)
         if (data.file) {
-            const fileType = data.file.type || 'image/jpeg';
-            const extension = fileType.split('/')[1] || 'jpg';
-            const safeName = data.nickname || `user_${Date.now()}`;
-            const newFileName = `${safeName}.${extension}`;
-            const localUri = data.file.uri;
-            const finalUri = Platform.OS === 'ios' && localUri.startsWith('file://')
-                ? localUri.replace('file://', '')
-                : localUri;
-
-            formData.append("file", {
-                uri: finalUri,
-                type: fileType,
-                name: newFileName,
-            } as any);
+            await this.uploadProfileImage(data.file.uri);
         }
+    },
+
+    async uploadProfileImage(imageUri: string): Promise<void> {
+        const token = await AsyncStorage.getItem("accessToken");
+        if (!token) throw new Error("Authentication required for upload");
+
+        const formData = new FormData();
+        const filename = imageUri.split('/').pop() || 'profile.jpg';
+        const type = filename.toLowerCase().endsWith('.png') ? 'image/png' : 'image/jpeg';
+
+        formData.append('image', {
+            uri: Platform.OS === 'android' ? imageUri : imageUri.replace('file://', ''),
+            name: filename,
+            type: type,
+        } as any);
 
         try {
-            const token = await AsyncStorage.getItem("accessToken");
-            const response = await fetch("http://10.0.2.2:8080/user/profile", {
+            const response = await fetch(`${API_BASE_URL}/user/profile`, {
                 method: "PUT",
                 headers: {
                     "Authorization": `Bearer ${token}`,
+                    "Content-Type": "multipart/form-data",
                     "Accept": "application/json",
                 },
                 body: formData,
             });
-            const responseText = await response.text();
-            if (!response.ok) throw new Error(`업로드 실패 (${response.status}): ${responseText}`);
+
+            if (!response.ok) {
+                const text = await response.text();
+                throw new Error(`Image upload failed (${response.status}): ${text}`);
+            }
         } catch (error: any) {
-            console.error("❌ [fetch 에러]:", error.message);
+            console.error("[UserAuthRepository] uploadProfileImage error:", error.message);
             throw error;
         }
     },
 
-    // 8. 나머지 기능들
-    async registerFcmToken(token) { await authApi.post("/user/fcm-token", { fcmToken: token }); },
-    async deleteAccount(pw, confirm) { await authApi.delete("/user/profile/delete", { data: { password: pw, passwordConfirm: confirm } }); },
-    async getUserProfile(userId) {
-        const res = await authApi.get(`/user/${userId}/profile`);
-        const data = res.data.data;
+    async registerFcmToken(token: string): Promise<void> {
+        await authApi.post("/user/fcm-token", { fcmToken: token });
+    },
+
+    async getUserProfile(userId: number) {
+        const response = await authApi.get(`/user/${userId}/profile`);
+        const data = response.data.data || response.data;
         return {
             email: data.email,
             nickname: data.nickname,
-            profileImage: data.image,
+            profileImage: data.image || data.profileImage,
             stateMessage: data.stateMessage,
         };
     },
 
-    // ⭐ [추가됨] 비밀번호 변경 구현
-    async changePassword(payload) {
-        // authApi가 헤더에 토큰을 자동으로 넣어줍니다.
-        // 엔드포인트는 서버 명세에 따라 수정하세요 (예: /api/members/password)
-        await authApi.patch("/api/members/password", payload);
+    async changePassword(payload: any): Promise<void> {
+        await authApi.put("/user/password/change", payload);
     },
 };

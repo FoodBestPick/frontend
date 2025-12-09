@@ -15,7 +15,6 @@ export interface UserAuthRepository {
         password: string;
     }): Promise<{
         accessToken: string;
-        refreshToken?: string;
         isAdmin: boolean;
     }>;
     resetPassword(payload: {
@@ -42,6 +41,9 @@ export interface UserAuthRepository {
         file?: any; // 이미지 객체
     }): Promise<void>;
 
+    // ⭐ [추가됨] 프로필 이미지 업로드 (내부적으로 사용되거나 개별 호출 가능)
+    uploadProfileImage(imageUri: string): Promise<void>;
+
     // 3. FCM 토큰 등록
     registerFcmToken(token: string): Promise<void>;
 
@@ -61,4 +63,7 @@ export interface UserAuthRepository {
         currentPassword: string;
         newPassword: string;
     }): Promise<void>;
+
+    // ⭐ [추가됨] 로그아웃
+    logout(): Promise<void>;
 }

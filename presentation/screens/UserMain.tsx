@@ -248,7 +248,7 @@ const UserMain = () => {
             <TouchableOpacity 
               style={styles.cardContainer} 
               activeOpacity={0.8}
-              onPress={() => navigation.navigate('RestaurantDetail' as never, { restaurantId: item.id } as never)}
+              onPress={() => (navigation.navigate as any)('RestaurantDetail', { restaurantId: item.id })}
             >
               <View style={styles.cardImageWrapper}>
                 {index < 3 && (

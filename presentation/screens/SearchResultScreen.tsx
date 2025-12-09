@@ -19,17 +19,17 @@ import { useSearchViewModel } from '../viewmodels/SearchViewModel';
 
 type Navigation = NativeStackNavigationProp<
   RootStackParamList,
-  'SearchResultScreen'
+  'SearchResult'
 >;
 type SearchResultRouteProp = RouteProp<
   RootStackParamList,
-  'SearchResultScreen'
+  'SearchResult'
 >;
 
 const SearchResultScreen = () => {
   const navigation = useNavigation<Navigation>();
   const route = useRoute<SearchResultRouteProp>();
-  const { theme } = useContext(ThemeContext);
+  const { theme, isDarkMode } = useContext(ThemeContext);
 
   // ✅ ViewModel 연결
   const { results, loading, error, searchRestaurants, sortBy, setSortBy } = useSearchViewModel();
@@ -114,7 +114,7 @@ const SearchResultScreen = () => {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
-      <StatusBar barStyle={theme.isDark ? "light-content" : "dark-content"} backgroundColor={theme.background} />
+      <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} backgroundColor={theme.background} />
 
       <View style={[styles.header, { borderBottomColor: theme.border }]}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
@@ -128,7 +128,7 @@ const SearchResultScreen = () => {
 
       {/* 필터 요약 */}
       {(category || (filters && Object.keys(filters).length > 0)) && (
-        <View style={[styles.filterSummary, { backgroundColor: theme.isDark ? '#333' : '#FFF4E6' }]}>
+        <View style={[styles.filterSummary, { backgroundColor: isDarkMode ? '#333' : '#FFF4E6' }]}>
           <Text style={styles.filterText}>
             {category || '전체'} 
             {filters?.radius ? ` · ${filters.radius}km` : ''} 

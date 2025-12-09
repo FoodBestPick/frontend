@@ -49,33 +49,27 @@ authApi.interceptors.response.use(
             originalRequest._retry = true; // 재시도 플래그 설정
 
             try {
-                // 1) 리프레시 토큰 꺼내기
-                const refreshToken = await AsyncStorage.getItem("refreshToken");
-                if (!refreshToken) {
-                    console.log("⚠️ 리프레시 토큰 없음. 로그아웃 처리.");
-                    return Promise.reject(error);
-                }
-
-                // 2) 토큰 갱신 요청 (기존 authApi 말고 쌩 axios로 요청)
-                const res = await axios.post("http://10.0.2.2:8080/auth/refresh", {
-                    refreshToken: refreshToken,
+                // 1) 토큰 갱신 요청 (기존 authApi 말고 쌩 axios로 요청)
+                // RefreshToken은 HttpOnly Cookie로 자동 전송됨 (withCredentials: true 필요할 수 있음, axios 기본설정 확인)
+                const res = await axios.post(`${API_BASE_URL}/auth/refresh`, {}, {
+                    withCredentials: true
                 });
 
-                // 3) 새 토큰 받아서 저장 (서버 응답 구조에 맞춰 수정 필요)
+                // 2) 새 토큰 받아서 저장 (서버 응답 구조에 맞춰 수정 필요)
                 const newAccessToken = res.data?.data?.accessToken || res.data?.accessToken;
 
                 if (newAccessToken) {
                     console.log("✅ [토큰 갱신 성공] 새 토큰으로 재요청합니다.");
                     await AsyncStorage.setItem("accessToken", newAccessToken);
 
-                    // 4) 실패했던 요청의 헤더를 새 토큰으로 교체하고 재전송
+                    // 3) 실패했던 요청의 헤더를 새 토큰으로 교체하고 재전송
                     originalRequest.headers['Authorization'] = `Bearer ${newAccessToken}`;
                     return authApi(originalRequest);
                 }
 
             } catch (refreshError) {
                 console.error("❌ [토큰 갱신 실패] 로그아웃 처리합니다.", refreshError);
-                await AsyncStorage.multiRemove(["accessToken", "refreshToken", "isAdmin"]);
+                await AsyncStorage.multiRemove(["accessToken", "isAutoLogin", "isAdmin"]);
                 return Promise.reject(refreshError);
             }
         }

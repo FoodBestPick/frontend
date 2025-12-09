@@ -75,26 +75,9 @@ export const FilterModal = ({
     selectedFilters.priceMax?.toString() || ''
   );
 
-  const categories = [
-    '한식',
-    '중식',
-    '일식',
-    '양식',
-    '분식',
-    '카페',
-    '패스트푸드',
-    '치킨',
-  ];
 
   const radiusOptions = [0.5, 1, 2, 3, 5, 10];
 
-  const priceRanges = [
-    { label: '5천원', value: 5000 },
-    { label: '1만원', value: 10000 },
-    { label: '2만원', value: 20000 },
-    { label: '3만원', value: 30000 },
-    { label: '5만원', value: 50000 },
-  ];
 
   const handleReset = () => {
     setFilters({
@@ -150,8 +133,8 @@ export const FilterModal = ({
   const handleApply = () => {
     onApply({
       ...selectedFilters,
-      priceMin: minPrice ? parseInt(minPrice) : undefined,
-      priceMax: maxPrice ? parseInt(maxPrice) : undefined,
+      priceMin: minPrice ? parseInt(minPrice) : 0,
+      priceMax: maxPrice ? parseInt(maxPrice) : 0,
     });
   };
 

@@ -33,9 +33,13 @@ export const AdminStatsScreen = () => {
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    await refetch();
+    if (selectedTab === "사용자 지정" && startDate && endDate) {
+      await refetch(startDate, endDate);
+    } else {
+      await refetch();
+    }
     setRefreshing(false);
-  }, [refetch]);
+  }, [refetch, selectedTab, startDate, endDate]);
 
   const current = useMemo(() => {
     switch (selectedTab) {
@@ -337,7 +341,12 @@ export const AdminStatsScreen = () => {
 
             <TouchableOpacity
               style={[styles.modalBtn, { backgroundColor: "#0A84FF" }]}
-              onPress={() => setIsCalendarVisible(false)}
+              onPress={() => {
+                setIsCalendarVisible(false);
+                if (startDate && endDate) {
+                  refetch(startDate, endDate);
+                }
+              }}
             >
               <Text style={styles.modalConfirmText}>적용</Text>
             </TouchableOpacity>
@@ -385,15 +394,21 @@ export const AdminStatsScreen = () => {
             <Text style={[styles.kpiValue, { color: theme.textPrimary }]}>{ui.line.kpi.value}</Text>
             <Text style={[styles.kpiSub, { color: "#3CB371" }]}>{ui.line.kpi.sub}</Text>
           </View>
-          <LineChart
-            data={{ labels: ui.line.labels, datasets: [{ data: ui.line.data }] }}
-            width={width - 35}
-            height={180}
-            chartConfig={ui.chartConfig}
-            bezier
-            style={styles.chart}
-            withInnerLines={false}
-          />
+          {ui.line.data.length > 0 && ui.line.data.some((v: number) => v > 0) ? (
+            <LineChart
+              data={{ labels: ui.line.labels, datasets: [{ data: ui.line.data }] }}
+              width={width - 35}
+              height={180}
+              chartConfig={ui.chartConfig}
+              bezier
+              style={styles.chart}
+              withInnerLines={false}
+            />
+          ) : (
+            <View style={[styles.chart, { height: 180, justifyContent: "center", alignItems: "center" }]}>
+              <Text style={{ color: theme.textSecondary }}>데이터가 없습니다.</Text>
+            </View>
+          )}
         </View>
 
         {/* 신규 유입 경로 */}
@@ -479,17 +494,23 @@ export const AdminStatsScreen = () => {
           <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>
             리뷰 평점 분포
           </Text>
-          <BarChart
-            data={{ labels: ui.bar.labels, datasets: [{ data: ui.bar.data }] }}
-            width={width - 55}
-            height={180}
-            chartConfig={ui.chartConfig}
-            withInnerLines={false}
-            style={styles.chart}
-            xAxisLabel=""
-            yAxisLabel=""
-            yAxisSuffix=""
-          />
+          {ui.bar.data.length > 0 && ui.bar.data.some((v: number) => v > 0) ? (
+            <BarChart
+              data={{ labels: ui.bar.labels, datasets: [{ data: ui.bar.data }] }}
+              width={width - 55}
+              height={180}
+              chartConfig={ui.chartConfig}
+              withInnerLines={false}
+              style={styles.chart}
+              xAxisLabel=""
+              yAxisLabel=""
+              yAxisSuffix=""
+            />
+          ) : (
+            <View style={[styles.chart, { height: 180, justifyContent: "center", alignItems: "center" }]}>
+              <Text style={{ color: theme.textSecondary }}>데이터가 없습니다.</Text>
+            </View>
+          )}
         </View>
 
         {/* 인기 검색어 */}

@@ -9,6 +9,8 @@ import {
   ScrollView,
   Alert,
   ActivityIndicator,
+  Platform,
+  ToastAndroid,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
@@ -17,6 +19,7 @@ import { launchImageLibrary } from 'react-native-image-picker';
 import { API_BASE_URL } from '@env';
 import { RootStackParamList } from '../navigation/types/RootStackParamList';
 import { useAuth } from '../../context/AuthContext';
+import axios from 'axios';
 
 type RouteParams = RouteProp<RootStackParamList, 'ReviewWrite'>;
 
@@ -36,14 +39,29 @@ const ReviewWriteScreen = () => {
   const [loading, setLoading] = useState(false);
 
   const handleImagePick = async () => {
-    const result = await launchImageLibrary({
-      mediaType: 'photo',
-      selectionLimit: 5 - images.length,
-      quality: 0.7,
-    });
+    try {
+      const result = await launchImageLibrary({
+        mediaType: 'photo',
+        selectionLimit: 5 - images.length,
+        quality: 0.7,
+        includeBase64: false,
+      });
 
-    if (result.assets) {
-      setImages([...images, ...result.assets]);
+      if (result.didCancel) {
+        return;
+      }
+
+      if (result.errorCode) {
+        Alert.alert('오류', result.errorMessage || '이미지를 불러오는데 실패했습니다.');
+        return;
+      }
+
+      if (result.assets) {
+        setImages([...images, ...result.assets]);
+      }
+    } catch (error) {
+      console.error('ImagePicker Error:', error);
+      Alert.alert('오류', '이미지 선택 중 오류가 발생했습니다.');
     }
   };
 
@@ -91,20 +109,38 @@ const ReviewWriteScreen = () => {
       const url = review ? `${API_BASE_URL}/api/review/${review.id}` : `${API_BASE_URL}/api/review`;
       const method = review ? 'PUT' : 'POST';
 
-      const response = await fetch(url, {
+      // Axios 사용 (transformRequest로 Android FormData 이슈 해결)
+      const response = await axios.request({
         method: method,
+        url: url,
+        data: formData,
         headers: {
+          'Content-Type': 'multipart/form-data',
           Authorization: `Bearer ${token}`,
         },
-        body: formData,
+        transformRequest: (data) => data,
       });
 
-      const result = await response.json();
+      console.log('Review submit response status:', response.status);
+      const result = response.data;
+      console.log('Review submit result:', result);
 
       if (result.code === 200) {
-        Alert.alert('성공', review ? '리뷰가 수정되었습니다.' : '리뷰가 등록되었습니다.', [
-          { text: '확인', onPress: () => navigation.goBack() },
-        ]);
+        if (Platform.OS === 'android') {
+          ToastAndroid.show(review ? '리뷰가 수정되었습니다.' : '리뷰가 등록되었습니다.', ToastAndroid.SHORT);
+          navigation.goBack();
+        } else {
+          Alert.alert(
+            '성공', 
+            review ? '리뷰가 수정되었습니다.' : '리뷰가 등록되었습니다.', 
+            [{ 
+              text: '확인', 
+              onPress: () => {
+                navigation.goBack();
+              } 
+            }]
+          );
+        }
       } else {
         Alert.alert('실패', result.message || (review ? '리뷰 수정에 실패했습니다.' : '리뷰 등록에 실패했습니다.'));
       }

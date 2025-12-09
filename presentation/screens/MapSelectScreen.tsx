@@ -163,8 +163,12 @@ export const MapSelectScreen = () => {
   /** 선택 완료 */
   const handleConfirm = () => {
     if (marker && address) {
-      navigation.navigate('AdminRestaurantAdd', {
-        selectedLocation: { lat: marker.lat, lng: marker.lng, address },
+      navigation.navigate({
+        name: 'AdminRestaurantAdd',
+        params: {
+          selectedLocation: { latitude: marker.lat, longitude: marker.lng, address },
+        },
+        merge: true,
       });
     }
   };

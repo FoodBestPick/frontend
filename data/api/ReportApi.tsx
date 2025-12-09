@@ -1,4 +1,5 @@
 import { API_BASE_URL } from "@env";
+import axios from 'axios';
 
 export interface SendReportRequest {
   targetType: string;
@@ -10,15 +11,14 @@ export interface SendReportRequest {
 export const ReportApi = {
   async sendReport(token: string, request: SendReportRequest) {
     try {
-      const response = await fetch(`${API_BASE_URL}/report`, {
-        method: "POST",
+      const response = await axios.post(`${API_BASE_URL}/report`, request, {
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify(request),
+        timeout: 10000,
       });
-      return await response.json();
+      return response.data;
     } catch (error) {
       console.error("sendReport error:", error);
       throw error;
@@ -40,15 +40,13 @@ export const ReportApi = {
       if (status) params.append("status", status);
       if (targetType) params.append("targetType", targetType);
 
-      const response = await fetch(
-        `${API_BASE_URL}/admin/report?${params.toString()}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-      return await response.json();
+      const response = await axios.get(`${API_BASE_URL}/admin/report?${params.toString()}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        timeout: 10000,
+      });
+      return response.data;
     } catch (error) {
       console.error("getAllReports error:", error);
       throw error;

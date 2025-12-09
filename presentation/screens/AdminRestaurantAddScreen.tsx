@@ -74,8 +74,8 @@ export const AdminRestaurantAddScreen = () => {
     if (route.params?.selectedLocation) {
       const {
         address: addr,
-        latitude: lat,
-        longitude: lng,
+        lat: lat,
+        lng: lng,
       } = route.params.selectedLocation;
       setAddress(addr);
       setLatitude(lat?.toString() || '');
@@ -85,7 +85,7 @@ export const AdminRestaurantAddScreen = () => {
 
   // ✅ 수정 모드일 경우 데이터 불러오기
   useEffect(() => {
-    if (isEditMode) {
+    if (isEditMode && route.params?.id) {
       const loadData = async () => {
         const data = await getRestaurantDetail(route.params.id!);
         if (data) {

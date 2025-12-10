@@ -74,8 +74,8 @@ export const AdminRestaurantAddScreen = () => {
     if (route.params?.selectedLocation) {
       const {
         address: addr,
-        lat: lat,
-        lng: lng,
+        latitude: lat,
+        longitude: lng,
       } = route.params.selectedLocation;
       setAddress(addr);
       setLatitude(lat?.toString() || '');
@@ -85,7 +85,7 @@ export const AdminRestaurantAddScreen = () => {
 
   // ✅ 수정 모드일 경우 데이터 불러오기
   useEffect(() => {
-    if (isEditMode && route.params?.id) {
+    if (isEditMode) {
       const loadData = async () => {
         const data = await getRestaurantDetail(route.params.id!);
         if (data) {
@@ -307,11 +307,28 @@ export const AdminRestaurantAddScreen = () => {
             {mainImages.length > 0 ? (
               <View style={styles.imageRow}>
                 {mainImages.map((img, idx) => (
-                  <Image
-                    key={idx}
-                    source={{ uri: img.uri }}
-                    style={styles.imagePreviewSmall}
-                  />
+                  <View key={idx} style={{ position: 'relative', marginRight: 8 }}>
+                    <Image
+                      source={{ uri: img.uri }}
+                      style={styles.imagePreviewSmall}
+                    />
+                    <TouchableOpacity
+                      style={{
+                        position: 'absolute',
+                        top: -5,
+                        right: -5,
+                        backgroundColor: 'rgba(0,0,0,0.5)',
+                        borderRadius: 10,
+                        padding: 2,
+                      }}
+                      onPress={(e) => {
+                        e.stopPropagation(); // 부모의 onPress 이벤트 전파 방지
+                        setMainImages(prev => prev.filter((_, i) => i !== idx));
+                      }}
+                    >
+                      <MaterialIcons name="close" size={16} color="#fff" />
+                    </TouchableOpacity>
+                  </View>
                 ))}
               </View> 
             ) : (

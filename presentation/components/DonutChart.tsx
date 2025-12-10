@@ -24,6 +24,31 @@ export const DonutChart = ({
   const circumference = 2 * Math.PI * radius;
   const total = data.reduce((sum, d) => sum + d.value, 0);
 
+  if (total === 0) {
+    return (
+      <View style={{ alignItems: "center", justifyContent: "center" }}>
+        <Svg width={size} height={size}>
+          <Circle
+            cx={size / 2}
+            cy={size / 2}
+            r={radius}
+            stroke={theme.border}
+            strokeWidth={strokeWidth}
+            fill="transparent"
+          />
+        </Svg>
+        <View style={styles.center}>
+          <Text style={[styles.centerTop, { color: theme.textPrimary }]}>
+            0
+          </Text>
+          <Text style={[styles.centerBottom, { color: theme.textSecondary }]}>
+            {centerBottom}
+          </Text>
+        </View>
+      </View>
+    );
+  }
+
   let startAngle = 0;
 
   return (

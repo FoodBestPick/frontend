@@ -14,6 +14,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { useAuth } from '../../context/AuthContext';
 import { ThemeContext } from '../../context/ThemeContext';
+import { LOCAL_HOST } from "@env";
+import axios from 'axios';
 
 const MyReviewsScreen = () => {
   const navigation = useNavigation<any>();
@@ -31,10 +33,11 @@ const MyReviewsScreen = () => {
   const fetchReviews = async () => {
     try {
       console.log('Fetching reviews with token:', token);
-      const response = await fetch('http://10.0.2.2:8080/api/review/my', {
-        headers: { Authorization: `Bearer ${token}` }
+      const response = await axios.get(`${LOCAL_HOST}/api/review/my`, {
+        headers: { Authorization: `Bearer ${token}` },
+        timeout: 10000,
       });
-      const json = await response.json();
+      const json = response.data;
       console.log('MyReviews response:', json);
       if (json.code === 200) {
         setReviews(json.data.content);

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { API_BASE_URL } from '@env';
 import { useAuth } from '../../context/AuthContext';
+import axios from 'axios';
 
 interface Food {
   id: number;
@@ -22,8 +23,10 @@ export const useAdminFoodViewModel = () => {
       setLoading(true);
       setError(null);
 
-      const response = await fetch(`${API_BASE_URL}/food`);
-      const result = await response.json();
+      const response = await axios.get(`${API_BASE_URL}/food`, {
+        timeout: 10000,
+      });
+      const result = response.data;
 
       if (result.code === 200) {
         setFoods(result.data);
@@ -40,16 +43,15 @@ export const useAdminFoodViewModel = () => {
 
   const createFood = async (name: string) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/food`, {
-        method: 'POST',
+      const response = await axios.post(`${API_BASE_URL}/food`, { name }, {
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ name }),
+        timeout: 10000,
       });
 
-      const result = await response.json();
+      const result = response.data;
 
       if (result.code === 200) {
         await fetchFoods();
@@ -69,16 +71,15 @@ export const useAdminFoodViewModel = () => {
         return { success: false, message: '로그인이 필요합니다.' };
       }
 
-      const response = await fetch(`${API_BASE_URL}/food/${id}`, {
-        method: 'PUT',
+      const response = await axios.put(`${API_BASE_URL}/food/${id}`, { name }, {
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ name }),
+        timeout: 10000,
       });
 
-      const result = await response.json();
+      const result = response.data;
 
       if (result.code === 200) {
         await fetchFoods();
@@ -98,14 +99,14 @@ export const useAdminFoodViewModel = () => {
         return { success: false, message: '로그인이 필요합니다.' };
       }
 
-      const response = await fetch(`${API_BASE_URL}/food/${id}`, {
-        method: 'DELETE',
+      const response = await axios.delete(`${API_BASE_URL}/food/${id}`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
+        timeout: 10000,
       });
 
-      const result = await response.json();
+      const result = response.data;
 
       if (result.code === 200) {
         await fetchFoods();

@@ -6,8 +6,8 @@ export const AdminRepositoryImpl: AdminRepository = {
     return await AdminApi.getStats(token);
   },
 
-  async getDetailStats() {
-    return await AdminApi.getDetailStats();
+  async getDetailStats(token: string, startDate?: string, endDate?: string) {
+    return await AdminApi.getDetailStats(token, startDate, endDate);
   },
 
   async getRestaurantList(page: number, size: number, status?: string, keyword?: string) {

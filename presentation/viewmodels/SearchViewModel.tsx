@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { API_BASE_URL } from '@env';
+import axios from 'axios';
 
 interface Restaurant {
   id: number;
@@ -53,8 +54,9 @@ export const useSearchViewModel = () => {
 
       console.log('Searching URL:', fullUrl);
 
-      const response = await fetch(fullUrl);
-      const result = await response.json();
+      // axios로 변경 및 타임아웃 설정
+      const response = await axios.get(fullUrl, { timeout: 10000 });
+      const result = response.data;
 
       if (result.code === 200) {
         // 백엔드에서 List<RestaurantResponse> 반환

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { API_BASE_URL } from '@env';
+import axios from 'axios';
 
 export interface Store {
   id: number;
@@ -21,17 +22,22 @@ export const useUserMainViewModel = () => {
   const fetchAllRestaurants = async () => {
     try {
       setLoading(true);
-      // Fetch a large list to populate the main screen
-      // In a real app, you might want a dedicated endpoint for "Home Screen Data"
-      const response = await fetch(`${API_BASE_URL}/restaurant/search?size=100`); 
-      const result = await response.json();
+      console.log(`Fetching restaurants from: ${API_BASE_URL}/restaurant/search?size=20`);
+      
+      // axios를 사용하여 타임아웃 설정 및 에러 핸들링 강화
+      const response = await axios.get(`${API_BASE_URL}/restaurant/search`, {
+        params: { size: 20 }, // 데이터 크기를 줄여서 테스트 (100 -> 20)
+        timeout: 10000, // 10초 타임아웃
+      });
+
+      const result = response.data;
 
       if (result.code === 200) {
         const dataList = result.data;
         const mappedStores: Store[] = dataList.map((item: any) => ({
           id: item.id,
           name: item.name,
-          image: item.images && item.images.length > 0 ? item.images : ['https://via.placeholder.com/150'], // Fallback image
+          image: item.images && item.images.length > 0 ? item.images : ['https://via.placeholder.com/150'],
           rating: item.averageRating || 0.0,
           reviews: item.reviewCount || 0,
           category: item.category || '미지정',

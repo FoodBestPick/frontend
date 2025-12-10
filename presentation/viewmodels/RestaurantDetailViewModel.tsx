@@ -3,6 +3,7 @@ import { API_BASE_URL } from '@env';
 import { useAuth } from '../../context/AuthContext';
 import { ReportApi } from '../../data/api/ReportApi';
 import { Alert } from 'react-native';
+import axios from 'axios';
 
 interface Menu {
   id: number;
@@ -61,11 +62,17 @@ export const useRestaurantDetailViewModel = (restaurantId: number) => {
       setLoading(true);
       setError(null);
 
-      // 1. 식당 상세 정보 조회
-      const response = await fetch(`${API_BASE_URL}/restaurant/${restaurantId}`, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {}
+      // 0. 조회수 증가 (비동기 처리, 결과 기다리지 않음)
+      axios.post(`${API_BASE_URL}/restaurant/${restaurantId}/view`, {}, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      }).catch(err => console.log('View count increment failed', err));
+
+      // 1. 식당 상세 정보 조회 (axios 사용, 타임아웃 10초)
+      const response = await axios.get(`${API_BASE_URL}/restaurant/${restaurantId}`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        timeout: 10000,
       });
-      const result = await response.json();
+      const result = response.data;
 
       if (result.code === 200) {
         const data = result.data;
@@ -77,10 +84,11 @@ export const useRestaurantDetailViewModel = (restaurantId: number) => {
         let averageRating = data.averageRating || 0.0;
 
         try {
-          const reviewRes = await fetch(`${API_BASE_URL}/api/review/restaurant/${restaurantId}`, {
-             headers: token ? { Authorization: `Bearer ${token}` } : {}
+          const reviewRes = await axios.get(`${API_BASE_URL}/api/review/restaurant/${restaurantId}`, {
+             headers: token ? { Authorization: `Bearer ${token}` } : {},
+             timeout: 10000,
           });
-          const reviewResult = await reviewRes.json();
+          const reviewResult = reviewRes.data;
           if (reviewResult.code === 200) {
             // 백엔드에서 isMine이 mine으로 올 수도 있으므로 매핑 처리
             reviews = reviewResult.data.content.map((r: any) => ({
@@ -159,14 +167,14 @@ export const useRestaurantDetailViewModel = (restaurantId: number) => {
         return { success: false, message: '로그인이 필요합니다.' };
       }
 
-      const response = await fetch(`${API_BASE_URL}/api/favorite/${restaurantId}`, {
-        method: 'POST', // Toggle 방식
+      const response = await axios.post(`${API_BASE_URL}/api/favorite/${restaurantId}`, {}, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
+        timeout: 10000,
       });
 
-      const result = await response.json();
+      const result = response.data;
 
       if (result.code === 200) {
         // 상태 반전
@@ -193,14 +201,14 @@ export const useRestaurantDetailViewModel = (restaurantId: number) => {
         return { success: false, message: '로그인이 필요합니다.' };
       }
 
-      const response = await fetch(`${API_BASE_URL}/api/like/${restaurantId}`, {
-        method: 'POST', // Toggle 방식
+      const response = await axios.post(`${API_BASE_URL}/api/like/${restaurantId}`, {}, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
+        timeout: 10000,
       });
 
-      const result = await response.json();
+      const result = response.data;
 
       if (result.code === 200) {
         setRestaurant(prev => prev ? { ...prev, isLiked: !prev.isLiked } : null);
@@ -221,14 +229,14 @@ export const useRestaurantDetailViewModel = (restaurantId: number) => {
     try {
       if (!token) return false;
 
-      const response = await fetch(`${API_BASE_URL}/api/review/${reviewId}`, {
-        method: 'DELETE',
+      const response = await axios.delete(`${API_BASE_URL}/api/review/${reviewId}`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
+        timeout: 10000,
       });
 
-      const result = await response.json();
+      const result = response.data;
       if (result.code === 200) {
         await fetchRestaurantDetail(); // 목록 갱신
         return true;
@@ -244,14 +252,14 @@ export const useRestaurantDetailViewModel = (restaurantId: number) => {
     try {
       if (!token) return false;
 
-      const response = await fetch(`${API_BASE_URL}/api/review/${reviewId}/like`, {
-        method: 'POST',
+      const response = await axios.post(`${API_BASE_URL}/api/review/${reviewId}/like`, {}, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
+        timeout: 10000,
       });
 
-      const result = await response.json();
+      const result = response.data;
       if (result.code === 200) {
         // 로컬 상태 업데이트 (낙관적 업데이트)
         setRestaurant(prev => {

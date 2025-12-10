@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { API_BASE_URL } from '@env';
 import { useAuth } from '../../context/AuthContext';
+import axios from 'axios';
 
 interface Restaurant {
   id: number;
@@ -43,13 +44,14 @@ export const useAdminRestaurantViewModel = () => {
         url = `${API_BASE_URL}/restaurant/search?keyword=${encodeURIComponent(searchKeyword)}`;
       }
 
-      const response = await fetch(url, {
+      const response = await axios.get(url, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
+        timeout: 10000,
       });
 
-      const result = await response.json();
+      const result = response.data;
 
       if (result.code === 200) {
         // ✅ [수정] 목록 데이터 매핑 (Page 객체 처리)
@@ -103,14 +105,14 @@ export const useAdminRestaurantViewModel = () => {
         return { success: false, message: '로그인이 필요합니다.' };
       }
 
-      const response = await fetch(`${API_BASE_URL}/restaurant/${id}`, {
-        method: 'DELETE',
+      const response = await axios.delete(`${API_BASE_URL}/restaurant/${id}`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
+        timeout: 10000,
       });
 
-      const result = await response.json();
+      const result = response.data;
 
       if (result.code === 200) {
         await fetchRestaurants(); // 삭제 후 목록 새로고침

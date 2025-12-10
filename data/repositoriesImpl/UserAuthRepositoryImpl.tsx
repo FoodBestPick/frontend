@@ -53,7 +53,7 @@ export const UserAuthRepositoryImpl: UserAuthRepository = {
         const response = await authApi.post("/auth/signin", payload);
         const rawData = response.data;
 
-        console.log("[UserAuthRepository] Signin Response:", JSON.stringify(rawData, null, 2));
+        // console.log("[UserAuthRepository] Signin Response:", JSON.stringify(rawData, null, 2)); // Temporarily added log, now removed
 
         // Normalize data structure (handle { data: ... } vs flat response)
         let tokenData = rawData.data || rawData;
@@ -64,6 +64,7 @@ export const UserAuthRepositoryImpl: UserAuthRepository = {
         }
 
         const userData = rawData.user || {};
+        const userId = userData.id; // Extract userId here!
 
         // Determine admin privileges
         const isAdmin =
@@ -82,6 +83,7 @@ export const UserAuthRepositoryImpl: UserAuthRepository = {
         return {
             accessToken,
             isAdmin,
+            userId, // ✨ Add userId to the return object
         };
     },
 
@@ -180,5 +182,14 @@ export const UserAuthRepositoryImpl: UserAuthRepository = {
 
     async changePassword(payload: any): Promise<void> {
         await authApi.put("/user/password/change", payload);
+    },
+
+    async resetPassword(payload: {
+        email: string;
+        password: string;
+        passwordConfirm: string;
+        code: string;
+    }): Promise<void> {
+        await authApi.post("/auth/password/reset", payload);
     },
 };

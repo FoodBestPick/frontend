@@ -10,16 +10,19 @@ import {
   Modal,
   ActivityIndicator,
   TextInput as RNTextInput,
+  Alert,
 } from "react-native";
 import { Dropdown } from "react-native-element-dropdown";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import { COLORS } from "../../core/constants/Colors";
 import { Header } from "../components/Header";
 import { ThemeContext } from "../../context/ThemeContext";
+import { useAuth } from "../../context/AuthContext"; // ✨ useAuth 임포트
 import { AdminUserViewModel } from "../../presentation/viewmodels/AdminUserViewModels";
 
 export const AdminUserScreen = () => {
   const { theme } = useContext(ThemeContext);
+  const { currentUserId } = useAuth(); // ✨ currentUserId 가져오기
 
   const {
     response,
@@ -34,6 +37,9 @@ export const AdminUserScreen = () => {
     keyword,
     setKeyword,
     refresh,
+    giveWarning,
+    suspendUser,
+    updateUserRole, // ⭐ 추가
   } = AdminUserViewModel();
 
   const [expandedUsers, setExpandedUsers] = useState<number[]>([]);
@@ -50,7 +56,7 @@ export const AdminUserScreen = () => {
   });
 
   useEffect(() => {
-    refresh(page, 10, status, sort, keyword);
+    refresh(); // 인자 없이 호출
   }, [page, status, sort, keyword]);
 
   const toggleUser = (id: number) => {
@@ -264,15 +270,25 @@ export const AdminUserScreen = () => {
                   </View>
                   <View style={styles.actionRow}>
                     <TouchableOpacity
-                      style={[styles.actionBtn, { backgroundColor: theme.icon + "22" }]}
+                      style={[
+                        styles.actionBtn,
+                        { backgroundColor: theme.icon + "22" },
+                        user.id === currentUserId && { opacity: 0.5 } // ✨ 본인 계정일 경우 투명도 조절
+                      ]}
                       onPress={() => setActiveModal({ type: "permission", user })}
+                      disabled={user.id === currentUserId} // ✨ 본인 계정일 경우 비활성화
                     >
                       <Text style={[styles.actionText, { color: theme.textPrimary }]}>권한 변경</Text>
                     </TouchableOpacity>
 
                     <TouchableOpacity
-                      style={[styles.actionBtn, { backgroundColor: "#ffcccc" }]}
+                      style={[
+                        styles.actionBtn,
+                        { backgroundColor: "#ffcccc" },
+                        user.id === currentUserId && { opacity: 0.5 } // ✨ 본인 계정일 경우 투명도 조절
+                      ]}
                       onPress={() => setActiveModal({ type: "suspend", user })}
+                      disabled={user.id === currentUserId} // ✨ 본인 계정일 경우 비활성화
                     >
                       <Text style={[styles.actionText, { color: "#b00020" }]}>
                         {user.status === "정지" ? "정지 해제" : "계정 정지"}
@@ -280,8 +296,13 @@ export const AdminUserScreen = () => {
                     </TouchableOpacity>
 
                     <TouchableOpacity
-                      style={[styles.actionBtn, { backgroundColor: "#ffe0b2" }]}
+                      style={[
+                        styles.actionBtn,
+                        { backgroundColor: "#ffe0b2" },
+                        user.id === currentUserId && { opacity: 0.5 } // ✨ 본인 계정일 경우 투명도 조절
+                      ]}
                       onPress={() => setActiveModal({ type: "warning", user })}
+                      disabled={user.id === currentUserId} // ✨ 본인 계정일 경우 비활성화
                     >
                       <Text style={[styles.actionText, { color: "#e65100" }]}>경고 추가</Text>
                     </TouchableOpacity>
@@ -389,6 +410,7 @@ export const AdminUserScreen = () => {
           user={activeModal.user}
           setSuccessModal={setSuccessModal}
           theme={theme}
+          onConfirm={updateUserRole} // ⭐ 추가
         />
         <SuspendModal
           visible={activeModal.type === "suspend"}
@@ -417,8 +439,8 @@ export const AdminUserScreen = () => {
   );
 };
 
-const PermissionModal = ({ visible, onClose, user, setSuccessModal, theme }: any) => {
-  const [role, setRole] = useState("사용자");
+const PermissionModal = ({ visible, onClose, user, setSuccessModal, theme, onConfirm }: any) => {
+  const [role, setRole] = useState(user?.role === "ADMIN" ? "관리자" : "사용자");
 
   return (
     <Modal
@@ -436,7 +458,7 @@ const PermissionModal = ({ visible, onClose, user, setSuccessModal, theme }: any
 
           <View style={styles.permissionRow}>
             <Text style={[styles.modalLabel, { color: theme.textSecondary }]}>현재 권한</Text>
-            <Text style={[styles.modalValue, { color: theme.textPrimary }]}>사용자</Text>
+            <Text style={[styles.modalValue, { color: theme.textPrimary }]}>{user?.role === "ADMIN" ? "관리자" : "사용자"}</Text>
           </View>
 
           <View style={[styles.modalDivider, { borderColor: theme.border }]} />
@@ -463,9 +485,15 @@ const PermissionModal = ({ visible, onClose, user, setSuccessModal, theme }: any
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.applyBtn, { backgroundColor: theme.icon }]}
-              onPress={() => {
+              onPress={async () => {
                 onClose();
-                setSuccessModal({ visible: true, type: "permission", user, extra: role });
+                const backendRole = role === "관리자" ? "ADMIN" : "USER"; // 백엔드 Enum 값으로 매핑
+                const success = await onConfirm(user.id, backendRole);
+                if (success) {
+                    setSuccessModal({ visible: true, type: "permission", user, extra: role });
+                } else {
+                    Alert.alert("권한 변경 실패", "서버 오류 또는 권한이 없습니다.");
+                }
               }}
             >
               <Text style={styles.applyText}>변경 적용</Text>

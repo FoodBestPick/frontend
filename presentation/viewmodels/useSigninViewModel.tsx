@@ -9,6 +9,7 @@ import { useAuth } from "../../context/AuthContext";
 interface ExecuteResult {
     accessToken?: string;
     isAdmin?: boolean;
+    userId?: number; // ✨ 추가: userId
 }
 
 type SigninFunction = (email: string, password: string, saveToStorage: boolean) => Promise<boolean>;
@@ -32,7 +33,8 @@ export const useSigninViewModel = () => {
                 await contextLogin(
                     result.accessToken,
                     saveToStorage,       
-                    result.isAdmin || false 
+                    result.isAdmin || false,
+                    result.userId! // ✨ userId 전달 (SigninUseCase에서 userId를 반환한다고 가정)
                 );
                 return true;
 

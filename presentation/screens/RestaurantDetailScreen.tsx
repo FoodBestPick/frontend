@@ -11,7 +11,6 @@ import {
   ActivityIndicator,
   Alert,
   Linking,
-  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
@@ -772,3 +771,5 @@ const styles = StyleSheet.create({
   },
   emptyTagText: {
     color: '#999',
+  },
+});

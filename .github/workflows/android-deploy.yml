@@ -1,9 +1,12 @@
-name: Android Deploy to Play Store
+name: Android Build & Deploy
 
 on:
   push:
     branches:
-      - main  # main 브랜치에 푸시하면 배포 시작
+      - main  # main에 합쳐지면 -> 빌드 후 배포
+  pull_request:
+    branches:
+      - main  # PR 올리면 -> 빌드 테스트만 수행 (배포 X)
 
 jobs:
   build-and-deploy:
@@ -17,19 +20,18 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
-          java-version: '17' # React Native 최신 버전 호환
+          java-version: '17'
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version: 20
           cache: 'npm'
 
       - name: Install Dependencies
         run: npm install
 
-      # 1. .env 파일 생성 (가장 중요)
-      # GitHub Secret "ENV_FILE_CONTENT"에 들어있는 내용을 그대로 .env 파일로 만듭니다.
+      # 1. .env 파일 생성
       - name: Create .env file
         run: |
           echo "${{ secrets.ENV_FILE_CONTENT }}" > .env
@@ -39,23 +41,25 @@ jobs:
         run: |
           echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 --decode > android/app/upload.keystore
 
-      # 3. Gradle Properties 생성 (서명 정보 주입)
+      # 3. Gradle Properties 생성 (줄바꿈 수정 완료)
       - name: Create gradle.properties
         run: |
+          echo "" >> android/gradle.properties
           echo "MYAPP_UPLOAD_STORE_FILE=upload.keystore" >> android/gradle.properties
           echo "MYAPP_UPLOAD_KEY_ALIAS=${{ secrets.KEY_ALIAS }}" >> android/gradle.properties
           echo "MYAPP_UPLOAD_STORE_PASSWORD=${{ secrets.KEYSTORE_PASSWORD }}" >> android/gradle.properties
           echo "MYAPP_UPLOAD_KEY_PASSWORD=${{ secrets.KEY_PASSWORD }}" >> android/gradle.properties
 
-      # 4. 실행 권한 부여 및 빌드
+      # 4. 실행 권한 부여 및 빌드 (여기까지는 PR/Main 모두 실행됨)
       - name: Build Android Bundle (AAB)
         working-directory: android
         run: |
           chmod +x gradlew
           ./gradlew bundleRelease
 
-      # 5. Play Store 업로드 (내부 테스트)
+      # 5. Play Store 업로드 (조건 추가: PR이 아닐 때만 실행!)
       - name: Upload to Play Store (Internal)
+        if: github.event_name == 'push'  # <--- [핵심] Push일 때만 배포, PR일 땐 건너뜀
         uses: r0adkll/upload-google-play@v1
         with:
           serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}

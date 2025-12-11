@@ -60,7 +60,6 @@ const ReportModal: React.FC<ReportModalProps> = ({
       visible={visible}
       transparent
       animationType="fade"
-      statusBarTranslucent
       onRequestClose={handleClose}
     >
       <TouchableWithoutFeedback onPress={handleClose}>

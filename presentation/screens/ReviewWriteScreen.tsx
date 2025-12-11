@@ -99,8 +99,8 @@ const ReviewWriteScreen = () => {
         if (!image.isExisting) {
           const file = {
             uri: image.uri,
-            type: image.type || 'image/jpeg',
-            name: image.fileName || `review_image_${Date.now()}.jpg`,
+            type: image.type,
+            name: image.fileName || 'review_image.jpg',
           };
           formData.append('file', file);
         }
@@ -144,10 +144,9 @@ const ReviewWriteScreen = () => {
       } else {
         Alert.alert('실패', result.message || (review ? '리뷰 수정에 실패했습니다.' : '리뷰 등록에 실패했습니다.'));
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error('리뷰 등록 오류:', error);
-      const errorMessage = error.response?.data?.message || error.message || '네트워크 오류가 발생했습니다.';
-      Alert.alert('오류', errorMessage);
+      Alert.alert('오류', '네트워크 오류가 발생했습니다.');
     } finally {
       setLoading(false);
     }

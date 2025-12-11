@@ -115,18 +115,52 @@ export const UserAuthRepositoryImpl: UserAuthRepository = {
     },
 
     async updateProfile(data: { nickname: string; stateMessage: string; file?: any }): Promise<void> {
-        // If there's a file, we might need to use uploadProfileImage or a multipart request here.
-        // For now, assuming this endpoint handles text updates.
-        // If 'file' is present, the logic might need to be split or handled via multipart.
-        // Given the interface, I'll send the text data.
-        await authApi.put("/user/profile", {
-            nickname: data.nickname,
-            stateMessage: data.stateMessage
-        });
-        
-        // If file exists, upload it separately (common pattern if PUT /profile is JSON only)
+        const token = await AsyncStorage.getItem("accessToken");
+        if (!token) throw new Error("Authentication required for updateProfile");
+
+        const formData = new FormData();
+        formData.append("nickname", data.nickname);
+        formData.append("stateMessage", data.stateMessage);
+
         if (data.file) {
-            await this.uploadProfileImage(data.file.uri);
+            const imageUri = data.file.uri;
+            const filename = imageUri.split('/').pop() || 'profile.jpg';
+            const type = filename.toLowerCase().endsWith('.png') ? 'image/png' : 'image/jpeg';
+
+            formData.append('file', {
+                uri: Platform.OS === 'android' ? imageUri : imageUri.replace('file://', ''),
+                name: filename,
+                type: type,
+            } as any);
+        }
+
+        try {
+            const response = await fetch(`${API_BASE_URL}/user/profile`, {
+                method: "PUT",
+                headers: {
+                    "Authorization": `Bearer ${token}`,
+                    "Accept": "application/json",
+                    // Content-Type: multipart/form-data is set automatically with boundary
+                },
+                body: formData,
+            });
+
+            if (!response.ok) {
+                const text = await response.text();
+                // Try to parse JSON error if possible
+                try {
+                    const json = JSON.parse(text);
+                    if (json.message) {
+                         throw new Error(json.message);
+                    }
+                } catch (e) {
+                    // Ignore parse error, use text
+                }
+                throw new Error(`프로필 수정 실패 (${response.status}): ${text}`);
+            }
+        } catch (error: any) {
+            console.error("[UserAuthRepository] updateProfile error:", error.message);
+            throw error;
         }
     },
 

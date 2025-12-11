@@ -772,5 +772,3 @@ const styles = StyleSheet.create({
   },
   emptyTagText: {
     color: '#999',
-  },
-});

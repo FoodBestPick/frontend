@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { Header } from '../components/Header';
 import { DashboardCard } from '../components/DashBoardCard';
-import { COLORS } from '../../core/constants/Colors';
+import { COLORS } from '../../core/constants/colors';
 import { AdminDashBoardViewModel } from '../viewmodels/AdminDashBoardViewModels';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';

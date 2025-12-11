@@ -14,7 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { useAuth } from '../../context/AuthContext';
 import { ThemeContext } from '../../context/ThemeContext';
-import { LOCAL_HOST } from "@env";
+import { API_BASE_URL } from "@env";
 import axios from 'axios';
 
 const MyReviewsScreen = () => {
@@ -33,7 +33,7 @@ const MyReviewsScreen = () => {
   const fetchReviews = async () => {
     try {
       console.log('Fetching reviews with token:', token);
-      const response = await axios.get(`${LOCAL_HOST}/api/review/my`, {
+      const response = await axios.get(`${API_BASE_URL}/api/review/my`, {
         headers: { Authorization: `Bearer ${token}` },
         timeout: 10000,
       });

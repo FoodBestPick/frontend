@@ -255,7 +255,7 @@ const MyPageScreen = () => {
         )}
 
         {/* 메뉴 리스트 - 섹션별 그룹화 */}
-        <View style={styles.menuSection}>
+        <View>
           <MenuSection title="내 활동">
             <MenuItem
               text="본인 리뷰 작성 조회"
@@ -272,26 +272,26 @@ const MyPageScreen = () => {
               text="알림 설정"
               onPress={() => navigation.navigate('NotificationSetting')}
             />
-            <MenuItem
-              text="비밀번호 변경"
-              onPress={() => navigation.navigate('ChangePassword')}
-            />
             <MenuItem text="고객센터" onPress={() => { }} />
             <MenuItem text="개인정보 처리방침" onPress={() => { }} />
           </MenuSection>
 
           <MenuSection title="계정 관리">
+            <MenuItem
+              text="비밀번호 변경"
+              onPress={() => navigation.navigate('ChangePassword')}
+            />
             <MenuItem text="로그아웃" onPress={handleLogout} isLogout />
           </MenuSection>
-
-          {/* 회원 탈퇴 버튼 (하단 분리) */}
-          <TouchableOpacity 
-            style={styles.deleteAccountButton} 
-            onPress={handleDeleteAccount}
-          >
-            <Text style={styles.deleteAccountText}>회원 탈퇴</Text>
-          </TouchableOpacity>
         </View>
+
+        {/* 회원 탈퇴 버튼 (하단 분리) */}
+        <TouchableOpacity 
+          style={styles.deleteAccountButton} 
+          onPress={handleDeleteAccount}
+        >
+          <Text style={styles.deleteAccountText}>회원 탈퇴</Text>
+        </TouchableOpacity>
 
       </ScrollView>
     </SafeAreaView>
@@ -311,10 +311,10 @@ const localStyles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 5,
   },
   saveButtonText: { color: '#fff', fontSize: 16, fontWeight: '700' },
 });
@@ -331,7 +331,7 @@ const styles = StyleSheet.create({
   deleteAccountButton: {
     alignSelf: 'center',
     marginTop: 20,
-    marginBottom: 20,
+    marginBottom: 0, // ✨ marginBottom 0으로 변경
     padding: 10,
   },
   deleteAccountText: {
@@ -343,8 +343,8 @@ const styles = StyleSheet.create({
   header: { height: 50, justifyContent: 'center', alignItems: 'center', marginTop: 10 },
   headerTitle: { fontSize: 18, fontWeight: '700', color: '#000' },
 
-  scrollContent: { paddingBottom: 0, paddingHorizontal: 16 }, // 하단 여백을 0으로 줄임
-  
+  scrollContent: { paddingHorizontal: 16, paddingBottom: 5 }, // 하단 여백 5 유지
+
   // 말풍선 스타일
   speechBubbleContainer: { alignItems: 'center', marginTop: 20, marginBottom: 5 },
   speechBubble: {
@@ -434,6 +434,6 @@ const styles = StyleSheet.create({
   menuText: { fontSize: 15, color: '#000', fontWeight: '500' },
 
   /* 섹션 스타일 추가 */
-  sectionContainer: { marginBottom: 0 }, // 섹션 간 하단 여백 제거
+  sectionContainer: { marginBottom: 20 }, // ✨ 섹션 간 간격 추가
   sectionTitle: { fontSize: 16, fontWeight: 'bold', color: '#333', marginBottom: 10, marginLeft: 4 },
 });

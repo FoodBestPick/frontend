@@ -2,7 +2,7 @@ import React from "react";// MatchingViewModel.ts
 import { useState } from "react";
 import { MatchingUseCase } from "../../domain/usecases/MatchingUseCase";
 import { MatchingRequest } from "../../domain/entities/ChatTypes";
-import { useAuth } from "../../context/AuthContext"; 
+import { useAuth } from "../../context/AuthContext";
 
 export function useMatchingViewModel() {
   const { token } = useAuth();
@@ -13,7 +13,8 @@ export function useMatchingViewModel() {
   const [roomId, setRoomId] = useState<number | null>(null);
   const [isCancelled, setIsCancelled] = useState(false);
 
-  const requestMatch = async (food : string , size: number, lat: number, lng: number) => {
+  const requestMatch = async (food: string, size: number, lat: number, lng: number) => {
+    console.log(token);
     if (!token) return;
 
     setIsLoading(true);

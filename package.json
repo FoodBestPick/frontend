@@ -14,7 +14,7 @@
     "@react-native-community/checkbox": "^0.5.20",
     "@react-native-firebase/app": "^23.5.0",
     "@react-native-firebase/messaging": "^23.5.0",
-    "@react-native-google-signin/google-signin": "^16.0.0",
+    "@react-native-google-signin/google-signin": "^13.0.0",
     "@react-native-picker/picker": "^2.11.4",
     "@react-native-seoul/kakao-login": "^5.4.2",
     "@react-native-seoul/naver-login": "^4.2.2",

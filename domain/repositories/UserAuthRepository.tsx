@@ -60,8 +60,8 @@ export interface UserAuthRepository {
 
     // ⭐ [추가됨] 비밀번호 변경
     changePassword(payload: {
-        currentPassword: string;
         newPassword: string;
+        confirmNewPassword: string; // 추가
     }): Promise<void>;
 
     // ⭐ [추가됨] 로그아웃

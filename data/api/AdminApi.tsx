@@ -241,6 +241,15 @@ export const AdminApi = {
     );
   },
 
+  async unsuspendUser(userId: number) {
+    const token = await getToken();
+    await axios.patch(
+      `${API_BASE_URL}/admin/user/${userId}/unsuspend`,
+      {},
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+  },
+
   async updateUserRole(userId: number, role: string) {
     const token = await getToken();
     try {

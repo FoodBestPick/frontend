@@ -16,12 +16,11 @@ export const useChangePasswordViewModel = () => {
     };
 
     const changePassword = async (
-        currentPassword: string,
         newPassword: string,
         confirmPassword: string
     ): Promise<boolean> => {
         // 1. 빈 값 검사
-        if (!currentPassword || !newPassword || !confirmPassword) {
+        if (!newPassword || !confirmPassword) {
             Alert.alert('알림', '모든 항목을 입력해주세요.');
             return false;
         }
@@ -41,17 +40,11 @@ export const useChangePasswordViewModel = () => {
             return false;
         }
 
-        // 4. 기존 비밀번호와 동일한지 검사
-        if (currentPassword === newPassword) {
-            Alert.alert('알림', '새 비밀번호는 현재 비밀번호와 달라야 합니다.');
-            return false;
-        }
-
         setIsLoading(true);
         try {
             await usecase.execute({
-                currentPassword,
-                newPassword
+                newPassword,
+                confirmNewPassword: confirmPassword,
             });
             return true; // 성공
         } catch (error: any) {

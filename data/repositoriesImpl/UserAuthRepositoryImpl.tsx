@@ -138,7 +138,7 @@ export const UserAuthRepositoryImpl: UserAuthRepository = {
         const filename = imageUri.split('/').pop() || 'profile.jpg';
         const type = filename.toLowerCase().endsWith('.png') ? 'image/png' : 'image/jpeg';
 
-        formData.append('image', {
+        formData.append('file', {
             uri: Platform.OS === 'android' ? imageUri : imageUri.replace('file://', ''),
             name: filename,
             type: type,
@@ -180,8 +180,16 @@ export const UserAuthRepositoryImpl: UserAuthRepository = {
         };
     },
 
-    async changePassword(payload: any): Promise<void> {
-        await authApi.put("/user/password/change", payload);
+    async changePassword(payload: {
+        newPassword: string;
+        confirmNewPassword: string;
+    }): Promise<void> {
+        // 백엔드 MyPagePasswordRequest DTO: { password, passwordConfirm }
+        // 현재 비밀번호 검증 없이 새 비밀번호로 바로 리셋하는 구조로 추정됨
+        await authApi.post("/user/password/reset", {
+            password: payload.newPassword,
+            passwordConfirm: payload.confirmNewPassword
+        });
     },
 
     async resetPassword(payload: {

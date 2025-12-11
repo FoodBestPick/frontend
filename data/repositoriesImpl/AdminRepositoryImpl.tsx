@@ -18,6 +18,22 @@ export const AdminRepositoryImpl: AdminRepository = {
     return await AdminApi.getUserList(page, size, status, sort, keyword);
   },
 
+  async updateUserWarning(userId: number, warnings: number, message: string) {
+    return await AdminApi.updateUserWarning(userId, warnings, message);
+  },
+
+  async suspendUser(userId: number, days: number, message: string) {
+    return await AdminApi.suspendUser(userId, days, message);
+  },
+
+  async unsuspendUser(userId: number) {
+    return await AdminApi.unsuspendUser(userId);
+  },
+
+  async updateUserRole(userId: number, role: string) {
+    return await AdminApi.updateUserRole(userId, role);
+  },
+
   async getNotifications() {
     return await AdminApi.getNotifications();
   }

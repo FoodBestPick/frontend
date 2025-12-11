@@ -4,8 +4,8 @@ export class ChangePasswordUseCase {
     constructor(private repo: UserAuthRepository) { }
 
     async execute(payload: {
-        currentPassword: string;
         newPassword: string;
+        confirmNewPassword: string; // 추가
     }): Promise<void> {
         return this.repo.changePassword(payload);
     }

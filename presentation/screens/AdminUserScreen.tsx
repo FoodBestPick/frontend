@@ -39,7 +39,8 @@ export const AdminUserScreen = () => {
     refresh,
     giveWarning,
     suspendUser,
-    updateUserRole, // ⭐ 추가
+    unsuspendUser, // ⭐ 추가
+    updateUserRole,
   } = AdminUserViewModel();
 
   const [expandedUsers, setExpandedUsers] = useState<number[]>([]);
@@ -418,6 +419,13 @@ export const AdminUserScreen = () => {
           user={activeModal.user}
           setSuccessModal={setSuccessModal}
           theme={theme}
+          onConfirm={async (id: number, days: number, reason: string) => {
+            if (days === 0) {
+              return await unsuspendUser(id);
+            } else {
+              return await suspendUser(id, days, reason);
+            }
+          }}
         />
         <WarningModal
           visible={activeModal.type === "warning"}
@@ -425,6 +433,7 @@ export const AdminUserScreen = () => {
           user={activeModal.user}
           setSuccessModal={setSuccessModal}
           theme={theme}
+          onConfirm={giveWarning} // ⭐ 추가: giveWarning 함수 전달
         />
         <SuccessModal
           visible={successModal.visible}
@@ -505,10 +514,25 @@ const PermissionModal = ({ visible, onClose, user, setSuccessModal, theme, onCon
   );
 };
 
-const SuspendModal = ({ visible, onClose, user, setSuccessModal, theme }: any) => {
+// SuspendModal 컴포넌트 수정
+const SuspendModal = ({ visible, onClose, user, setSuccessModal, theme, onConfirm }: any) => { // onConfirm prop 추가
   const [selectedPeriod, setSelectedPeriod] = useState("1일");
   const [reason, setReason] = useState("");
   const periods = ["1일", "3일", "7일", "30일", "영구 정지"];
+
+  // 기간 문자열을 숫자로 변환하는 헬퍼 함수
+  const parseDays = (periodStr: string) => {
+    switch (periodStr) {
+      case "1일": return 1;
+      case "3일": return 3;
+      case "7일": return 7;
+      case "30일": return 30;
+      case "영구 정지": return 36500; // 약 100년
+      default: return 1;
+    }
+  };
+
+  const isSuspended = user?.status === "정지"; // 현재 정지 상태인지 확인
 
   return (
     <Modal
@@ -519,60 +543,96 @@ const SuspendModal = ({ visible, onClose, user, setSuccessModal, theme }: any) =
       statusBarTranslucent>
       <View style={styles.overlay}>
         <View style={[styles.modalBox, { backgroundColor: theme.card }]}>
-          <Text style={[styles.modalTitle, { color: theme.textPrimary }]}>계정 상태 변경</Text>
+          <Text style={[styles.modalTitle, { color: theme.textPrimary }]}>
+            {isSuspended ? "정지 해제" : "계정 상태 변경"}
+          </Text>
           <Text style={[styles.modalSub, { color: theme.textSecondary }]}>사용자: {user?.name}</Text>
 
           <View style={[styles.modalDivider, { borderColor: theme.border }]} />
 
-          <Text style={[styles.modalLabel, { color: theme.textSecondary }]}>정지 기간</Text>
-          <View style={{ marginTop: 8, gap: 10 }}>
-            {periods.map((p) => (
-              <TouchableOpacity
-                key={p}
-                style={[styles.radioItem, { backgroundColor: theme.background, borderColor: theme.border }]}
-                onPress={() => setSelectedPeriod(p)}
-              >
-                <View style={[styles.radioOuter, { borderColor: theme.icon }]}>
-                  {selectedPeriod === p && (
-                    <View style={[styles.radioInner, { backgroundColor: theme.icon }]} />
-                  )}
-                </View>
-                <Text style={[styles.radioText, { color: theme.textPrimary }]}>{p}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+          {isSuspended ? (
+            // 🔓 정지 해제 UI
+            <View>
+              <Text style={[styles.modalSub, { color: theme.textPrimary, fontSize: 16, marginVertical: 20 }]}>
+                해당 사용자의 정지를 해제하시겠습니까?
+              </Text>
+            </View>
+          ) : (
+            // 🔒 정지 적용 UI (기존)
+            <>
+              <Text style={[styles.modalLabel, { color: theme.textSecondary }]}>정지 기간</Text>
+              <View style={{ marginTop: 8, gap: 10 }}>
+                {periods.map((p) => (
+                  <TouchableOpacity
+                    key={p}
+                    style={[styles.radioItem, { backgroundColor: theme.background, borderColor: theme.border }]}
+                    onPress={() => setSelectedPeriod(p)}
+                  >
+                    <View style={[styles.radioOuter, { borderColor: theme.icon }]}>
+                      {selectedPeriod === p && (
+                        <View style={[styles.radioInner, { backgroundColor: theme.icon }]} />
+                      )}
+                    </View>
+                    <Text style={[styles.radioText, { color: theme.textPrimary }]}>{p}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
 
-          <Text style={[styles.modalLabel, { color: theme.textSecondary, marginTop: 14 }]}>
-            정지 사유
-          </Text>
-          <RNTextInput
-            style={[
-              styles.textArea,
-              {
-                backgroundColor: theme.background,
-                color: theme.textPrimary,
-                borderColor: theme.border,
-              },
-            ]}
-            placeholder="정지 사유를 입력해주세요."
-            placeholderTextColor={theme.textSecondary}
-            multiline
-            value={reason}
-            onChangeText={setReason}
-          />
+              <Text style={[styles.modalLabel, { color: theme.textSecondary, marginTop: 14 }]}>
+                정지 사유
+              </Text>
+              <RNTextInput
+                style={[
+                  styles.textArea,
+                  {
+                    backgroundColor: theme.background,
+                    color: theme.textPrimary,
+                    borderColor: theme.border,
+                  },
+                ]}
+                placeholder="정지 사유를 입력해주세요."
+                placeholderTextColor={theme.textSecondary}
+                multiline
+                value={reason}
+                onChangeText={setReason}
+              />
+            </>
+          )}
 
           <View style={styles.modalFooter}>
             <TouchableOpacity style={[styles.cancelBtn, { backgroundColor: theme.background }]} onPress={onClose}>
               <Text style={[styles.cancelText, { color: theme.textPrimary }]}>취소</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.applyBtn, { backgroundColor: "#E53935" }]}
-              onPress={() => {
-                onClose();
-                setSuccessModal({ visible: true, type: "suspend", user, extra: selectedPeriod });
+              style={[styles.applyBtn, { backgroundColor: isSuspended ? "#4CAF50" : "#E53935" }]} // 해제는 초록색, 정지는 빨간색
+              onPress={async () => {
+                let success;
+                if (isSuspended) {
+                    // 정지 해제 로직 (days: 0)
+                    success = await onConfirm(user.id, 0, "정지 해제");
+                } else {
+                    // 정지 적용 로직
+                    const days = parseDays(selectedPeriod);
+                    success = await onConfirm(user.id, days, reason);
+                }
+                
+                if (success) {
+                  onClose();
+                  // 성공 모달 띄우기
+                  setSuccessModal({ 
+                      visible: true, 
+                      type: "suspend", 
+                      user, 
+                      extra: isSuspended ? "해제" : selectedPeriod // 해제면 "해제"라고 전달
+                  });
+                  setReason(""); 
+                  setSelectedPeriod("1일");
+                } else {
+                  Alert.alert("실패", isSuspended ? "정지 해제에 실패했습니다." : "유저 정지에 실패했습니다.");
+                }
               }}
             >
-              <Text style={styles.applyText}>정지 적용</Text>
+              <Text style={styles.applyText}>{isSuspended ? "해제 적용" : "정지 적용"}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -581,7 +641,8 @@ const SuspendModal = ({ visible, onClose, user, setSuccessModal, theme }: any) =
   );
 };
 
-const WarningModal = ({ visible, onClose, user, setSuccessModal, theme }: any) => {
+// WarningModal 컴포넌트 수정
+const WarningModal = ({ visible, onClose, user, setSuccessModal, theme, onConfirm }: any) => { // onConfirm prop 추가
   const [reason, setReason] = useState("");
   const [detail, setDetail] = useState("");
   const [level, setLevel] = useState("1회");
@@ -652,9 +713,21 @@ const WarningModal = ({ visible, onClose, user, setSuccessModal, theme }: any) =
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.applyBtn, { backgroundColor: "#FF5252" }]}
-              onPress={() => {
-                onClose();
-                setSuccessModal({ visible: true, type: "warning", user, extra: level });
+              onPress={async () => {
+                const warningsToAdd = parseInt(level.replace("회", ""), 10) || 1;
+                const fullReason = `${reason} - ${detail}`;
+                
+                const success = await onConfirm(user.id, warningsToAdd, fullReason); // 실제 API 호출
+
+                if (success) {
+                  onClose();
+                  setSuccessModal({ visible: true, type: "warning", user, extra: level });
+                  setReason(""); // 초기화
+                  setDetail("");
+                  setLevel("1회");
+                } else {
+                   Alert.alert("실패", "경고 추가에 실패했습니다.");
+                }
               }}
             >
               <Text style={styles.applyText}>경고 추가</Text>
@@ -680,12 +753,16 @@ const SuccessModal = ({ visible, onClose, type, user, extra, theme }: any) => {
           buttonColor: "#007AFF",
         };
       case "suspend":
+        const isUnsuspend = extra === "해제";
         return {
-          icon: "close-circle-outline",
-          color: "#E53935",
-          title: "계정 정지 조치 완료!",
-          subtitle: `${user?.name}님의 계정이 ${extra}간 정지되었습니다.`,
-          buttonColor: "#E53935",
+          icon: isUnsuspend ? "checkmark-circle-outline" : "close-circle-outline",
+          color: isUnsuspend ? "#4CAF50" : "#E53935",
+          title: isUnsuspend ? "계정 정지 해제 완료!" : "계정 정지 조치 완료!",
+                                  subtitle: isUnsuspend
+                                    ? `${user?.name}님의 계정 정지가 해제되었습니다.`
+                                    : extra === "영구 정지"
+                                      ? `${user?.name}님의 계정이 영구 정지되었습니다.`
+                                      : `${user?.name}님의 계정이 ${extra}간 정지되었습니다.`,          buttonColor: isUnsuspend ? "#4CAF50" : "#E53935",
         };
       case "warning":
         return {

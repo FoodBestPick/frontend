@@ -33,21 +33,40 @@ interface MenuItemProps {
 const MenuItem = ({ text, onPress, isLogout = false }: MenuItemProps) => {
   return (
     <TouchableOpacity
-      style={styles.menuItem} // 보내주신 오렌지색 라인 스타일 적용
+      style={[
+        styles.menuItem,
+        {
+          backgroundColor: '#fff', // 카드 배경색
+          shadowColor: "#000",
+          shadowOpacity: 0.05,
+          shadowRadius: 3,
+          elevation: 2,
+          borderColor: '#eee', // 테두리 색상
+          borderWidth: 1, // 테두리 두께
+        },
+      ]}
       activeOpacity={0.7}
       onPress={onPress}
     >
-      <Text style={[styles.menuText, { color: isLogout ? DESTRUCTIVE_COLOR : '#000' }]}>
+      <Text style={[styles.menuText, { color: isLogout ? DESTRUCTIVE_COLOR : '#333' }]}>
         {text}
       </Text>
       <Icon
         name={isLogout ? 'alert-circle-outline' : 'chevron-forward'}
         size={20}
-        color={isLogout ? DESTRUCTIVE_COLOR : '#CCC'}
+        color={isLogout ? DESTRUCTIVE_COLOR : MAIN_COLOR} // 아이콘 색상을 MAIN_COLOR로 변경
       />
     </TouchableOpacity>
   );
 };
+
+/* 섹션 컴포넌트 */
+const MenuSection = ({ title, children }: { title: string; children: React.ReactNode }) => (
+  <View style={styles.sectionContainer}>
+    <Text style={styles.sectionTitle}>{title}</Text>
+    {children}
+  </View>
+);
 
 /* 마이 페이지 화면 */
 const MyPageScreen = () => {
@@ -199,10 +218,10 @@ const MyPageScreen = () => {
           </View>
         </View>
 
-        {/* 변경 사항 저장 버튼 (스타일이 없어서 기존 스타일 유지하되 배치) */}
+        {/* 변경 사항 저장 버튼 */}
         {hasChanges && (
           <TouchableOpacity
-            style={localStyles.saveButton} // 저장 버튼은 별도 스타일 유지
+            style={localStyles.saveButton}
             onPress={handleSave}
             disabled={loading}
           >
@@ -214,30 +233,43 @@ const MyPageScreen = () => {
           </TouchableOpacity>
         )}
 
-        {/* 메뉴 리스트 */}
+        {/* 메뉴 리스트 - 섹션별 그룹화 */}
         <View style={styles.menuSection}>
-          <MenuItem
-            text="본인 리뷰 작성 조회"
-            onPress={() => navigation.navigate('MyReviewsScreen')}
-          />
-          <MenuItem
-            text="맛집 즐겨찾기"
-            onPress={() => navigation.navigate('MyLikesScreen')}
-          />
-          <MenuItem text="알림 설정" // 마이페이지 버튼에 추가
-            onPress={() => navigation.navigate('NotificationSetting')} />
-          <MenuItem text="고객센터" onPress={() => { }} />
+          <MenuSection title="내 활동">
+            <MenuItem
+              text="본인 리뷰 작성 조회"
+              onPress={() => navigation.navigate('MyReviewsScreen')}
+            />
+            <MenuItem
+              text="맛집 즐겨찾기"
+              onPress={() => navigation.navigate('MyLikesScreen')}
+            />
+          </MenuSection>
 
-          <MenuItem
-            text="비밀번호 변경"
-            onPress={() => navigation.navigate('ChangePassword')}
-          />
+          <MenuSection title="설정 및 지원">
+            <MenuItem
+              text="알림 설정"
+              onPress={() => navigation.navigate('NotificationSetting')}
+            />
+            <MenuItem
+              text="비밀번호 변경"
+              onPress={() => navigation.navigate('ChangePassword')}
+            />
+            <MenuItem text="고객센터" onPress={() => { }} />
+            <MenuItem text="개인정보 처리방침" onPress={() => { }} />
+          </MenuSection>
 
-          <MenuItem text="개인정보 처리방침" onPress={() => { }} />
+          <MenuSection title="계정 관리">
+            <MenuItem text="로그아웃" onPress={handleLogout} isLogout />
+          </MenuSection>
 
-          {/* 탈퇴/로그아웃도 오렌지 라인 스타일 유지하되, 텍스트 색상만 붉게 처리 */}
-          <MenuItem text="회원 탈퇴" onPress={handleDeleteAccount} isLogout />
-          <MenuItem text="로그아웃" onPress={handleLogout} isLogout />
+          {/* 회원 탈퇴 버튼 (하단 분리) */}
+          <TouchableOpacity 
+            style={styles.deleteAccountButton} 
+            onPress={handleDeleteAccount}
+          >
+            <Text style={styles.deleteAccountText}>회원 탈퇴</Text>
+          </TouchableOpacity>
         </View>
 
       </ScrollView>
@@ -271,12 +303,26 @@ const localStyles = StyleSheet.create({
  * -----------------------------------------------------*/
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#fff' },
+  
+  /* ... 기존 스타일 ... */
+
+  /* 회원 탈퇴 버튼 스타일 추가 */
+  deleteAccountButton: {
+    alignSelf: 'center',
+    marginTop: 20,
+    marginBottom: 20,
+    padding: 10,
+  },
+  deleteAccountText: {
+    fontSize: 13,
+    color: '#999',
+    textDecorationLine: 'underline',
+  },
 
   header: { height: 50, justifyContent: 'center', alignItems: 'center', marginTop: 10 },
   headerTitle: { fontSize: 18, fontWeight: '700', color: '#000' },
 
-  scrollContent: { paddingBottom: 80 },
-
+  scrollContent: { paddingBottom: 0, paddingHorizontal: 16 }, // 하단 여백을 0으로 줄임
   profileImageContainer: { alignItems: 'center', marginTop: 20, marginBottom: 30 },
   imageWrapper: {
     width: 110, height: 110, borderRadius: 55, borderWidth: 2, borderColor: MAIN_COLOR, padding: 4,
@@ -289,7 +335,7 @@ const styles = StyleSheet.create({
     borderWidth: 2, borderColor: '#fff',
   },
 
-  infoSection: { paddingHorizontal: 20, marginBottom: 30 },
+  infoSection: { paddingHorizontal: 0, marginBottom: 30 },
   nameRow: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
     paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: MAIN_COLOR,
@@ -314,14 +360,20 @@ const styles = StyleSheet.create({
   emailRow: { paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: MAIN_COLOR },
   userEmail: { fontSize: 14, color: '#999' },
 
-  menuSection: { paddingHorizontal: 20 },
+  menuSection: { paddingHorizontal: 0, marginTop: 20 },
   menuItem: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: MAIN_COLOR,
+    paddingVertical: 12, // 버튼 높이 줄임
+    paddingHorizontal: 20, // MenuItem 자체에 가로 패딩 추가
+    marginBottom: 10, // 카드 간 간격
+    // borderBottomWidth: 1, // 기존 라인 삭제
+    // borderBottomColor: MAIN_COLOR, // 기존 라인 삭제
   },
   menuText: { fontSize: 15, color: '#000', fontWeight: '500' },
+
+  /* 섹션 스타일 추가 */
+  sectionContainer: { marginBottom: 0 }, // 섹션 간 하단 여백 제거
+  sectionTitle: { fontSize: 16, fontWeight: 'bold', color: '#333', marginBottom: 10, marginLeft: 4 },
 });

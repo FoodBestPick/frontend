@@ -15,5 +15,9 @@ export interface AdminRepository {
     sort?: string,
     keyword?: string
   ): Promise<AdminUserList>;
+  updateUserWarning(userId: number, warnings: number, message: string): Promise<void>;
+  suspendUser(userId: number, days: number, message: string): Promise<void>;
+  unsuspendUser(userId: number): Promise<void>;
+  updateUserRole(userId: number, role: string): Promise<void>;
   getNotifications(): Promise<AdminNotificationList>;
 }

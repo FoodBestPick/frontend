@@ -83,6 +83,7 @@ const MyPageScreen = () => {
 
   // 로컬 상태
   const [tempNickname, setTempNickname] = useState('');
+  const [tempStateMessage, setTempStateMessage] = useState(''); // ✨ 상태 메시지 상태 추가
   const [selectedImage, setSelectedImage] = useState<any>(null);
 
   const inputRef = useRef<TextInput>(null);
@@ -95,15 +96,18 @@ const MyPageScreen = () => {
     }, [])
   );
 
-  // 2. 프로필 로드되면 닉네임 세팅
+  // 2. 프로필 로드되면 닉네임/상태메시지 세팅
   useEffect(() => {
     if (profile) {
       setTempNickname(profile.nickname);
+      setTempStateMessage(profile.stateMessage || ""); // ✨ 상태 메시지 초기화
     }
   }, [profile]);
 
   // 변경 사항이 있는지 감지
-  const hasChanges = (selectedImage !== null) || (profile && tempNickname !== profile.nickname);
+  const hasChanges = (selectedImage !== null) || 
+                     (profile && tempNickname !== profile.nickname) ||
+                     (profile && tempStateMessage !== (profile.stateMessage || "")); // ✨ 상태 메시지 변경 감지
 
   /* 저장 버튼 클릭 시 실행 */
   const handleSave = async () => {
@@ -116,7 +120,7 @@ const MyPageScreen = () => {
 
     const success = await saveProfile(
       tempNickname,
-      profile?.stateMessage || "",
+      tempStateMessage, // ✨ 수정된 상태 메시지 전달
       selectedImage
     );
 
@@ -178,6 +182,23 @@ const MyPageScreen = () => {
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
+
+        {/* 상태 메시지 말풍선 (프로필 이미지 위) */}
+        <View style={styles.speechBubbleContainer}>
+          <View style={styles.speechBubble}>
+            <TextInput
+              style={styles.speechBubbleInput}
+              value={tempStateMessage}
+              onChangeText={setTempStateMessage}
+              placeholder="상태 메시지를 입력하세요 (최대 30자)"
+              placeholderTextColor="#999"
+              maxLength={30}
+              multiline={true}
+              blurOnSubmit={true}
+            />
+          </View>
+          <View style={styles.speechBubbleTail} />
+        </View>
 
         {/* 프로필 이미지 영역 */}
         <View style={styles.profileImageContainer}>
@@ -323,7 +344,46 @@ const styles = StyleSheet.create({
   headerTitle: { fontSize: 18, fontWeight: '700', color: '#000' },
 
   scrollContent: { paddingBottom: 0, paddingHorizontal: 16 }, // 하단 여백을 0으로 줄임
-  profileImageContainer: { alignItems: 'center', marginTop: 20, marginBottom: 30 },
+  
+  // 말풍선 스타일
+  speechBubbleContainer: { alignItems: 'center', marginTop: 20, marginBottom: 5 },
+  speechBubble: {
+    backgroundColor: '#FFF4E6', // 연한 MAIN_COLOR 배경
+    borderRadius: 16,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    maxWidth: '80%', // 최대 너비 제한
+    minWidth: 100,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  speechBubbleInput: {
+    fontSize: 14,
+    color: '#555',
+    textAlign: 'center',
+    padding: 0,
+    margin: 0,
+  },
+  speechBubbleTail: {
+    width: 0,
+    height: 0,
+    backgroundColor: 'transparent',
+    borderStyle: 'solid',
+    borderLeftWidth: 8,
+    borderRightWidth: 8,
+    borderTopWidth: 10,
+    borderLeftColor: 'transparent',
+    borderRightColor: 'transparent',
+    borderTopColor: '#FFF4E6', // 말풍선 배경색과 동일
+    marginTop: -1, // 말풍선과 꼬리 연결
+  },
+
+  profileImageContainer: { alignItems: 'center', marginTop: 5, marginBottom: 30 }, // marginTop 조정
   imageWrapper: {
     width: 110, height: 110, borderRadius: 55, borderWidth: 2, borderColor: MAIN_COLOR, padding: 4,
     justifyContent: 'center', alignItems: 'center', position: 'relative',

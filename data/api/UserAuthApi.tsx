@@ -3,6 +3,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { API_BASE_URL } from "@env";
 
 // 1. Axios 인스턴스 생성
+console.log("[UserAuthApi] Using API_BASE_URL:", API_BASE_URL);
 export const authApi = axios.create({
     baseURL: API_BASE_URL,            
     withCredentials: true,

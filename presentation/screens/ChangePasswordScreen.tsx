@@ -5,12 +5,13 @@ import {
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useChangePasswordViewModel } from '../viewmodels/useChangePasswordViewModel';
+import { useAuth } from '../../context/AuthContext';
 
 const ChangePasswordScreen = () => {
     const navigation = useNavigation();
     const { changePassword, isLoading, validatePassword } = useChangePasswordViewModel();
+    const { logout } = useAuth();
 
-    const [currentPassword, setCurrentPassword] = useState('');
     const [newPassword, setNewPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
 
@@ -33,10 +34,10 @@ const ChangePasswordScreen = () => {
     }, [navigation]);
 
     const handleSubmit = async () => {
-        const isSuccess = await changePassword(currentPassword, newPassword, confirmPassword);
+        const isSuccess = await changePassword(newPassword, confirmPassword);
         if (isSuccess) {
-            Alert.alert('성공', '비밀번호가 변경되었습니다.', [
-                { text: '확인', onPress: () => navigation.goBack() }
+            Alert.alert('성공', '비밀번호가 변경되었습니다.\n다시 로그인해주세요.', [
+                { text: '확인', onPress: () => logout() }
             ]);
         }
     };
@@ -52,19 +53,6 @@ const ChangePasswordScreen = () => {
                     </Text>
 
                     <View style={styles.formContainer}>
-                        {/* 현재 비밀번호 */}
-                        <View style={styles.inputGroup}>
-                            <Text style={styles.label}>현재 비밀번호</Text>
-                            <TextInput
-                                style={styles.input}
-                                secureTextEntry
-                                placeholder="현재 비밀번호 입력"
-                                value={currentPassword}
-                                onChangeText={setCurrentPassword}
-                                placeholderTextColor="#aaa"
-                            />
-                        </View>
-
                         {/* 새 비밀번호 */}
                         <View style={styles.inputGroup}>
                             <Text style={styles.label}>새 비밀번호</Text>

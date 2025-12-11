@@ -137,6 +137,18 @@ export const AdminUserViewModel = () => {
         }
     };
 
+    // 회원 정지 해제
+    const unsuspendUser = async (userId: number) => {
+        try {
+            await AdminRepositoryImpl.unsuspendUser(userId);
+            fetchAllData(); // 데이터 갱신
+            return true;
+        } catch (e) {
+            console.error(e);
+            return false;
+        }
+    };
+
     // 회원 권한 변경
     const updateUserRole = async (userId: number, role: string) => {
         try {
@@ -168,7 +180,8 @@ export const AdminUserViewModel = () => {
 
         giveWarning,
         suspendUser,
-        updateUserRole, // ⭐ 추가
+        unsuspendUser, // ⭐ 추가
+        updateUserRole,
 
         refresh: fetchAllData, // refresh는 fetchAllData를 호출
     };

@@ -1,43 +1,42 @@
-import SockJS from "sockjs-client";
-import Stomp from "stompjs";
+import { Client } from '@stomp/stompjs';
+import SockJS from 'sockjs-client';
 
 class WebSocketClient {
-    stompClient: Stomp.Client | null = null;
+    private client: Client | null = null;
 
     connect(roomId: number, onMessage: (msg: any) => void) {
-        const socket = new SockJS("http://13.125.213.115:8080/ws");
-        this.stompClient = Stomp.over(socket);
-
-        this.stompClient.connect({}, () => {
-            console.log("🔌 STOMP Connected");
-
-            // STOMP 구독 (joinRoom 개념)
-            this.stompClient!.subscribe(`/topic/chat/${roomId}`, (frame) => {
-                const data = JSON.parse(frame.body);
-                onMessage(data);
-            });
+        this.client = new Client({
+            // SockJS를 사용하는 경우 webSocketFactory 설정
+            webSocketFactory: () => new SockJS("http://13.125.213.115:8080/ws"),
+            onConnect: () => {
+                console.log("🔌 STOMP Connected");
+                this.client?.subscribe(`/topic/chat/${roomId}`, (message) => {
+                    const data = JSON.parse(message.body);
+                    onMessage(data);
+                });
+            },
+            onStompError: (frame) => {
+                console.error('Broker reported error: ' + frame.headers['message']);
+                console.error('Additional details: ' + frame.body);
+            },
         });
+
+        this.client.activate();
     }
 
     send(roomId: number, senderId: number, content: string) {
-        if (!this.stompClient) return;
+        if (!this.client || !this.client.connected) return;
 
-        this.stompClient.send(
-            "/app/chat.send", 
-            {},
-            JSON.stringify({
-                roomId,
-                senderId,
-                content,
-            })
-        );
+        this.client.publish({
+            destination: "/app/chat.send",
+            body: JSON.stringify({ roomId, senderId, content }),
+        });
     }
 
     disconnect() {
-        if (this.stompClient) {
-            this.stompClient.disconnect(() => {
-                console.log("🔌 STOMP Disconnected");
-            });
+        if (this.client) {
+            this.client.deactivate();
+            console.log("🔌 STOMP Disconnected");
         }
     }
 }

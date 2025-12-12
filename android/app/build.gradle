@@ -129,12 +129,6 @@ dependencies {
     implementation 'com.google.android.gms:play-services-auth:20.7.0'
     implementation 'com.google.android.gms:play-services-location:21.0.1'
 
-    // Exclude play-services-location from react-native-geolocation-service
-    // This resolves "Found interface..., but class was expected" error
-    implementation (project(':react-native-geolocation-service')) {
-        exclude group: 'com.google.android.gms', module: 'play-services-location'
-    }
-
     if (hermesEnabled.toBoolean()) {
         implementation("com.facebook.react:hermes-android")
     } else {

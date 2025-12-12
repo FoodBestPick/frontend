@@ -8,6 +8,17 @@ export interface SendReportRequest {
   reasonDetail: string;
 }
 
+export interface ReportListResponse {
+  id: number;
+  reporterId: number;
+  targetId: number;
+  targetType: string;
+  reason: string;
+  reasonDetail: string;
+  status: string;
+  createdAt: string;
+}
+
 export const ReportApi = {
   async sendReport(token: string, request: SendReportRequest) {
     try {

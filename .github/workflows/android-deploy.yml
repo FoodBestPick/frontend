@@ -60,6 +60,14 @@ jobs:
         run: |
           chmod +x gradlew
           ./gradlew bundleRelease
+      
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-release-bundle
+          path: android/app/build/outputs/bundle/release/app-release.aab
+          retention-days: 3
+
 
       # 5. Play Store 업로드 (조건 추가: PR이 아닐 때만 실행!)
       - name: Upload to Play Store (Internal)

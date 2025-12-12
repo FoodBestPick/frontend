@@ -11,7 +11,6 @@ const client = axios.create({
 setupInterceptors(client);
 
 export const MatchingApi = {
-  // 매칭 요청
   requestMatch: async (
     token: string,
     body: MatchingRequest,
@@ -31,7 +30,6 @@ export const MatchingApi = {
     return res.data;
   },
 
-  // 매칭 취소
   cancelMatch: async (token: string): Promise<ApiResponse<string>> => {
     const res = await client.delete<ApiResponse<string>>('/match', {
       headers: {

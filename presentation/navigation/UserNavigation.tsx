@@ -14,6 +14,9 @@ import RestaurantDetailScreen from '../screens/RestaurantDetailScreen';
 import ReviewWriteScreen from '../screens/ReviewWriteScreen';
 import MyLikesScreen from '../screens/MyLikesScreen';
 import MyReviewsScreen from '../screens/MyReviewsScreen';
+import MatchingSetupScreen from '../screens/MatchingSetupScreen';
+import MatchingFindingScreen from '../screens/MatchingFindingScreen';
+import ChatRoomScreen from '../screens/ChatRoomScreen';
 
 const Tab = createBottomTabNavigator();
 const HomeStack = createStackNavigator();
@@ -55,6 +58,9 @@ const RouletteStackNavigator = () => (
 const MatchStackNavigator = () => (
   <MatchStack.Navigator screenOptions={stackOptions}>
     <MatchStack.Screen name="MatchScreen" component={MatchScreen} />
+    <MatchStack.Screen name="MatchingSetupScreen" component={MatchingSetupScreen} />
+    <MatchStack.Screen name="MatchingFindingScreen" component={MatchingFindingScreen} />
+    <MatchStack.Screen name="ChatRoomScreen" component={ChatRoomScreen} />
   </MatchStack.Navigator>
 );
 

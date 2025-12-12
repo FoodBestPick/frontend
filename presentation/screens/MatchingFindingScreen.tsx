@@ -7,7 +7,8 @@ import {
     StatusBar, 
     PermissionsAndroid, 
     Platform,
-    TouchableOpacity
+    TouchableOpacity,
+    Alert
 } from 'react-native';
 import Geolocation from 'react-native-geolocation-service';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -33,66 +34,94 @@ const MatchingFindingScreen = () => {
 
     const requestLocationPermission = async () => {
         if (Platform.OS === 'android') {
-            const granted = await PermissionsAndroid.request(
-                PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
-                {
-                    title: "위치 권한 요청",
-                    message: "매칭을 위해 현재 위치 정보가 필요합니다.",
-                    buttonPositive: "확인"
-                }
-            );
-            return granted === PermissionsAndroid.RESULTS.GRANTED;
-        }
-        return true;
-    };
+            try {
+                console.log("[Matching] 안드로이드 위치 권한 요청 시작");
+                const granted = await PermissionsAndroid.requestMultiple([
+                    PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
+                    PermissionsAndroid.PERMISSIONS.ACCESS_COARSE_LOCATION,
+                ]);
 
-    useEffect(() => {
-        async function init() {
-            const hasPermission = await requestLocationPermission();
-            if (!hasPermission) {
-                console.log("위치 권한 없음");
-                return;
+                if (granted[PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION] === PermissionsAndroid.RESULTS.GRANTED &&
+                    granted[PermissionsAndroid.PERMISSIONS.ACCESS_COARSE_LOCATION] === PermissionsAndroid.RESULTS.GRANTED) {
+                    console.log("[Matching] 위치 권한 모두 허용됨");
+                    return true;
+                } else {
+                    console.log("[Matching] 위치 권한 거부됨");
+                    return false;
+                }
+            } catch (err) {
+                console.error('위치 권한 요청 에러:', err);
+                return false;
             }
+        }
+        return true; // iOS는 Manifest에서 처리
+    };
+    
+    useEffect(() => {
+        let mounted = true; // 메모리 누수 방지
 
-            Geolocation.getCurrentPosition(
-                (pos) => {
-                    const lat = pos.coords.latitude;
-                    const lng = pos.coords.longitude;
-
-                    requestMatch(food, size, lat, lng);
-                },
-                (error) => {
-                    console.log("위치 오류:", error);
-                },
-                {
-                    enableHighAccuracy: true,
-                    timeout: 15000,
-                    maximumAge: 10000
+        async function init() {
+            try {
+                const hasPermission = await requestLocationPermission();
+                if (!hasPermission) {
+                    if (mounted) {
+                        Alert.alert("알림", "위치 권한이 거부되어 매칭을 진행할 수 없습니다.", [{ text: "확인", onPress: () => navigation.goBack() }]);
+                    }
+                    return;
                 }
-            );
+                
+                console.log("[Matching] Geolocation.getCurrentPosition 호출 시작");
+                Geolocation.getCurrentPosition(
+                    (pos) => {
+                        if (!mounted) return;
+                        const lat = pos.coords.latitude;
+                        const lng = pos.coords.longitude;
+                        console.log(`[Matching] 위치 확보: 위도 ${lat}, 경도 ${lng}`);
+                        
+                        // 위치 확보 성공 시 매칭 요청
+                        requestMatch(food, size, lat, lng);
+                    },
+                    (error) => {
+                        console.error("[Matching] 위치 오류 발생:", error.code, error.message);
+                        if (mounted) {
+                            let errorMessage = "현재 위치를 가져올 수 없습니다. GPS 설정과 권한을 확인해주세요.";
+                            if (error.code === 1) errorMessage = "위치 권한이 없습니다.";
+                            else if (error.code === 2) errorMessage = "GPS가 꺼져있거나 기기에서 위치를 가져올 수 없습니다.";
+                            else if (error.code === 3) errorMessage = "위치 요청 시간 초과.";
+
+                            Alert.alert("오류", errorMessage, [{ text: "확인", onPress: () => navigation.goBack() }]);
+                        }
+                    },
+                    {
+                        enableHighAccuracy: true, // 다시 고정밀도 활성화
+                        timeout: 15000,
+                        maximumAge: 10000
+                    }
+                );
+            } catch (e) {
+                console.error("[Matching] 초기화 중 치명적 에러:", e);
+                if (mounted) {
+                    Alert.alert("오류", "매칭 초기화 중 문제가 발생했습니다.", [{ text: "확인", onPress: () => navigation.goBack() }]);
+                }
+            }
         }
 
         init();
+
+        return () => { 
+            mounted = false; 
+            cancelMatch(); // 컴포넌트 언마운트 시 매칭 취소 요청
+        };
     }, []);
 
     useEffect(() => {
         if (isMatched && roomId) {
-            navigation.dispatch(
-                CommonActions.reset({
-                    index: 1,
-                    routes: [
-                        { name: 'UserMain' },
-                        {
-                            name: 'ChatRoomScreen',
-                            params: {
-                                roomId,
-                                roomTitle: `${food} 함께 먹어요!`,
-                                peopleCount: size === 0 ? 4 : size
-                            }
-                        },
-                    ],
-                })
-            );
+            // 🔥 매칭 성공 시 채팅방으로 화면 교체 (뒤로가기 시 다시 매칭 화면으로 오지 않도록)
+            navigation.replace('ChatRoomScreen', {
+                roomId,
+                roomTitle: `${food} 함께 먹어요!`,
+                peopleCount: size === 0 ? 4 : size
+            });
         }
     }, [isMatched]);
 

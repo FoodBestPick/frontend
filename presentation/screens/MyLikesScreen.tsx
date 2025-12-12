@@ -14,7 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { useAuth } from '../../context/AuthContext';
 import { ThemeContext } from '../../context/ThemeContext';
-import { LOCAL_HOST } from "@env";
+import { API_BASE_URL } from "@env";
 import axios from 'axios';
 
 const MyLikesScreen = () => {
@@ -33,7 +33,7 @@ const MyLikesScreen = () => {
   const fetchLikes = async () => {
     try {
       console.log('Fetching likes with token:', token);
-      const response = await axios.get(`${LOCAL_HOST}/api/like/my`, {
+      const response = await axios.get(`${API_BASE_URL}/api/like/my`, {
         headers: { Authorization: `Bearer ${token}` },
         timeout: 10000,
       });

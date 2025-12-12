@@ -6,8 +6,9 @@ export const MatchingRepositoryImpl: MatchingRepository = {
   requestMatch(
     token: string,
     body: MatchingRequest,
+    signal?: AbortSignal,
   ): Promise<ApiResponse<MatchingResponse>> {
-    return MatchingApi.requestMatch(token, body);
+    return MatchingApi.requestMatch(token, body, signal);
   },
 
   cancelMatch(token: string): Promise<ApiResponse<string>> {

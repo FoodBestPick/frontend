@@ -5,7 +5,7 @@ import { LightTheme, DarkTheme } from '../core/constants/colors';
 export const ThemeContext = createContext({
   isDarkMode: false,
   theme: LightTheme,
-  toggleDarkMode: (v: boolean) => {},
+  toggleDarkMode: (v: boolean) => { },
 });
 
 export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {

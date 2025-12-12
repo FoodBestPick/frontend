@@ -13,7 +13,7 @@ import {
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { ReportApi, ReportListResponse } from '../../data/api/ReportApi';
 import { useAuth } from '../../context/AuthContext';
-import { COLORS } from '../../core/constants/Colors';
+import { COLORS } from '../../core/constants/colors';
 import { ThemeContext } from '../../context/ThemeContext';
 import { Header } from '../components/Header';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -54,15 +54,15 @@ const AdminReportScreen = () => {
       else if (filter === 'USER') targetTypeParam = 'USER'; // Note: This might need to include REVIEW/CHAT if backend supports multiple or we filter client-side
 
       const response = await ReportApi.getAllReports(token, pageNum, 10, undefined, targetTypeParam);
-      
+
       if (response.code === 200) {
         const newReports = response.data.reports;
-        
+
         // Client-side filtering if backend doesn't support complex OR queries (e.g. USER includes REVIEW/CHAT)
         // For now, assuming backend handles 'USER' strictly or we just show what we get.
         // If 'USER' filter is meant to show User + Review + Chat, we might need to fetch ALL and filter, or backend needs adjustment.
         // Let's assume for now we just fetch what matches.
-        
+
         if (isRefresh) {
           setReports(newReports);
         } else {
@@ -188,17 +188,17 @@ const AdminReportScreen = () => {
 
         <Text style={[styles.reasonTitle, { color: theme.textPrimary }]}>사유: {item.reason}</Text>
         <Text style={[styles.reasonDetail, { color: theme.textSecondary }]}>{item.reasonDetail}</Text>
-        
+
         <View style={styles.infoContainer}>
           <Text style={[styles.infoText, { color: theme.textSecondary }]}>신고자 ID: {item.reporterId}</Text>
           <Text style={[styles.infoText, { color: theme.textSecondary }]}>대상 ID: {item.targetId}</Text>
         </View>
 
         <View style={styles.statusContainer}>
-            <Text style={[styles.statusLabel, { color: theme.textSecondary }]}>상태: </Text>
-            <Text style={[styles.statusValue, item.status === 'PENDING' ? styles.pending : styles.completed]}>
-                {item.status}
-            </Text>
+          <Text style={[styles.statusLabel, { color: theme.textSecondary }]}>상태: </Text>
+          <Text style={[styles.statusValue, item.status === 'PENDING' ? styles.pending : styles.completed]}>
+            {item.status}
+          </Text>
         </View>
 
         {item.status === 'PENDING' && (
@@ -226,7 +226,7 @@ const AdminReportScreen = () => {
                 </TouchableOpacity>
               </>
             )}
-            
+
             <TouchableOpacity
               style={[styles.button, styles.deleteButton]}
               onPress={() => handleDeleteReport(item.id)}
@@ -242,7 +242,7 @@ const AdminReportScreen = () => {
   return (
     <View style={[styles.container, { backgroundColor: isDarkMode ? theme.background : '#f5f5f5' }]}>
       <Header title="신고 관리" showBackButton onBackPress={() => navigation.goBack()} />
-      
+
       {/* Filter Tabs */}
       <View style={[styles.filterContainer, { backgroundColor: isDarkMode ? theme.card : '#fff' }]}>
         {(['ALL', 'USER', 'RESTAURANT'] as const).map((filter) => (
@@ -293,7 +293,7 @@ const AdminReportScreen = () => {
             <Text style={[styles.modalTitle, { color: theme.textPrimary }]}>
               {actionType === 'WARNING' ? '경고 처리' : '정지 처리'}
             </Text>
-            
+
             <Text style={[styles.label, { color: theme.textPrimary }]}>처리 사유</Text>
             <TextInput
               style={[styles.input, { color: theme.textPrimary, borderColor: theme.border }]}
@@ -415,17 +415,17 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
   statusContainer: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      marginBottom: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
   },
   statusLabel: {
-      fontSize: 13,
-      fontWeight: '600',
+    fontSize: 13,
+    fontWeight: '600',
   },
   statusValue: {
-      fontSize: 13,
-      fontWeight: 'bold',
+    fontSize: 13,
+    fontWeight: 'bold',
   },
   pending: {
     color: '#F57C00',

@@ -1,11 +1,11 @@
 import React, { createContext, useEffect, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { LightTheme, DarkTheme } from '../core/constants/Colors';
+import { LightTheme, DarkTheme } from '../core/constants/colors';
 
 export const ThemeContext = createContext({
   isDarkMode: false,
   theme: LightTheme,
-  toggleDarkMode: (v: boolean) => {},
+  toggleDarkMode: (v: boolean) => { },
 });
 
 export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {

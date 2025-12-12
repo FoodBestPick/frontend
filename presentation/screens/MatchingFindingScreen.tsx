@@ -108,7 +108,10 @@ const MatchingFindingScreen = () => {
 
         init();
 
-        return () => { mounted = false; };
+        return () => { 
+            mounted = false; 
+            cancelMatch(); // 컴포넌트 언마운트 시 매칭 취소 요청
+        };
     }, []);
 
     useEffect(() => {

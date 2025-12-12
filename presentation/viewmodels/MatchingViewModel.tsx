@@ -1,3 +1,4 @@
+<<<<<<< Updated upstream
 import { useState, useCallback, useEffect, useRef } from "react"; // useCallback, useEffect, useRef 추가
 import { MatchingUseCase } from "../../domain/usecases/MatchingUseCase";
 import { MatchingRequest } from "../../domain/entities/ChatTypes";
@@ -5,9 +6,29 @@ import { useAuth } from "../../context/AuthContext";
 
 const MAX_RETRIES = 3; // 최대 재시도 횟수 (오류 발생 시)
 const RETRY_DELAY_MS = 3000; // 재시도 간 지연 시간 (3초)
+=======
+import React, { useState, useEffect, useCallback } from "react";
+import { MatchingUseCase } from "../../domain/usecases/MatchingUseCase";
+import { MatchingRequest } from "../../domain/entities/ChatTypes";
+import { useAuth } from "../../context/AuthContext";
+import { webSocketClient } from "../../core/utils/WebSocketClient";
+
+type MatchPayload = { matched: boolean; roomId: number | null };
+
+function unwrapMatchPayload(res: any): MatchPayload | null {
+  const root = res?.data;
+  const payload = root?.data ?? root;
+  if (!payload) return null;
+
+  return {
+    matched: Boolean(payload.matched),
+    roomId: payload.roomId ?? null,
+  };
+}
+>>>>>>> Stashed changes
 
 export function useMatchingViewModel() {
-  const { token } = useAuth();
+  const { token, currentUserId } = useAuth();
 
   const [isLoading, setIsLoading] = useState(false);
   const [statusText, setStatusText] = useState("매칭을 요청 중…");
@@ -15,6 +36,7 @@ export function useMatchingViewModel() {
   const [roomId, setRoomId] = useState<number | null>(null);
   const [isCancelled, setIsCancelled] = useState(false);
 
+<<<<<<< Updated upstream
   // AbortController와 setTimeout ID를 관리하기 위한 ref
   const activeControllerRef = useRef<AbortController | null>(null);
   const timeoutIdRef = useRef<NodeJS.Timeout | null>(null);
@@ -70,8 +92,24 @@ export function useMatchingViewModel() {
     if (isCancelled) { // 이미 취소 상태면 새 요청 시작 안함
         setStatusText("이전 매칭 요청이 취소되어 새 요청을 시작할 수 없습니다.");
         return;
+=======
+  const handleMatchComplete = useCallback((data: MatchPayload) => {
+    if (data?.matched && data.roomId != null) {
+      setIsMatched(true);
+      setRoomId(data.roomId);
+      setStatusText("매칭 성공! 채팅방으로 이동합니다.");
+      webSocketClient.disconnectMatching();
+    }
+  }, []);
+
+  const requestMatch = async (food: string, size: number, lat: number, lng: number) => {
+    if (!token || currentUserId === null) {
+      console.error("인증 토큰 또는 사용자 ID가 없습니다.");
+      return;
+>>>>>>> Stashed changes
     }
 
+    setIsCancelled(false);
     setIsLoading(true);
     setStatusText("매칭 요청 중…");
 
@@ -86,6 +124,7 @@ export function useMatchingViewModel() {
       targetCount: size === 0 ? null : size,
     };
 
+<<<<<<< Updated upstream
     let retries = 0;
     let matchFound = false;
 
@@ -141,8 +180,33 @@ export function useMatchingViewModel() {
             }
         }
       }
+=======
+    try {
+      const res = await MatchingUseCase.requestMatch(token, body);
+      const payload = unwrapMatchPayload(res);
+
+      console.log("MATCH API RESPONSE:", res?.data);
+
+      if (payload?.matched && payload.roomId != null) {
+        setIsMatched(true);
+        setRoomId(payload.roomId);
+        setStatusText("매칭 성공! 채팅방으로 이동합니다.");
+        webSocketClient.disconnectMatching();
+        return;
+      }
+      setStatusText("상대를 찾는 중…");
+      webSocketClient.connectMatching(token, currentUserId, handleMatchComplete);
+
+    } catch (err) {
+      setStatusText("매칭 요청 실패");
+      console.error("매칭 요청 중 오류 발생:", err);
+      webSocketClient.disconnectMatching();
+    } finally {
+      setIsLoading(false);
+>>>>>>> Stashed changes
     }
 
+<<<<<<< Updated upstream
     // 루프 종료 후 최종 정리 (matchFound 되었거나 루프가 종료되었을 때)
     cleanupMatchingProcess();
 
@@ -163,6 +227,27 @@ export function useMatchingViewModel() {
       // 서버 요청 취소는 사용자가 명시적으로 버튼을 누르거나 다른 매칭을 시도할 때만 하는 것이 일반적.
     };
   }, [cleanupMatchingProcess]);
+=======
+  const cancelMatch = useCallback(async () => {
+    if (!token) return;
+
+    try {
+      await MatchingUseCase.cancelMatch(token);
+    } catch (error) {
+      console.error("매칭 취소 API 실패:", error);
+    }
+
+    webSocketClient.disconnectMatching();
+    setIsCancelled(true);
+    setStatusText("매칭이 취소되었습니다.");
+  }, [token]);
+
+  useEffect(() => {
+    return () => {
+      webSocketClient.disconnectMatching();
+    };
+  }, []);
+>>>>>>> Stashed changes
 
   return {
     isLoading, // Ensure this is present

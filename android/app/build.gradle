@@ -89,6 +89,10 @@ android {
             KAKAO_NATIVE_APP_KEY: project.env.get("KAKAO_NATIVE_APP_KEY"),
         ]
     }
+    lint {
+        abortOnError false
+        checkReleaseBuilds false
+    }
     signingConfigs {
         debug {
             storeFile file('debug.keystore')

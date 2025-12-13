@@ -13,7 +13,7 @@ import {
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { ReportApi, ReportListResponse } from '../../data/api/ReportApi';
 import { useAuth } from '../../context/AuthContext';
-import { COLORS } from '../../core/constants/colors';
+import { COLORS } from '../../core/constants/Colors';
 import { ThemeContext } from '../../context/ThemeContext';
 import { Header } from '../components/Header';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';

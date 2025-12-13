@@ -10,7 +10,7 @@ import {
   Keyboard,
   Alert,
 } from 'react-native';
-import { COLORS } from '../../core/constants/colors';
+import { COLORS } from '../../core/constants/Colors';
 
 interface ReportModalProps {
   visible: boolean;

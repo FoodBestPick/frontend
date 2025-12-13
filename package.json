@@ -51,6 +51,7 @@
     "react-native-vector-icons": "^10.3.0",
     "react-native-webview": "^13.16.0",
     "sockjs-client": "^1.6.1",
+    "text-encoding": "^0.7.0",
     "victory": "^37.3.6",
     "victory-native": "^41.20.1"
   },

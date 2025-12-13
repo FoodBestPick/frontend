@@ -18,6 +18,7 @@ import { ThemeContext } from '../../context/ThemeContext';
 import { Header } from '../components/Header';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/types/RootStackParamList';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 type Navigation = NativeStackNavigationProp<RootStackParamList>;
 
@@ -25,6 +26,7 @@ const AdminReportScreen = () => {
   const navigation = useNavigation<Navigation>();
   const { token } = useAuth();
   const { theme, isDarkMode } = useContext(ThemeContext);
+  const insets = useSafeAreaInsets();
 
   const [reports, setReports] = useState<ReportListResponse[]>([]);
   const [loading, setLoading] = useState(false);
@@ -275,7 +277,10 @@ const AdminReportScreen = () => {
         refreshing={refreshing}
         onEndReached={handleLoadMore}
         onEndReachedThreshold={0.5}
-        contentContainerStyle={styles.listContent}
+        contentContainerStyle={[
+          styles.listContent,
+          { paddingBottom: insets.bottom + 16 }
+        ]}
         ListEmptyComponent={
           !loading ? <Text style={[styles.emptyText, { color: theme.textSecondary }]}>신고 내역이 없습니다.</Text> : null
         }

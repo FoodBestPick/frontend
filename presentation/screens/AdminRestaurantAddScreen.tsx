@@ -21,6 +21,7 @@ import { Header } from '../components/Header';
 import { ThemeContext } from '../../context/ThemeContext';
 import { launchImageLibrary } from 'react-native-image-picker';
 import { useAdminRestaurantAddViewModel } from '../viewmodels/AdminRestaurantAddViewModel';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 type Navigation = NativeStackNavigationProp<
   RootStackParamList,
@@ -32,6 +33,7 @@ export const AdminRestaurantAddScreen = () => {
   const navigation = useNavigation<Navigation>();
   const route = useRoute<AddRouteProp>();
   const { theme } = useContext(ThemeContext);
+  const insets = useSafeAreaInsets();
 
   // ✅ ViewModel 연결
   const {
@@ -444,7 +446,13 @@ export const AdminRestaurantAddScreen = () => {
                 {address || '지도에서 위치를 선택하세요'}
               </Text>
               <TouchableOpacity
-                onPress={() => navigation.navigate('MapSelectScreen')}
+                onPress={() => navigation.navigate('MapSelectScreen', {
+                  onSelect: (loc) => {
+                    setAddress(loc.address);
+                    setLatitude(loc.lat.toString());
+                    setLongitude(loc.lng.toString());
+                  }
+                })}
                 activeOpacity={0.7}
                 style={{ padding: 6 }}
               >
@@ -723,7 +731,11 @@ export const AdminRestaurantAddScreen = () => {
         <View
           style={[
             styles.footerBox,
-            { backgroundColor: theme.card, borderColor: theme.border },
+            { 
+              backgroundColor: theme.card, 
+              borderColor: theme.border,
+              paddingBottom: insets.bottom > 0 ? insets.bottom : 12 
+            },
           ]}
         >
           <TouchableOpacity

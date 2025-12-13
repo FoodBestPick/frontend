@@ -12,8 +12,10 @@ import {
   LayoutAnimation,
   Platform,
   UIManager,
+  Alert
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
+import messaging from '@react-native-firebase/messaging';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 // import { foodRes, CategoryKey, Store } from '../../data/mock/foodRes'; // Mock data removed
@@ -51,6 +53,39 @@ const UserMain = () => {
 
   const scrollY = useRef(new Animated.Value(0)).current;
   const [isStickyActive, setIsStickyActive] = useState(false);
+
+  useEffect(() => {
+    // 🔥 FCM 권한 요청 및 리스너 등록
+    const setupFCM = async () => {
+      try {
+        const authStatus = await messaging().requestPermission();
+        const enabled =
+          authStatus === messaging.AuthorizationStatus.AUTHORIZED ||
+          authStatus === messaging.AuthorizationStatus.PROVISIONAL;
+
+        if (enabled) {
+          console.log('FCM 권한 승인됨:', authStatus);
+          const token = await messaging().getToken();
+          console.log('FCM Token:', token);
+        }
+      } catch (error) {
+        console.error('FCM 권한 요청 실패:', error);
+      }
+    };
+
+    setupFCM();
+
+    // 포그라운드 알림 리스너
+    const unsubscribe = messaging().onMessage(async remoteMessage => {
+      console.log('포그라운드 알림 수신:', remoteMessage);
+      Alert.alert(
+        remoteMessage.notification?.title || '알림',
+        remoteMessage.notification?.body || '새로운 알림이 도착했습니다.'
+      );
+    });
+
+    return unsubscribe;
+  }, []);
 
   useEffect(() => {
     const listenerId = scrollY.addListener(({ value }) => {

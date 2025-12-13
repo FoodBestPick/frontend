@@ -114,9 +114,9 @@ export const AdminUserViewModel = () => {
     }, []);
 
     // 경고 부여
-    const giveWarning = async (userId: number, message: string) => {
+    const giveWarning = async (userId: number, count: number, message: string) => {
         try {
-            await AdminRepositoryImpl.updateUserWarning(userId, 1, message);
+            await AdminRepositoryImpl.updateUserWarning(userId, count, message);
             fetchAllData(); // 데이터 갱신
             return true;
         } catch (e) {

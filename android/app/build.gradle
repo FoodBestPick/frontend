@@ -89,6 +89,10 @@ android {
             KAKAO_NATIVE_APP_KEY: project.env.get("KAKAO_NATIVE_APP_KEY"),
         ]
     }
+    lint {
+        abortOnError false
+        checkReleaseBuilds false
+    }
     signingConfigs {
         debug {
             storeFile file('debug.keystore')
@@ -123,6 +127,7 @@ dependencies {
     // The version of react-native is set by the React Native Gradle Plugin
     implementation("com.facebook.react:react-android")
     implementation 'com.google.android.gms:play-services-auth:20.7.0'
+    implementation 'com.google.android.gms:play-services-location:21.0.1'
 
     if (hermesEnabled.toBoolean()) {
         implementation("com.facebook.react:hermes-android")

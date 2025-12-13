@@ -253,6 +253,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: 14,
         fontSize: 14,
         marginBottom: 14,
+        color: '#000', // 입력 텍스트 색상을 검은색으로 지정
     },
     checkboxRow: {
         width: "100%",

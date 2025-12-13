@@ -5,8 +5,9 @@ export const MatchingUseCase = {
   requestMatch(
     token: string,
     body: MatchingRequest,
+    signal?: AbortSignal,
   ): Promise<ApiResponse<MatchingResponse>> {
-    return MatchingRepositoryImpl.requestMatch(token, body);
+    return MatchingRepositoryImpl.requestMatch(token, body, signal);
   },
 
   cancelMatch(token: string): Promise<ApiResponse<string>> {

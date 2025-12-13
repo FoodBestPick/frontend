@@ -1,15 +1,19 @@
 import { ChatRepositoryImpl } from "../../data/repositoriesImpl/ChatRepositoryImpl";
 
 export const ChatUseCase = {
-    connect(roomId: number, onMessage: (msg: any) => void) {
-        ChatRepositoryImpl.connect(roomId, onMessage);
-    },
+  getMessages(token: string, roomId: number) {
+    return ChatRepositoryImpl.getMessages(token, roomId);
+  },
 
-    send(roomId: number, senderId: number, content: string) {
-        ChatRepositoryImpl.send(roomId, senderId, content);
-    },
+  connect(roomId: number, token: string, onMessage: (msg: any) => void) {
+    ChatRepositoryImpl.connect(roomId, token, onMessage);
+  },
 
-    disconnect() {
-        ChatRepositoryImpl.disconnect();
-    }
+  send(roomId: number, senderId: number, content: string) {
+    ChatRepositoryImpl.send(roomId, senderId, content);
+  },
+
+  disconnect() {
+    ChatRepositoryImpl.disconnect();
+  },
 };

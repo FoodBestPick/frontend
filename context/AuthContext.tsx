@@ -76,9 +76,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             await AsyncStorage.setItem('userId', userId.toString()); // ✨ userId 저장
 
             setToken(accessToken);
-            setIsLoggedIn(true);
+            // 🚨 순서 변경: 권한 및 유저 정보를 먼저 세팅
             setIsAdmin(isAdmin);
-            setCurrentUserId(userId); // ✨ userId 상태 설정
+            setCurrentUserId(userId); 
+            
+            // 마지막에 로그인 상태를 true로 변경하여 네비게이션이 올바른 상태를 참조하도록 함
+            setIsLoggedIn(true);
         } catch (e) {
             console.error(e);
         }

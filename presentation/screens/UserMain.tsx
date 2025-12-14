@@ -20,7 +20,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 // import { foodRes, CategoryKey, Store } from '../../data/mock/foodRes'; // Mock data removed
 import { useUserMainViewModel, Store } from '../viewmodels/UserMainViewModel';
-
+import { useAuth } from "../../context/AuthContext";
 if (
   Platform.OS === 'android' &&
   UIManager.setLayoutAnimationEnabledExperimental
@@ -41,8 +41,7 @@ type CategoryKey = string; // Define CategoryKey locally or import if needed
 const UserMain = () => {
   const [selectedCategory, setSelectedCategory] = useState<CategoryKey>('전체');
   const navigation = useNavigation();
-
-  // ✅ ViewModel 연결
+  const { unreadAlarmCount, markAllAlarmsRead } = useAuth();
   const { groupedStores, getStoresByCategory, loading, refresh } = useUserMainViewModel();
 
   useFocusEffect(
@@ -120,11 +119,24 @@ const UserMain = () => {
       <View style={styles.topHeaderRow}>
         <View style={{ width: 24 }} />
         <Text style={styles.headerTitle}>맛집 찾기</Text>
+
         <TouchableOpacity
           style={styles.notificationButton}
-          onPress={() => navigation.navigate('UserNotificationScreen' as never)}
+          onPress={() => {
+            markAllAlarmsRead();
+            navigation.navigate("UserNotificationScreen" as never)
+          }}
         >
-          <Icon name="notifications-outline" size={24} color="#333" />
+          <View style={{ position: "relative" }}>
+            <Icon name="notifications-outline" size={24} color="#333" />
+            {unreadAlarmCount > 0 && (
+              <View style={styles.badge}>
+                <Text style={styles.badgeText}>
+                  {unreadAlarmCount > 99 ? "99+" : unreadAlarmCount}
+                </Text>
+              </View>
+            )}
+          </View>
         </TouchableOpacity>
       </View>
 
@@ -286,8 +298,8 @@ const UserMain = () => {
           onContentSizeChange={w => setContentWidth(w)}
           onLayout={e => setScrollViewWidth(e.nativeEvent.layout.width)}
           renderItem={({ item, index }) => (
-            <TouchableOpacity 
-              style={styles.cardContainer} 
+            <TouchableOpacity
+              style={styles.cardContainer}
               activeOpacity={0.8}
               onPress={() => (navigation.navigate as any)('RestaurantDetail', { restaurantId: item.id })}
             >
@@ -299,8 +311,8 @@ const UserMain = () => {
                       index === 0
                         ? { backgroundColor: '#FFD700' }
                         : index === 1
-                        ? { backgroundColor: '#C0C0C0' }
-                        : { backgroundColor: '#CD7F32' },
+                          ? { backgroundColor: '#C0C0C0' }
+                          : { backgroundColor: '#CD7F32' },
                     ]}
                   >
                     <Text style={styles.rankTextWhite}>{index + 1}</Text>
@@ -364,8 +376,8 @@ const UserMain = () => {
               index === 0
                 ? { backgroundColor: '#FFD700' }
                 : index === 1
-                ? { backgroundColor: '#C0C0C0' }
-                : { backgroundColor: '#CD7F32' },
+                  ? { backgroundColor: '#C0C0C0' }
+                  : { backgroundColor: '#CD7F32' },
             ]}
           >
             <Text style={styles.rankTextWhite}>{index + 1}</Text>
@@ -692,4 +704,17 @@ const styles = StyleSheet.create({
   },
   textSmall: { fontSize: 11, color: '#999' },
   textSelected: { color: '#FFA847', fontWeight: '700' },
+  badge: {
+    position: "absolute",
+    right: -6,
+    top: -4,
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
+    paddingHorizontal: 5,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#FF3B30",
+  },
+  badgeText: { color: "#fff", fontSize: 11, fontWeight: "800" },
 });

@@ -2,6 +2,14 @@ import { webSocketClient } from "../../core/utils/WebSocketClient";
 import { ChatApi } from "../api/ChatApi";
 
 export const ChatRepositoryImpl = {
+  async getMyActiveRoom(token: string): Promise<number | null> {
+    return ChatApi.getMyActiveRoom(token);
+  },
+
+  async uploadImage(token: string, file: any): Promise<string | null> {
+    return ChatApi.uploadImage(token, file);
+  },
+
   async getMessages(token: string, roomId: number) {
     return ChatApi.loadMessages(token, roomId);
   },

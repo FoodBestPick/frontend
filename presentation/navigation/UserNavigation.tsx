@@ -60,7 +60,7 @@ const MatchStackNavigator = () => (
     <MatchStack.Screen name="MatchScreen" component={MatchScreen} />
     <MatchStack.Screen name="MatchingSetupScreen" component={MatchingSetupScreen} />
     <MatchStack.Screen name="MatchingFindingScreen" component={MatchingFindingScreen} />
-    <MatchStack.Screen name="ChatRoomScreen" component={ChatRoomScreen} />
+    {/* ChatRoomScreen 제거됨: App.tsx의 Root Stack에서 처리하여 탭바 가림 */}
   </MatchStack.Navigator>
 );
 

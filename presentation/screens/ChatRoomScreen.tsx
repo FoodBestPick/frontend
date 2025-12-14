@@ -10,13 +10,16 @@ import {
     Image,
     KeyboardAvoidingView,
     Platform,
-    Alert
+    Alert,
+    ActivityIndicator
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
-import { useNavigation, useRoute, CommonActions } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { useChatViewModel } from "../../presentation/viewmodels/ChatViewModel";
 import { useAuth } from "../../context/AuthContext";
+import { launchImageLibrary } from 'react-native-image-picker';
+import { ChatRepositoryImpl } from '../../data/repositoriesImpl/ChatRepositoryImpl';
 
 const MAIN_COLOR = '#FFA847';
 const GRAY_BG = '#F2F2F2';
@@ -24,39 +27,14 @@ const GRAY_BG = '#F2F2F2';
 const ChatRoomScreen = () => {
     const navigation = useNavigation();
     const route = useRoute<any>();
-    const { roomId, roomTitle, peopleCount } = route.params;
+    const { roomId, roomTitle = "채팅방", peopleCount = 0 } = route.params;
 
-    const { currentUserId } = useAuth();
+    const { currentUserId, token, checkActiveRoom } = useAuth();
     const { messages, sendMessage } = useChatViewModel(roomId);
 
     const [inputText, setInputText] = useState('');
+    const [uploading, setUploading] = useState(false);
     const flatListRef = useRef<FlatList>(null);
-
-    /* 1시간 뒤 방 폭파 */
-    useEffect(() => {
-        const timer = setTimeout(() => {
-            Alert.alert(
-                "⏰ 시간 종료",
-                "매칭 시간이 종료되어 방이 폭파되었습니다.",
-                [
-                    {
-                        text: "확인",
-                        onPress: () => {
-                            navigation.dispatch(
-                                CommonActions.reset({
-                                    index: 0,
-                                    routes: [{ name: 'UserMain' }],
-                                })
-                            );
-                        }
-                    }
-                ],
-                { cancelable: false }
-            );
-        }, 3600000);
-
-        return () => clearTimeout(timer);
-    }, []);
 
     /* 메시지 변경 시 자동 스크롤 */
     useEffect(() => {
@@ -69,26 +47,82 @@ const ChatRoomScreen = () => {
         setInputText('');
     };
 
-    /* ---- 핵심 수정: 서버 메시지 구조에 맞게 렌더링 ---- */
+    const handleImagePick = async () => {
+        const result = await launchImageLibrary({
+            mediaType: 'photo',
+            quality: 0.8,
+        });
+
+        if (result.didCancel || !result.assets || result.assets.length === 0) return;
+
+        const asset = result.assets[0];
+        if (!token) return;
+
+        setUploading(true);
+        try {
+            const uploadedUrl = await ChatRepositoryImpl.uploadImage(token, {
+                uri: asset.uri,
+                type: asset.type,
+                fileName: asset.fileName,
+            });
+
+            if (uploadedUrl) {
+                sendMessage(uploadedUrl); // URL 전송
+            } else {
+                Alert.alert("업로드 실패", "이미지 업로드 중 오류가 발생했습니다.");
+            }
+        } catch (e) {
+            console.error(e);
+            Alert.alert("오류", "이미지 전송 실패");
+        } finally {
+            setUploading(false);
+        }
+    };
+
+    const handleLeave = () => {
+        Alert.alert(
+            "채팅방 나가기",
+            "현재 나가기 기능은 서버 미지원으로, 화면만 닫힙니다. (방은 유지됨)",
+            [
+                { text: "취소", style: "cancel" },
+                { 
+                    text: "나가기", 
+                    style: "destructive",
+                    onPress: () => {
+                        navigation.goBack();
+                        checkActiveRoom(); // 상태 갱신 시도
+                    }
+                }
+            ]
+        );
+    };
+
     const renderItem = ({ item }: { item: any }) => {
         const isMe = item.senderId === currentUserId;
+        const isImage = item.content.startsWith("http"); // 간단한 URL 체크
 
         return (
             <View style={[styles.messageRow, isMe ? styles.myMessageRow : styles.otherMessageRow]}>
-                {/* 상대방 아바타 */}
                 {!isMe && item.senderAvatar && (
                     <Image source={{ uri: item.senderAvatar }} style={styles.avatar} />
                 )}
 
                 <View style={styles.bubbleContainer}>
-                    {/* 상대 이름 */}
                     {!isMe && item.senderName && <Text style={styles.senderName}>{item.senderName}</Text>}
 
                     <View style={{ flexDirection: isMe ? 'row-reverse' : 'row', alignItems: 'flex-end' }}>
-                        <View style={[styles.bubble, isMe ? styles.myBubble : styles.otherBubble]}>
-                            <Text style={[styles.messageText, isMe ? styles.myMessageText : styles.otherMessageText]}>
-                                {item.content}
-                            </Text>
+                        <View style={[styles.bubble, isMe ? styles.myBubble : styles.otherBubble, isImage && { padding: 0, backgroundColor: 'transparent', borderWidth: 0 }]}>
+                            {isImage ? (
+                                <Image 
+                                    source={{ uri: item.content }} 
+                                    style={{ width: 200, height: 200, borderRadius: 10 }} 
+                                    resizeMode="cover"
+                                />
+                            ) : (
+                                <Text style={[styles.messageText, isMe ? styles.myMessageText : styles.otherMessageText]}>
+                                    {item.content}
+                                </Text>
+                            )}
                         </View>
 
                         <Text style={styles.timeText}>{item.formattedTime}</Text>
@@ -110,10 +144,13 @@ const ChatRoomScreen = () => {
 
                 <View style={styles.headerCenter}>
                     <Text style={styles.headerTitle}>{roomTitle}</Text>
-                    <Text style={styles.headerSub}>참여자 {peopleCount}명</Text>
+                    {peopleCount > 0 && <Text style={styles.headerSub}>참여자 {peopleCount}명</Text>}
                 </View>
 
-                <View style={{ width: 40 }} />
+                {/* 나가기 버튼 */}
+                <TouchableOpacity onPress={handleLeave} style={styles.backBtn}>
+                    <Icon name="exit-outline" size={24} color="#FF3B30" />
+                </TouchableOpacity>
             </View>
 
             {/* 메시지 리스트 */}
@@ -132,8 +169,8 @@ const ChatRoomScreen = () => {
                 keyboardVerticalOffset={0}
             >
                 <View style={styles.inputArea}>
-                    <TouchableOpacity style={styles.plusBtn}>
-                        <Icon name="add" size={24} color="#888" />
+                    <TouchableOpacity style={styles.plusBtn} onPress={handleImagePick} disabled={uploading}>
+                        {uploading ? <ActivityIndicator size="small" color={MAIN_COLOR} /> : <Icon name="add" size={24} color="#888" />}
                     </TouchableOpacity>
 
                     <TextInput
@@ -161,7 +198,6 @@ const ChatRoomScreen = () => {
 
 export default ChatRoomScreen;
 
-/* 기존 스타일 유지 */
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: '#fff' },
     header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#F0F0F0', backgroundColor: '#fff' },
@@ -169,7 +205,7 @@ const styles = StyleSheet.create({
     headerCenter: { alignItems: 'center' },
     headerTitle: { fontSize: 16, fontWeight: '700', color: '#000' },
     headerSub: { fontSize: 12, color: '#888', marginTop: 2 },
-    chatList: { paddingHorizontal: 16, paddingBottom: 20, backgroundColor: '#F7F7F7', flexGrow: 1 },
+    chatList: { paddingHorizontal: 16, paddingBottom: 20, paddingTop: 20, backgroundColor: '#F7F7F7', flexGrow: 1 },
 
     messageRow: { flexDirection: 'row', marginBottom: 12 },
     myMessageRow: { justifyContent: 'flex-end' },

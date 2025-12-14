@@ -12,19 +12,23 @@ import {
 } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { Header } from '../components/Header';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../navigation/types/RootStackParamList';
 import { KAKAO_JAVASCRIPT_KEY } from '@env';
 import { getCoordsByAddress } from '../../core/utils/KakaoMaps';
 import { ThemeContext } from '../../context/ThemeContext';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 type Navigation = NativeStackNavigationProp<RootStackParamList>;
+type MapSelectRouteProp = RouteProp<RootStackParamList, 'MapSelectScreen'>;
 
 export const MapSelectScreen = () => {
   const navigation = useNavigation<Navigation>();
+  const route = useRoute<MapSelectRouteProp>();
   const webViewRef = useRef<WebView>(null);
   const { theme } = useContext(ThemeContext);
+  const insets = useSafeAreaInsets();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [address, setAddress] = useState('');
@@ -163,13 +167,10 @@ export const MapSelectScreen = () => {
   /** 선택 완료 */
   const handleConfirm = () => {
     if (marker && address) {
-      navigation.navigate({
-        name: 'AdminRestaurantAdd',
-        params: {
-          selectedLocation: { latitude: marker.lat, longitude: marker.lng, address },
-        },
-        merge: true,
-      });
+      if (route.params?.onSelect) {
+        route.params.onSelect({ lat: marker.lat, lng: marker.lng, address });
+      }
+      navigation.goBack();
     }
   };
 
@@ -232,7 +233,11 @@ export const MapSelectScreen = () => {
       <View
         style={[
           styles.footer,
-          { backgroundColor: theme.card, borderColor: theme.border },
+          { 
+            backgroundColor: theme.card, 
+            borderColor: theme.border,
+            paddingBottom: insets.bottom > 0 ? insets.bottom : 16 
+          },
         ]}
       >
         <Text

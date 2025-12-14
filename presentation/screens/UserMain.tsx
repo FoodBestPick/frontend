@@ -554,7 +554,6 @@ const styles = StyleSheet.create({
     height: 32,
     resizeMode: 'contain',
     marginBottom: 6,
-    tintColor: '#555',
   },
   iconSelected: { tintColor: '#FFA847' },
   gridText: {
@@ -690,7 +689,6 @@ const styles = StyleSheet.create({
     height: 28,
     resizeMode: 'contain',
     marginBottom: 4,
-    tintColor: '#999',
   },
   textSmall: { fontSize: 11, color: '#999' },
   textSelected: { color: '#FFA847', fontWeight: '700' },

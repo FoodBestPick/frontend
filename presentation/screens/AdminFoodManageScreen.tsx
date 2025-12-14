@@ -13,9 +13,11 @@ import { Header } from '../components/Header';
 import { ThemeContext } from '../../context/ThemeContext';
 import { useAdminFoodViewModel } from '../viewmodels/AdminFoodViewModel';
 import Ionicons from 'react-native-vector-icons/Ionicons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export const AdminFoodManageScreen = () => {
   const { theme } = useContext(ThemeContext);
+  const insets = useSafeAreaInsets();
   const { foods, loading, error, createFood, updateFood, deleteFood, refresh } =
     useAdminFoodViewModel();
 
@@ -135,7 +137,10 @@ export const AdminFoodManageScreen = () => {
       <FlatList
         data={foods}
         keyExtractor={item => item.id.toString()}
-        contentContainerStyle={styles.listContent}
+        contentContainerStyle={[
+          styles.listContent,
+          { paddingBottom: insets.bottom + 16 }
+        ]}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
             <Ionicons

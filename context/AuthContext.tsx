@@ -1,113 +1,216 @@
-// src/context/AuthContext.tsx (최종 버전)
-
-import React, { createContext, useState, useEffect, useContext } from 'react';
+import React, { createContext, useState, useEffect, useContext, useRef } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { UserAuthRepositoryImpl } from '../data/repositoriesImpl/UserAuthRepositoryImpl'; // Import Repository
+import { Alert } from 'react-native';
+
+import { UserAuthRepositoryImpl } from '../data/repositoriesImpl/UserAuthRepositoryImpl';
+import { webSocketClient } from "../core/utils/WebSocketClient";
+
+export type AlarmItem = {
+  id?: number;
+  message: string;
+  createdAt?: string;
+  read?: boolean;
+  // 필요하면 type/targetId 등 추가
+};
 
 interface AuthContextType {
-    isLoggedIn: boolean;
-    token: string | null;
-    loading: boolean;
-    isAdmin: boolean;
-    currentUserId: number | null; // ✨ 추가: 현재 로그인한 사용자의 ID
-    login: (accessToken: string, isAutoLogin: boolean, isAdmin: boolean, userId: number) => Promise<void>;
-    logout: () => Promise<void>;
+  isLoggedIn: boolean;
+  token: string | null;
+  loading: boolean;
+  isAdmin: boolean;
+  currentUserId: number | null;
+
+  login: (accessToken: string, isAutoLogin: boolean, isAdmin: boolean, userId: number) => Promise<void>;
+  logout: () => Promise<void>;
+
+  alarms: AlarmItem[];
+  unreadAlarmCount: number;
+
+  setAlarmScreenActive: (active: boolean) => void;
+
+  markAllAlarmsRead: () => void;
 }
 
 export const AuthContext = createContext<AuthContextType>({
-    isLoggedIn: false,
-    token: null,
-    loading: true,
-    isAdmin: false,
-    currentUserId: null, // ✨ 추가: currentUserId 기본값
-    login: async () => { },
-    logout: async () => { },
+  isLoggedIn: false,
+  token: null,
+  loading: true,
+  isAdmin: false,
+  currentUserId: null,
+
+  login: async () => {},
+  logout: async () => {},
+
+  alarms: [],
+  unreadAlarmCount: 0,
+  setAlarmScreenActive: () => {},
+  markAllAlarmsRead: () => {},
 });
 
 export const useAuth = () => useContext(AuthContext);
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
-    const [isLoggedIn, setIsLoggedIn] = useState(false);
-    const [token, setToken] = useState<string | null>(null);
-    const [loading, setLoading] = useState(true);
-    const [isAdmin, setIsAdmin] = useState(false);
-    const [currentUserId, setCurrentUserId] = useState<number | null>(null); // ✨ 추가: 현재 사용자 ID 상태
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [token, setToken] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState<number | null>(null);
 
-    // 🚀 앱 시작 시 토큰 및 isAdmin 로드 로직
-    const loadToken = async () => {
-        try {
-            setLoading(true);
-            const storedAccessToken = await AsyncStorage.getItem('accessToken');
-            const storedIsAutoLogin = await AsyncStorage.getItem('isAutoLogin');
-            const storedIsAdmin = await AsyncStorage.getItem('isAdmin');
-            const storedUserId = await AsyncStorage.getItem('userId'); // ✨ 추가: userId 로드
+  const [alarms, setAlarms] = useState<AlarmItem[]>([]);
+  const [unreadAlarmCount, setUnreadAlarmCount] = useState(0);
+  const alarmScreenActiveRef = useRef(false);
 
-            if (storedAccessToken && storedIsAutoLogin === 'true') {
-                setToken(storedAccessToken);
-                setIsLoggedIn(true);
-                setIsAdmin(storedIsAdmin === 'true');
-                setCurrentUserId(storedUserId ? parseInt(storedUserId) : null); // ✨ 추가: userId 설정
-            } else if (storedAccessToken && storedIsAutoLogin !== 'true') {
-                // 자동 로그인 선택 해제 시 토큰 삭제 (isAdmin 포함)
-                await AsyncStorage.multiRemove(['accessToken', 'isAutoLogin', 'isAdmin', 'userId']); // ✨ 추가: userId 삭제
-                setToken(null);
-                setIsLoggedIn(false);
-                setIsAdmin(false);
-                setCurrentUserId(null); // ✨ 추가: userId 초기화
-            }
+  const setAlarmScreenActive = (active: boolean) => {
+    alarmScreenActiveRef.current = active;
+  };
 
-        } catch (e) {
-            console.error('Failed to load token', e);
-        } finally {
-            setLoading(false);
-        }
+  const markAllAlarmsRead = () => {
+    setUnreadAlarmCount(0);
+    setAlarms(prev => prev.map(a => ({ ...a, read: true })));
+  };
+
+  const loadToken = async () => {
+    try {
+      setLoading(true);
+      const storedAccessToken = await AsyncStorage.getItem('accessToken');
+      const storedIsAutoLogin = await AsyncStorage.getItem('isAutoLogin');
+      const storedIsAdmin = await AsyncStorage.getItem('isAdmin');
+      const storedUserId = await AsyncStorage.getItem('userId');
+
+      if (storedAccessToken && storedIsAutoLogin === 'true') {
+        setToken(storedAccessToken);
+        setIsAdmin(storedIsAdmin === 'true');
+        setCurrentUserId(storedUserId ? parseInt(storedUserId, 10) : null);
+        setIsLoggedIn(true);
+      } else if (storedAccessToken && storedIsAutoLogin !== 'true') {
+        await AsyncStorage.multiRemove(['accessToken', 'isAutoLogin', 'isAdmin', 'userId']);
+        setToken(null);
+        setIsLoggedIn(false);
+        setIsAdmin(false);
+        setCurrentUserId(null);
+      }
+    } catch (e) {
+      console.error('Failed to load token', e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadToken();
+  }, []);
+
+  const login = async (accessToken: string, isAutoLogin: boolean, isAdmin: boolean, userId: number) => {
+    try {
+      await AsyncStorage.setItem('accessToken', accessToken);
+      await AsyncStorage.setItem('isAutoLogin', isAutoLogin ? 'true' : 'false');
+      await AsyncStorage.setItem('isAdmin', isAdmin ? 'true' : 'false');
+      await AsyncStorage.setItem('userId', userId.toString());
+
+      setToken(accessToken);
+
+      setIsAdmin(isAdmin);
+      setCurrentUserId(userId);
+      setIsLoggedIn(true);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const logout = async () => {
+    try {
+      await UserAuthRepositoryImpl.logout();
+    } catch (e) {
+      console.error("Logout failed:", e);
+      await AsyncStorage.multiRemove(['accessToken', 'refreshToken', 'isAutoLogin', 'isAdmin', 'userId']);
+    } finally {
+      try {
+        webSocketClient.disconnect?.();
+        webSocketClient.disconnectMatching?.();
+        webSocketClient.disconnectAccount?.();
+        webSocketClient.disconnectAlarm?.();
+      } catch (e) {}
+
+      setToken(null);
+      setIsLoggedIn(false);
+      setIsAdmin(false);
+      setCurrentUserId(null);
+
+      setAlarms([]);
+      setUnreadAlarmCount(0);
+    }
+  };
+
+  useEffect(() => {
+    if (!token || !isLoggedIn) return;
+
+    webSocketClient.connectAccount?.(token, async (msg: string) => {
+      Alert.alert("로그아웃", msg || "계정 상태가 변경되어 로그아웃되었습니다.");
+
+      try {
+        webSocketClient.disconnect?.();
+        webSocketClient.disconnectMatching?.();
+        webSocketClient.disconnectAccount?.();
+        webSocketClient.disconnectAlarm?.(); 
+      } catch (e) {}
+
+      await logout();
+    });
+
+    return () => {
+      try {
+        webSocketClient.disconnectAccount?.();
+      } catch (e) {}
     };
+  }, [token, isLoggedIn]);
 
-    useEffect(() => {
-        loadToken();
-    }, []);
+  useEffect(() => {
+    if (!token || !isLoggedIn || !currentUserId) return;
 
-    // ✅ 로그인 함수 (저장소에 토큰 저장 - RefreshToken은 HttpOnly Cookie로 관리됨)
-    const login = async (accessToken: string, isAutoLogin: boolean, isAdmin: boolean, userId: number) => { // ✨ userId 추가
-        try {
-            await AsyncStorage.setItem('accessToken', accessToken);
-            await AsyncStorage.setItem('isAutoLogin', isAutoLogin ? 'true' : 'false');
-            await AsyncStorage.setItem('isAdmin', isAdmin ? 'true' : 'false');
-            await AsyncStorage.setItem('userId', userId.toString()); // ✨ userId 저장
+    try {
+      webSocketClient.connectAlarm?.(token, currentUserId, (alarm: any) => {
+        const next: AlarmItem = {
+          id: alarm.id,
+          message: alarm.message ?? alarm.body ?? alarm.content ?? "",
+          createdAt: alarm.createdAt,
+          read: false,
+        };
 
-            setToken(accessToken);
-            // 🚨 순서 변경: 권한 및 유저 정보를 먼저 세팅
-            setIsAdmin(isAdmin);
-            setCurrentUserId(userId); 
-            
-            // 마지막에 로그인 상태를 true로 변경하여 네비게이션이 올바른 상태를 참조하도록 함
-            setIsLoggedIn(true);
-        } catch (e) {
-            console.error(e);
+        setAlarms(prev => [next, ...prev]);
+
+        if (!alarmScreenActiveRef.current) {
+          setUnreadAlarmCount(c => c + 1);
         }
-    };
+      });
+    } catch (e) {
+      console.error("connectAlarm failed:", e);
+    }
 
-    // ✅ 로그아웃 함수 (Refactored to use Repository)
-    const logout = async () => {
-        try {
-            // Call the repository's logout method which handles API call + storage clearing
-            await UserAuthRepositoryImpl.logout(); 
-        } catch (e) {
-            console.error("Logout failed:", e);
-            // Fallback: Clear storage locally if repo fails (though repo handles this too)
-            await AsyncStorage.multiRemove(['accessToken', 'refreshToken', 'isAutoLogin', 'isAdmin', 'userId']); // ✨ userId 삭제
-        } finally {
-            // Update Context State
-            setToken(null);
-            setIsLoggedIn(false);
-            setIsAdmin(false);
-            setCurrentUserId(null); // ✨ userId 초기화
-        }
+    return () => {
+      try {
+        webSocketClient.disconnectAlarm?.();
+      } catch (e) {}
     };
+  }, [token, isLoggedIn, currentUserId]);
 
-    return (
-        <AuthContext.Provider value={{ isLoggedIn, token, loading, isAdmin, currentUserId, login, logout }}>
-            {children}
-        </AuthContext.Provider>
-    );
+  return (
+    <AuthContext.Provider
+      value={{
+        isLoggedIn,
+        token,
+        loading,
+        isAdmin,
+        currentUserId,
+        login,
+        logout,
+
+        alarms,
+        unreadAlarmCount,
+        setAlarmScreenActive,
+        markAllAlarmsRead,
+      }}
+    >
+      {children}
+    </AuthContext.Provider>
+  );
 };

@@ -4,6 +4,16 @@ import { useAuth } from "../../context/AuthContext";
 import type { ChatMessage } from "../../domain/entities/ChatMessage";
 
 function normalizeMessage(roomId: number, m: any): ChatMessage {
+    // 실시간 채팅이므로 서버 시간 대신 '현재 시간(수신 시점)'을 사용
+    // 과거 메시지 로딩 시에는 로딩 시점의 시간이 찍히는 한계가 있지만, 시간 오차 문제는 확실히 해결됨.
+    const now = new Date();
+    const timeString = new Intl.DateTimeFormat('ko-KR', {
+        hour: 'numeric',
+        minute: 'numeric',
+        hour12: true,
+        timeZone: 'Asia/Seoul',
+    }).format(now);
+
     return {
         roomId: m?.roomId ?? roomId,
         senderId: m?.senderId,
@@ -17,7 +27,7 @@ function normalizeMessage(roomId: number, m: any): ChatMessage {
             m?.imageUrl ??
             null,
         content: m?.content ?? m?.message ?? "",
-        formattedTime: m?.formattedTime ?? m?.time ?? m?.timestamp ?? undefined,
+        formattedTime: timeString, // 항상 현재 시간 사용
     };
 }
 

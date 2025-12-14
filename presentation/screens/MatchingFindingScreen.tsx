@@ -15,6 +15,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useNavigation, useRoute, CommonActions } from '@react-navigation/native';
 import { useMatchingViewModel } from "../viewmodels/MatchingViewModel";
+import { useAuth } from "../../context/AuthContext";
 
 const MAIN_COLOR = '#FFA847';
 
@@ -46,6 +47,7 @@ const MatchingFindingScreen = () => {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
   const { food, size } = route.params;
+  const { checkActiveRoom } = useAuth(); 
 
   const {
     isMatched,
@@ -119,6 +121,9 @@ const MatchingFindingScreen = () => {
     if (isMatched && roomId != null) {
       navigatedRef.current = true;
 
+      // ✨ 매칭 성공 시 전역 상태 업데이트 (API 호출하여 확실하게 동기화)
+      checkActiveRoom();
+
       navigation.dispatch(
         CommonActions.reset({
           index: 1,
@@ -128,7 +133,7 @@ const MatchingFindingScreen = () => {
               name: 'ChatRoomScreen',
               params: {
                 roomId,
-                roomTitle: `${food} 함께 먹어요!`,
+                roomTitle: `${food} 함께 먹어요!`, 
                 peopleCount: size === 0 ? 4 : size,
               },
             },
@@ -136,7 +141,7 @@ const MatchingFindingScreen = () => {
         })
       );
     }
-  }, [isMatched, roomId, navigation, food, size]);
+  }, [isMatched, roomId, navigation, food, size, checkActiveRoom]); 
 
   return (
     <SafeAreaView style={styles.container}>

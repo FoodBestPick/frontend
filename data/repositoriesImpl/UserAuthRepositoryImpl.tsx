@@ -53,8 +53,6 @@ export const UserAuthRepositoryImpl: UserAuthRepository = {
         const response = await authApi.post("/auth/signin", payload);
         const rawData = response.data;
 
-        // console.log("[UserAuthRepository] Signin Response:", JSON.stringify(rawData, null, 2)); // Temporarily added log, now removed
-
         // Normalize data structure (handle { data: ... } vs flat response)
         let tokenData = rawData.data || rawData;
         
@@ -63,15 +61,18 @@ export const UserAuthRepositoryImpl: UserAuthRepository = {
             tokenData = tokenData.token;
         }
 
-        const userData = rawData.user || {};
-        const userId = userData.id; // Extract userId here!
+        // 🚨 [수정] userData가 'data' 객체 안에도 있는지 확인
+        const userData = rawData.user || (rawData.data && rawData.data.user) || {};
+        const userId = userData.id;
 
         // Determine admin privileges
         const isAdmin =
             tokenData.isAdmin === true ||
             userData.admin === true ||
             tokenData.role === "ADMIN" ||
-            tokenData.role === "ROLE_ADMIN";
+            tokenData.role === "ROLE_ADMIN" ||
+            userData.role === "ADMIN" ||      // userData 안의 role도 확인
+            userData.role === "ROLE_ADMIN";   // userData 안의 role도 확인
 
         // Extract accessToken only (refreshToken is HttpOnly cookie)
         const accessToken = tokenData.accessToken || tokenData.access_token;

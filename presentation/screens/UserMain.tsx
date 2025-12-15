@@ -21,6 +21,7 @@ import { useNavigation, useFocusEffect } from '@react-navigation/native';
 // import { foodRes, CategoryKey, Store } from '../../data/mock/foodRes'; // Mock data removed
 import { useUserMainViewModel, Store } from '../viewmodels/UserMainViewModel';
 import { UserAuthRepositoryImpl } from '../../data/repositoriesImpl/UserAuthRepositoryImpl'; // ✨ Import 추가
+import { useAuth } from '../../context/AuthContext'; // ✨ useAuth 임포트 추가
 
 if (
   Platform.OS === 'android' &&

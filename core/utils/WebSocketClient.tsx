@@ -170,8 +170,8 @@ class WebSocketClient {
   // connectGlobal로 통합되었으므로 기능은 비워둠
   disconnectAccount() {}
   disconnectAlarm() {}
-  connectAccount() {}
-  connectAlarm() {}
+  connectAccount(token: string, onMessage: (msg: string) => void) {}
+  connectAlarm(token: string, userId: number, onAlarm: (alarm: any) => void) {}
 }
 
 export const webSocketClient = new WebSocketClient();

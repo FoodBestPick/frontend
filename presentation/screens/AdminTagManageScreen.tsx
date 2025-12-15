@@ -16,6 +16,7 @@ import {
   TAG_PREFIXES,
 } from '../viewmodels/AdminTagViewModel';
 import Ionicons from 'react-native-vector-icons/Ionicons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const TAG_CATEGORIES = [
   { id: 'PURPOSE', name: '목적', color: '#64B5F6', prefix: '#' },
@@ -25,6 +26,7 @@ const TAG_CATEGORIES = [
 
 export const AdminTagManageScreen = () => {
   const { theme } = useContext(ThemeContext);
+  const insets = useSafeAreaInsets();
   const { tags, loading, error, createTag, updateTag, deleteTag, refresh } =
     useAdminTagViewModel();
 
@@ -216,7 +218,10 @@ export const AdminTagManageScreen = () => {
       <FlatList
         data={filteredTags}
         keyExtractor={item => item.id.toString()}
-        contentContainerStyle={styles.listContent}
+        contentContainerStyle={[
+          styles.listContent,
+          { paddingBottom: insets.bottom + 16 }
+        ]}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
             <Text style={{ color: theme.textSecondary }}>

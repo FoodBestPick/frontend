@@ -15,7 +15,9 @@ export type RootStackParamList = {
     };
     id?: number;
   };
-  MapSelectScreen: undefined;
+  MapSelectScreen: {
+    onSelect?: (location: { lat: number; lng: number; address: string }) => void;
+  } | undefined;
   AdminManageSelect: undefined;
   AdminFoodManage: undefined;
   AdminTagManage: undefined;

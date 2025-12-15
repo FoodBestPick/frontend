@@ -12,12 +12,16 @@ import {
   LayoutAnimation,
   Platform,
   UIManager,
+  Alert
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
+import messaging from '@react-native-firebase/messaging';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 // import { foodRes, CategoryKey, Store } from '../../data/mock/foodRes'; // Mock data removed
 import { useUserMainViewModel, Store } from '../viewmodels/UserMainViewModel';
+import { UserAuthRepositoryImpl } from '../../data/repositoriesImpl/UserAuthRepositoryImpl'; // ✨ Import 추가
+import { useAuth } from '../../context/AuthContext'; // ✨ useAuth 임포트 추가
 
 if (
   Platform.OS === 'android' &&
@@ -39,8 +43,7 @@ type CategoryKey = string; // Define CategoryKey locally or import if needed
 const UserMain = () => {
   const [selectedCategory, setSelectedCategory] = useState<CategoryKey>('전체');
   const navigation = useNavigation();
-
-  // ✅ ViewModel 연결
+  const { unreadAlarmCount, markAllAlarmsRead } = useAuth();
   const { groupedStores, getStoresByCategory, loading, refresh } = useUserMainViewModel();
 
   useFocusEffect(
@@ -51,6 +54,47 @@ const UserMain = () => {
 
   const scrollY = useRef(new Animated.Value(0)).current;
   const [isStickyActive, setIsStickyActive] = useState(false);
+
+  useEffect(() => {
+    // 🔥 FCM 권한 요청 및 리스너 등록
+    const setupFCM = async () => {
+      try {
+        const authStatus = await messaging().requestPermission();
+        const enabled =
+          authStatus === messaging.AuthorizationStatus.AUTHORIZED ||
+          authStatus === messaging.AuthorizationStatus.PROVISIONAL;
+
+        if (enabled) {
+          console.log('FCM 권한 승인됨:', authStatus);
+          const token = await messaging().getToken();
+          console.log('FCM Token:', token);
+          
+          // ✨ 서버에 FCM 토큰 등록 (중요!)
+          try {
+            await UserAuthRepositoryImpl.registerFcmToken(token);
+            console.log("✅ FCM 토큰 서버 등록 성공");
+          } catch (e) {
+            console.error("❌ FCM 토큰 서버 등록 실패:", e);
+          }
+        }
+      } catch (error) {
+        console.error('FCM 권한 요청 실패:', error);
+      }
+    };
+
+    setupFCM();
+
+    // 포그라운드 알림 리스너
+    const unsubscribe = messaging().onMessage(async remoteMessage => {
+      console.log('포그라운드 알림 수신:', remoteMessage);
+      Alert.alert(
+        remoteMessage.notification?.title || '알림',
+        remoteMessage.notification?.body || '새로운 알림이 도착했습니다.'
+      );
+    });
+
+    return unsubscribe;
+  }, []);
 
   useEffect(() => {
     const listenerId = scrollY.addListener(({ value }) => {
@@ -85,11 +129,24 @@ const UserMain = () => {
       <View style={styles.topHeaderRow}>
         <View style={{ width: 24 }} />
         <Text style={styles.headerTitle}>맛집 찾기</Text>
+
         <TouchableOpacity
           style={styles.notificationButton}
-          onPress={() => navigation.navigate('UserNotificationScreen' as never)}
+          onPress={() => {
+            markAllAlarmsRead();
+            navigation.navigate("UserNotificationScreen" as never)
+          }}
         >
-          <Icon name="notifications-outline" size={24} color="#333" />
+          <View style={{ position: "relative" }}>
+            <Icon name="notifications-outline" size={24} color="#333" />
+            {unreadAlarmCount > 0 && (
+              <View style={styles.badge}>
+                <Text style={styles.badgeText}>
+                  {unreadAlarmCount > 99 ? "99+" : unreadAlarmCount}
+                </Text>
+              </View>
+            )}
+          </View>
         </TouchableOpacity>
       </View>
 
@@ -251,8 +308,8 @@ const UserMain = () => {
           onContentSizeChange={w => setContentWidth(w)}
           onLayout={e => setScrollViewWidth(e.nativeEvent.layout.width)}
           renderItem={({ item, index }) => (
-            <TouchableOpacity 
-              style={styles.cardContainer} 
+            <TouchableOpacity
+              style={styles.cardContainer}
               activeOpacity={0.8}
               onPress={() => (navigation.navigate as any)('RestaurantDetail', { restaurantId: item.id })}
             >
@@ -264,8 +321,8 @@ const UserMain = () => {
                       index === 0
                         ? { backgroundColor: '#FFD700' }
                         : index === 1
-                        ? { backgroundColor: '#C0C0C0' }
-                        : { backgroundColor: '#CD7F32' },
+                          ? { backgroundColor: '#C0C0C0' }
+                          : { backgroundColor: '#CD7F32' },
                     ]}
                   >
                     <Text style={styles.rankTextWhite}>{index + 1}</Text>
@@ -329,8 +386,8 @@ const UserMain = () => {
               index === 0
                 ? { backgroundColor: '#FFD700' }
                 : index === 1
-                ? { backgroundColor: '#C0C0C0' }
-                : { backgroundColor: '#CD7F32' },
+                  ? { backgroundColor: '#C0C0C0' }
+                  : { backgroundColor: '#CD7F32' },
             ]}
           >
             <Text style={styles.rankTextWhite}>{index + 1}</Text>
@@ -519,7 +576,6 @@ const styles = StyleSheet.create({
     height: 32,
     resizeMode: 'contain',
     marginBottom: 6,
-    tintColor: '#555',
   },
   iconSelected: { tintColor: '#FFA847' },
   gridText: {
@@ -655,8 +711,20 @@ const styles = StyleSheet.create({
     height: 28,
     resizeMode: 'contain',
     marginBottom: 4,
-    tintColor: '#999',
   },
   textSmall: { fontSize: 11, color: '#999' },
   textSelected: { color: '#FFA847', fontWeight: '700' },
+  badge: {
+    position: "absolute",
+    right: -6,
+    top: -4,
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
+    paddingHorizontal: 5,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#FF3B30",
+  },
+  badgeText: { color: "#fff", fontSize: 11, fontWeight: "800" },
 });

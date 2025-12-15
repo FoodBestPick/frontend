@@ -14,7 +14,7 @@ import {
 } from "react-native";
 import { Dropdown } from "react-native-element-dropdown";
 import Ionicons from "react-native-vector-icons/Ionicons";
-import { COLORS } from "../../core/constants/Colors";
+import { COLORS } from "../../core/constants/colors";
 import { Header } from "../components/Header";
 import { ThemeContext } from "../../context/ThemeContext";
 import { useAuth } from "../../context/AuthContext"; // ✨ useAuth 임포트
@@ -252,8 +252,8 @@ export const AdminUserScreen = () => {
                             user.status === "접속중"
                               ? "#4CAF50"
                               : user.status === "정지"
-                              ? "#E53935"
-                              : theme.textSecondary,
+                                ? "#E53935"
+                                : theme.textSecondary,
                         },
                       ]}
                     >
@@ -499,9 +499,9 @@ const PermissionModal = ({ visible, onClose, user, setSuccessModal, theme, onCon
                 const backendRole = role === "관리자" ? "ADMIN" : "USER"; // 백엔드 Enum 값으로 매핑
                 const success = await onConfirm(user.id, backendRole);
                 if (success) {
-                    setSuccessModal({ visible: true, type: "permission", user, extra: role });
+                  setSuccessModal({ visible: true, type: "permission", user, extra: role });
                 } else {
-                    Alert.alert("권한 변경 실패", "서버 오류 또는 권한이 없습니다.");
+                  Alert.alert("권한 변경 실패", "서버 오류 또는 권한이 없습니다.");
                 }
               }}
             >
@@ -608,24 +608,24 @@ const SuspendModal = ({ visible, onClose, user, setSuccessModal, theme, onConfir
               onPress={async () => {
                 let success;
                 if (isSuspended) {
-                    // 정지 해제 로직 (days: 0)
-                    success = await onConfirm(user.id, 0, "정지 해제");
+                  // 정지 해제 로직 (days: 0)
+                  success = await onConfirm(user.id, 0, "정지 해제");
                 } else {
-                    // 정지 적용 로직
-                    const days = parseDays(selectedPeriod);
-                    success = await onConfirm(user.id, days, reason);
+                  // 정지 적용 로직
+                  const days = parseDays(selectedPeriod);
+                  success = await onConfirm(user.id, days, reason);
                 }
-                
+
                 if (success) {
                   onClose();
                   // 성공 모달 띄우기
-                  setSuccessModal({ 
-                      visible: true, 
-                      type: "suspend", 
-                      user, 
-                      extra: isSuspended ? "해제" : selectedPeriod // 해제면 "해제"라고 전달
+                  setSuccessModal({
+                    visible: true,
+                    type: "suspend",
+                    user,
+                    extra: isSuspended ? "해제" : selectedPeriod // 해제면 "해제"라고 전달
                   });
-                  setReason(""); 
+                  setReason("");
                   setSelectedPeriod("1일");
                 } else {
                   Alert.alert("실패", isSuspended ? "정지 해제에 실패했습니다." : "유저 정지에 실패했습니다.");
@@ -716,7 +716,7 @@ const WarningModal = ({ visible, onClose, user, setSuccessModal, theme, onConfir
               onPress={async () => {
                 const warningsToAdd = parseInt(level.replace("회", ""), 10) || 1;
                 const fullReason = `${reason} - ${detail}`;
-                
+
                 const success = await onConfirm(user.id, warningsToAdd, fullReason); // 실제 API 호출
 
                 if (success) {
@@ -726,7 +726,7 @@ const WarningModal = ({ visible, onClose, user, setSuccessModal, theme, onConfir
                   setDetail("");
                   setLevel("1회");
                 } else {
-                   Alert.alert("실패", "경고 추가에 실패했습니다.");
+                  Alert.alert("실패", "경고 추가에 실패했습니다.");
                 }
               }}
             >
@@ -758,11 +758,11 @@ const SuccessModal = ({ visible, onClose, type, user, extra, theme }: any) => {
           icon: isUnsuspend ? "checkmark-circle-outline" : "close-circle-outline",
           color: isUnsuspend ? "#4CAF50" : "#E53935",
           title: isUnsuspend ? "계정 정지 해제 완료!" : "계정 정지 조치 완료!",
-                                  subtitle: isUnsuspend
-                                    ? `${user?.name}님의 계정 정지가 해제되었습니다.`
-                                    : extra === "영구 정지"
-                                      ? `${user?.name}님의 계정이 영구 정지되었습니다.`
-                                      : `${user?.name}님의 계정이 ${extra}간 정지되었습니다.`,          buttonColor: isUnsuspend ? "#4CAF50" : "#E53935",
+          subtitle: isUnsuspend
+            ? `${user?.name}님의 계정 정지가 해제되었습니다.`
+            : extra === "영구 정지"
+              ? `${user?.name}님의 계정이 영구 정지되었습니다.`
+              : `${user?.name}님의 계정이 ${extra}간 정지되었습니다.`, buttonColor: isUnsuspend ? "#4CAF50" : "#E53935",
         };
       case "warning":
         return {
@@ -818,7 +818,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     marginBottom: 10,
     marginTop: 10,
-    
+
   },
   input: { flex: 1, marginLeft: 8 },
   filterRow: { flexDirection: "row", gap: 10, marginBottom: 10 },

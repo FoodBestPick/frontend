@@ -27,8 +27,15 @@ export const useMyPageViewModel = () => {
                 image: data.profileImage,
                 stateMessage: data.stateMessage || "",
             });
-        } catch (e) {
+        } catch (e: any) {
             console.error("프로필 로드 실패", e);
+            // 401: Unauthorized (토큰 만료 등)
+            // 갱신 실패 시 인터셉터가 에러를 던지므로 여기서 잡아서 처리
+            if (e.response?.status === 401 || e.message?.includes("401")) {
+                Alert.alert("세션 만료", "로그인 정보가 만료되었습니다. 다시 로그인해주세요.", [
+                    { text: "확인", onPress: () => logout() }
+                ]);
+            }
         } finally {
             setLoading(false);
         }

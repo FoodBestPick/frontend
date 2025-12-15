@@ -11,7 +11,8 @@ import {
   ActivityIndicator,
   Alert,
   Linking,
-} from 'react-native';
+  Platform,
+ } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useNavigation, useRoute, RouteProp, useFocusEffect } from '@react-navigation/native';

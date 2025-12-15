@@ -51,9 +51,13 @@ authApi.interceptors.response.use(
 
             try {
                 // 1) 토큰 갱신 요청 (기존 authApi 말고 쌩 axios로 요청)
-                // RefreshToken은 HttpOnly Cookie로 자동 전송됨 (withCredentials: true 필요할 수 있음, axios 기본설정 확인)
+                console.log(`🔄 [토큰 갱신 시도] URL: ${API_BASE_URL}/auth/refresh`);
                 const res = await axios.post(`${API_BASE_URL}/auth/refresh`, {}, {
-                    withCredentials: true
+                    withCredentials: true,
+                    headers: {
+                        'Content-Type': 'application/json',
+                        // 필요한 경우 여기에 추가 헤더 설정
+                    }
                 });
 
                 // 2) 새 토큰 받아서 저장 (서버 응답 구조에 맞춰 수정 필요)

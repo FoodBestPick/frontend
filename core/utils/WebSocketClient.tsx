@@ -15,48 +15,82 @@ class WebSocketClient {
     return t.startsWith("Bearer ") ? t : `Bearer ${t}`;
   }
 
-  connectAccount(token: string, onForceLogout: (msg: string) => void) {
+  private globalClient: Client | null = null; // 전역 웹소켓 클라이언트 추가
+
+  /**
+   * 전역 웹소켓 연결 (알림 및 강제 로그아웃용)
+   * @param token 사용자 토큰
+   * @param userId 사용자 ID
+   * @param callbacks 강제 로그아웃 및 알림 수신 시 호출될 콜백 함수
+   */
+  connectGlobal(
+    token: string,
+    userId: number,
+    callbacks: {
+      onForceLogout: (msg: string) => void;
+      onAlarm: (alarmData: any) => void;
+    }
+  ) {
     const auth = this.toBearer(token);
 
+    // 이미 살아있는 연결이 있으면 재연결하지 않음
+    if (this.globalClient && this.globalClient.connected) return;
 
-    if (this.accountClient && this.accountClient.connected) return;
-
-
-    if (this.accountClient) {
-      try { this.accountClient.deactivate(); } catch { }
-      this.accountClient = null;
-    }
-
-    this.accountClient = new Client({
+    this.globalClient = new Client({
       webSocketFactory: () => new SockJS(WS_ENDPOINT),
-      reconnectDelay: 3000,
-      debug: (str) => console.log("🛠️ ACCOUNT STOMP:", str),
-      connectHeaders: { Authorization: auth },
+      reconnectDelay: 3000, // 3초 후 재연결 시도
+      debug: (str) => {
+        // console.log("🛠️ GLOBAL STOMP DEBUG:", str); // 디버깅 시 주석 해제
+      },
+      connectHeaders: { Authorization: auth }, // 인증 헤더 포함
 
       onConnect: () => {
-        console.log("✅ ACCOUNT STOMP Connected");
+        console.log(`✅ GLOBAL STOMP Connected for User ${userId}`);
 
-        this.accountClient!.subscribe("/user/queue/force-logout", (frame) => {
-          onForceLogout(frame.body);
+        // 1. 강제 로그아웃 구독 (/user/queue/force-logout)
+        // Spring Security STOMP 사용 시 /user/queue/... 로 구독해야 개인 메시지를 받음
+        this.globalClient!.subscribe(`/user/queue/force-logout`, (frame) => {
+          console.warn("🚨 FORCE LOGOUT MESSAGE RECEIVED:", frame.body);
+          callbacks.onForceLogout(frame.body);
+        });
+
+        // 2. 실시간 알림 구독 (/topic/alarms/{userId})
+        // 전체 사용자에게 보내는 알림이 아닌, 특정 사용자에게 가는 알림
+        this.globalClient!.subscribe(`/topic/alarms/${userId}`, (frame) => {
+          try {
+            const data = JSON.parse(frame.body);
+            console.log("🔔 ALARM RECEIVED:", data);
+            callbacks.onAlarm(data);
+          } catch (e) {
+            console.error("❌ Alarm parse error:", e, frame.body);
+          }
         });
       },
 
-      onStompError: (frame) => console.error("❌ ACCOUNT STOMP ERROR:", frame.body),
-      onWebSocketError: (e) => console.error("❌ ACCOUNT WS ERROR:", e),
-      onDisconnect: () => console.log("🔌 ACCOUNT STOMP Disconnected"),
+      onStompError: (frame) => {
+        console.error("❌ GLOBAL STOMP ERROR:", frame.headers["message"], frame.body);
+      },
+      onWebSocketError: (error) => {
+        console.error("❌ GLOBAL WEBSOCKET ERROR:", error);
+      },
+      onDisconnect: () => {
+        console.log("🔌 GLOBAL STOMP Disconnected");
+      },
     });
 
-    this.accountClient.activate();
+    this.globalClient.activate(); // 웹소켓 활성화
   }
 
-  disconnectAccount() {
-    if (this.accountClient) {
-      this.accountClient.deactivate();
-      this.accountClient = null;
-      console.log("🔌 ACCOUNT STOMP Disconnected (manual)");
+  /**
+   * 전역 웹소켓 연결 해제
+   */
+  disconnectGlobal() {
+    if (this.globalClient) {
+      this.globalClient.deactivate();
+      this.globalClient = null;
+      console.log("🔌 GLOBAL STOMP Disconnected (manual)");
     }
   }
-
 
   connect(roomId: number, token: string, onMessage: (msg: any) => void) {
     const auth = this.toBearer(token);

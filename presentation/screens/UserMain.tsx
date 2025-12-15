@@ -20,7 +20,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 // import { foodRes, CategoryKey, Store } from '../../data/mock/foodRes'; // Mock data removed
 import { useUserMainViewModel, Store } from '../viewmodels/UserMainViewModel';
-import { useAuth } from "../../context/AuthContext";
+import { UserAuthRepositoryImpl } from '../../data/repositoriesImpl/UserAuthRepositoryImpl'; // ✨ Import 추가
+
 if (
   Platform.OS === 'android' &&
   UIManager.setLayoutAnimationEnabledExperimental
@@ -66,6 +67,14 @@ const UserMain = () => {
           console.log('FCM 권한 승인됨:', authStatus);
           const token = await messaging().getToken();
           console.log('FCM Token:', token);
+          
+          // ✨ 서버에 FCM 토큰 등록 (중요!)
+          try {
+            await UserAuthRepositoryImpl.registerFcmToken(token);
+            console.log("✅ FCM 토큰 서버 등록 성공");
+          } catch (e) {
+            console.error("❌ FCM 토큰 서버 등록 실패:", e);
+          }
         }
       } catch (error) {
         console.error('FCM 권한 요청 실패:', error);

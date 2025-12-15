@@ -2,16 +2,12 @@ import React, { createContext, useState, useEffect, useContext, useRef } from "r
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Alert } from "react-native";
 
-import { UserAuthRepositoryImpl } from "../data/repositoriesImpl/UserAuthRepositoryImpl";
-import { webSocketClient } from "../core/utils/WebSocketClient";
-import { ChatRepositoryImpl } from "../data/repositoriesImpl/ChatRepositoryImpl";
-
-export type AlarmItem = {
-  id?: number;
-  message: string;
-  createdAt?: string;
-  read?: boolean;
-};
+import React, { createContext, useState, useEffect, useContext } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { UserAuthRepositoryImpl } from '../data/repositoriesImpl/UserAuthRepositoryImpl'; 
+import { ChatRepositoryImpl } from '../data/repositoriesImpl/ChatRepositoryImpl';
+import { webSocketClient } from '../core/utils/WebSocketClient'; // WebSocketClient 임포트
+import { Alert } from 'react-native';
 
 interface AuthContextType {
   isLoggedIn: boolean;
@@ -51,27 +47,32 @@ export const AuthContext = createContext<AuthContextType>({
 export const useAuth = () => useContext(AuthContext);
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [token, setToken] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [currentUserId, setCurrentUserId] = useState<number | null>(null);
-  const [activeRoomId, setActiveRoomId] = useState<number | null>(null);
-  const [alarms, setAlarms] = useState<AlarmItem[]>([]);
-  const [unreadAlarmCount, setUnreadAlarmCount] = useState<number>(0);
-  const alarmScreenActiveRef = useRef(false);
+    const [isLoggedIn, setIsLoggedIn] = useState(false);
+    const [token, setToken] = useState<string | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [isAdmin, setIsAdmin] = useState(false);
+    const [currentUserId, setCurrentUserId] = useState<number | null>(null);
+    const [activeRoomId, setActiveRoomId] = useState<number | null>(null); // ✨ 추가
 
-  const setAlarmScreenActive = (active: boolean) => {
-    alarmScreenActiveRef.current = active;
-  };
+    // ✅ 로그아웃 함수 (이전에 정의되어 있으나 웹소켓 해제 로직 추가를 위해 이동/정의)
+    const logout = async () => {
+        try {
+            await UserAuthRepositoryImpl.logout(); 
+        } catch (e) {
+            console.error("Logout failed:", e);
+            // API 호출 실패와 관계없이 로컬 스토리지 비움
+            await AsyncStorage.multiRemove(['accessToken', 'refreshToken', 'isAutoLogin', 'isAdmin', 'userId']);
+        } finally {
+            setToken(null);
+            setIsLoggedIn(false);
+            setIsAdmin(false);
+            setCurrentUserId(null);
+            setActiveRoomId(null); // ✨ 초기화
+            webSocketClient.disconnectGlobal(); // 전역 웹소켓 연결 해제
+        }
+    };
 
-  
-
-  const markAllAlarmsRead = () => {
-    setUnreadAlarmCount(0);
-    setAlarms((prev) => prev.map((a) => ({ ...a, read: true })));
-  };
-
+    // ✨ 내 방 확인 함수
     const checkActiveRoom = async () => {
         if (!token) return;
         try {
@@ -81,109 +82,71 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             setActiveRoomId(roomId);
         } catch (e) {
             console.error("[AuthContext] 방 확인 실패:", e);
+            const currentToken = await AsyncStorage.getItem('accessToken');
+            if (!currentToken) {
+                 console.log("[AuthContext] 토큰이 유효하지 않아 로그아웃 처리합니다.");
+                 logout(); // 웹소켓 해제 포함
+            }
         }
     };
 
-  
-  const loadToken = async () => {
-    try {
-      setLoading(true);
+    // 🚀 앱 시작 시 토큰 및 isAdmin 로드 로직
+    const loadToken = async () => {
+        try {
+            setLoading(true);
+            const storedAccessToken = await AsyncStorage.getItem('accessToken');
+            const storedIsAutoLogin = await AsyncStorage.getItem('isAutoLogin');
+            const storedIsAdmin = await AsyncStorage.getItem('isAdmin');
+            const storedUserId = await AsyncStorage.getItem('userId');
 
-      const storedAccessToken = await AsyncStorage.getItem("accessToken");
-      const storedIsAutoLogin = await AsyncStorage.getItem("isAutoLogin");
-      const storedIsAdmin = await AsyncStorage.getItem("isAdmin");
-      const storedUserId = await AsyncStorage.getItem("userId");
+            if (storedAccessToken && storedIsAutoLogin === 'true' && storedUserId) {
+                const parsedUserId = parseInt(storedUserId);
+                setToken(storedAccessToken);
+                setIsLoggedIn(true);
+                setIsAdmin(storedIsAdmin === 'true');
+                setCurrentUserId(parsedUserId);
+                
+                // ✨ 저장된 토큰으로 방 확인
+                const roomId = await ChatRepositoryImpl.getMyActiveRoom(storedAccessToken);
+                setActiveRoomId(roomId);
 
-      if (storedAccessToken && storedIsAutoLogin === "true") {
-        setToken(storedAccessToken);
-        setIsAdmin(storedIsAdmin === "true");
-        setCurrentUserId(storedUserId ? parseInt(storedUserId, 10) : null);
-        setIsLoggedIn(true);
-      } else if (storedAccessToken && storedIsAutoLogin !== "true") {
-        await AsyncStorage.multiRemove(["accessToken", "isAutoLogin", "isAdmin", "userId"]);
-        setToken(null);
-        setIsLoggedIn(false);
-        setIsAdmin(false);
-        setCurrentUserId(null);
-        setActiveRoomId(null);
-      }
-    } catch (e) {
-      console.error("Failed to load token", e);
-    } finally {
-      setLoading(false);
-    }
-  };
+                // ✨ 전역 웹소켓 연결
+                webSocketClient.connectGlobal(storedAccessToken, parsedUserId, {
+                    onForceLogout: (message) => {
+                        Alert.alert("알림", message || "관리자에 의해 로그아웃되었습니다.");
+                        logout();
+                    },
+                    onAlarm: (alarmData) => {
+                        Alert.alert(alarmData.title || "새로운 알림", alarmData.body || alarmData.message);
+                        // TODO: 알림 배지 업데이트 로직 추가 가능
+                    }
+                });
 
-  useEffect(() => {
-    loadToken();
-  }, []);
+            } else if (storedAccessToken && storedIsAutoLogin !== 'true') {
+                await AsyncStorage.multiRemove(['accessToken', 'isAutoLogin', 'isAdmin', 'userId']);
+                setToken(null);
+                setIsLoggedIn(false);
+                setIsAdmin(false);
+                setCurrentUserId(null);
+                setActiveRoomId(null);
+                webSocketClient.disconnectGlobal(); // 전역 웹소켓 연결 해제
+            }
 
-  useEffect(() => {
-    if (!token || !isLoggedIn) return;
-    checkActiveRoom();
-  }, [token, isLoggedIn]);
-
-  const login = async (accessToken: string, isAutoLogin: boolean, admin: boolean, userId: number) => {
-    try {
-      await AsyncStorage.setItem("accessToken", accessToken);
-      await AsyncStorage.setItem("isAutoLogin", isAutoLogin ? "true" : "false");
-      await AsyncStorage.setItem("isAdmin", admin ? "true" : "false");
-      await AsyncStorage.setItem("userId", String(userId));
-
-      setToken(accessToken);
-      setIsAdmin(admin);
-      setCurrentUserId(userId);
-      setIsLoggedIn(true);
-
-      // (선택) 로그인 직후 방상태 확인
-      // await checkActiveRoom(); // token state 반영 전에 호출될 수 있어 useEffect쪽이 안전
-    } catch (e) {
-      console.error(e);
-    }
-  };
-
-  const logout = async () => {
-    try {
-      await UserAuthRepositoryImpl.logout();
-    } catch (e) {
-      console.error("Logout failed:", e);
-      await AsyncStorage.multiRemove(["accessToken", "refreshToken", "isAutoLogin", "isAdmin", "userId"]);
-    } finally {
-      try {
-        webSocketClient.disconnect?.();
-        webSocketClient.disconnectMatching?.();
-        webSocketClient.disconnectAccount?.();
-        webSocketClient.disconnectAlarm?.();
-      } catch (e) {}
-
-      setToken(null);
-      setIsLoggedIn(false);
-      setIsAdmin(false);
-      setCurrentUserId(null);
-      setActiveRoomId(null);
-
-      setAlarms([]);
-      setUnreadAlarmCount(0);
-    }
-  };
-
-  useEffect(() => {
-    if (!token || !isLoggedIn) return;
-
-    webSocketClient.connectAccount?.(token, async (msg: string) => {
-      Alert.alert("로그아웃", msg || "계정 상태가 변경되어 로그아웃되었습니다.");
-      await logout();
-    });
-
-    return () => {
-      try {
-        webSocketClient.disconnectAccount?.();
-      } catch (e) {}
+        } catch (e) {
+            console.error('Failed to load token', e);
+        } finally {
+            setLoading(false);
+        }
     };
   }, [token, isLoggedIn]);
 
-  useEffect(() => {
-    if (!token || !isLoggedIn || !currentUserId) return;
+    useEffect(() => {
+        loadToken();
+        // 컴포넌트 언마운트 시 웹소켓 정리
+        return () => {
+            webSocketClient.disconnectGlobal();
+        };
+    }, []); // 빈 배열: 최초 1회만 실행
 
     try {
       webSocketClient.connectAlarm?.(token, currentUserId, (alarm: any) => {
@@ -194,45 +157,26 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           read: false,
         };
 
-        setAlarms((prev) => [next, ...prev]);
+            // ✨ 로그인 시 전역 웹소켓 연결
+            webSocketClient.connectGlobal(accessToken, userId, {
+                onForceLogout: (message) => {
+                    Alert.alert("알림", message || "관리자에 의해 로그아웃되었습니다.");
+                    logout();
+                },
+                onAlarm: (alarmData) => {
+                    Alert.alert(alarmData.title || "새로운 알림", alarmData.body || alarmData.message);
+                }
+            });
 
-        if (!alarmScreenActiveRef.current) {
-          setUnreadAlarmCount((c) => c + 1);
+            setIsLoggedIn(true);
+        } catch (e) {
+            console.error(e);
         }
-      });
-    } catch (e) {
-      console.error("connectAlarm failed:", e);
-    }
-
-    return () => {
-      try {
-        webSocketClient.disconnectAlarm?.();
-      } catch (e) {}
     };
-  }, [token, isLoggedIn, currentUserId]);
 
-  return (
-    <AuthContext.Provider
-      value={{
-        isLoggedIn,
-        token,
-        loading,
-        isAdmin,
-        currentUserId,
-
-        activeRoomId,
-        checkActiveRoom,
-
-        login,
-        logout,
-
-        alarms,
-        unreadAlarmCount,
-        setAlarmScreenActive,
-        markAllAlarmsRead,
-      }}
-    >
-      {children}
-    </AuthContext.Provider>
-  );
+    return (
+        <AuthContext.Provider value={{ isLoggedIn, token, loading, isAdmin, currentUserId, activeRoomId, checkActiveRoom, login, logout }}>
+            {children}
+        </AuthContext.Provider>
+    );
 };

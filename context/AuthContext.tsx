@@ -1,47 +1,48 @@
-import React, { createContext, useState, useEffect, useContext, useRef } from "react";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { Alert } from "react-native";
-
-import React, { createContext, useState, useEffect, useContext } from 'react';
+import React, { createContext, useState, useEffect, useContext, useRef } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { UserAuthRepositoryImpl } from '../data/repositoriesImpl/UserAuthRepositoryImpl'; 
 import { ChatRepositoryImpl } from '../data/repositoriesImpl/ChatRepositoryImpl';
-import { webSocketClient } from '../core/utils/WebSocketClient'; // WebSocketClient 임포트
+import { webSocketClient } from '../core/utils/WebSocketClient'; 
 import { Alert } from 'react-native';
 
+// ✨ AlarmItem 타입 정의 추가 (develop 브랜치 호환성)
+export type AlarmItem = {
+  id?: number;
+  message: string;
+  createdAt?: string;
+  read?: boolean;
+};
+
 interface AuthContextType {
-  isLoggedIn: boolean;
-  token: string | null;
-  loading: boolean;
-  isAdmin: boolean;
-  currentUserId: number | null;
-  activeRoomId: number | null;
-  checkActiveRoom: () => Promise<void>;
-  login: (accessToken: string, isAutoLogin: boolean, isAdmin: boolean, userId: number) => Promise<void>;
-  logout: () => Promise<void>;
-  alarms: AlarmItem[];
-  unreadAlarmCount: number;
-  setAlarmScreenActive: (active: boolean) => void;
-  markAllAlarmsRead: () => void;
+    isLoggedIn: boolean;
+    token: string | null;
+    loading: boolean;
+    isAdmin: boolean;
+    currentUserId: number | null;
+    activeRoomId: number | null; 
+    alarms: AlarmItem[]; // ✨ 추가
+    unreadAlarmCount: number; // ✨ 추가
+    checkActiveRoom: () => Promise<void>; 
+    login: (accessToken: string, isAutoLogin: boolean, isAdmin: boolean, userId: number) => Promise<void>;
+    logout: () => Promise<void>;
+    setAlarmScreenActive: (active: boolean) => void; // ✨ 추가
+    markAllAlarmsRead: () => void; // ✨ 추가
 }
 
 export const AuthContext = createContext<AuthContextType>({
-  isLoggedIn: false,
-  token: null,
-  loading: true,
-  isAdmin: false,
-  currentUserId: null,
-
-  activeRoomId: null,
-  checkActiveRoom: async () => {},
-
-  login: async () => {},
-  logout: async () => {},
-
-  alarms: [],
-  unreadAlarmCount: 0,
-  setAlarmScreenActive: () => {},
-  markAllAlarmsRead: () => {},
+    isLoggedIn: false,
+    token: null,
+    loading: true,
+    isAdmin: false,
+    currentUserId: null,
+    activeRoomId: null,
+    alarms: [],
+    unreadAlarmCount: 0,
+    checkActiveRoom: async () => { },
+    login: async () => { },
+    logout: async () => { },
+    setAlarmScreenActive: () => {},
+    markAllAlarmsRead: () => {},
 });
 
 export const useAuth = () => useContext(AuthContext);
@@ -52,23 +53,44 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const [loading, setLoading] = useState(true);
     const [isAdmin, setIsAdmin] = useState(false);
     const [currentUserId, setCurrentUserId] = useState<number | null>(null);
-    const [activeRoomId, setActiveRoomId] = useState<number | null>(null); // ✨ 추가
+    const [activeRoomId, setActiveRoomId] = useState<number | null>(null);
+    
+    // ✨ develop 브랜치 기능 호환을 위한 상태
+    const [alarms, setAlarms] = useState<AlarmItem[]>([]);
+    const [unreadAlarmCount, setUnreadAlarmCount] = useState<number>(0);
+    const alarmScreenActiveRef = useRef(false);
 
-    // ✅ 로그아웃 함수 (이전에 정의되어 있으나 웹소켓 해제 로직 추가를 위해 이동/정의)
+    const setAlarmScreenActive = (active: boolean) => {
+        alarmScreenActiveRef.current = active;
+    };
+
+    const markAllAlarmsRead = () => {
+        setUnreadAlarmCount(0);
+        setAlarms((prev) => prev.map((a) => ({ ...a, read: true })));
+    };
+
+    // ✅ 로그아웃 함수
     const logout = async () => {
         try {
             await UserAuthRepositoryImpl.logout(); 
         } catch (e) {
             console.error("Logout failed:", e);
-            // API 호출 실패와 관계없이 로컬 스토리지 비움
             await AsyncStorage.multiRemove(['accessToken', 'refreshToken', 'isAutoLogin', 'isAdmin', 'userId']);
         } finally {
+            try {
+                // 기존 연결 모두 해제 시도
+                webSocketClient.disconnect?.();
+                webSocketClient.disconnectMatching?.();
+                webSocketClient.disconnectGlobal?.(); // ✨ 우리가 추가한 메서드
+            } catch (e) {}
+
             setToken(null);
             setIsLoggedIn(false);
             setIsAdmin(false);
             setCurrentUserId(null);
-            setActiveRoomId(null); // ✨ 초기화
-            webSocketClient.disconnectGlobal(); // 전역 웹소켓 연결 해제
+            setActiveRoomId(null); 
+            setAlarms([]);
+            setUnreadAlarmCount(0);
         }
     };
 
@@ -85,7 +107,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             const currentToken = await AsyncStorage.getItem('accessToken');
             if (!currentToken) {
                  console.log("[AuthContext] 토큰이 유효하지 않아 로그아웃 처리합니다.");
-                 logout(); // 웹소켓 해제 포함
+                 logout();
             }
         }
     };
@@ -107,10 +129,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                 setCurrentUserId(parsedUserId);
                 
                 // ✨ 저장된 토큰으로 방 확인
-                const roomId = await ChatRepositoryImpl.getMyActiveRoom(storedAccessToken);
-                setActiveRoomId(roomId);
+                // const roomId = await ChatRepositoryImpl.getMyActiveRoom(storedAccessToken);
+                // setActiveRoomId(roomId);
 
-                // ✨ 전역 웹소켓 연결
+                // ✨ 전역 웹소켓 연결 (실시간 알림 및 강제 로그아웃)
                 webSocketClient.connectGlobal(storedAccessToken, parsedUserId, {
                     onForceLogout: (message) => {
                         Alert.alert("알림", message || "관리자에 의해 로그아웃되었습니다.");
@@ -118,7 +140,18 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                     },
                     onAlarm: (alarmData) => {
                         Alert.alert(alarmData.title || "새로운 알림", alarmData.body || alarmData.message);
-                        // TODO: 알림 배지 업데이트 로직 추가 가능
+                        
+                        // develop 브랜치 로직 통합: 로컬 알람 상태 업데이트
+                        const next: AlarmItem = {
+                            id: alarmData.id,
+                            message: alarmData.message ?? alarmData.body ?? alarmData.content ?? "",
+                            createdAt: alarmData.createdAt,
+                            read: false,
+                        };
+                        setAlarms((prev) => [next, ...prev]);
+                        if (!alarmScreenActiveRef.current) {
+                            setUnreadAlarmCount((c) => c + 1);
+                        }
                     }
                 });
 
@@ -129,7 +162,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                 setIsAdmin(false);
                 setCurrentUserId(null);
                 setActiveRoomId(null);
-                webSocketClient.disconnectGlobal(); // 전역 웹소켓 연결 해제
+                webSocketClient.disconnectGlobal();
             }
 
         } catch (e) {
@@ -138,24 +171,29 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             setLoading(false);
         }
     };
-  }, [token, isLoggedIn]);
 
     useEffect(() => {
         loadToken();
-        // 컴포넌트 언마운트 시 웹소켓 정리
         return () => {
             webSocketClient.disconnectGlobal();
         };
-    }, []); // 빈 배열: 최초 1회만 실행
+    }, []);
 
-    try {
-      webSocketClient.connectAlarm?.(token, currentUserId, (alarm: any) => {
-        const next: AlarmItem = {
-          id: alarm.id,
-          message: alarm.message ?? alarm.body ?? alarm.content ?? "",
-          createdAt: alarm.createdAt,
-          read: false,
-        };
+    // ✅ 로그인 함수
+    const login = async (accessToken: string, isAutoLogin: boolean, isAdmin: boolean, userId: number) => {
+        try {
+            await AsyncStorage.setItem('accessToken', accessToken);
+            await AsyncStorage.setItem('isAutoLogin', isAutoLogin ? 'true' : 'false');
+            await AsyncStorage.setItem('isAdmin', isAdmin ? 'true' : 'false');
+            await AsyncStorage.setItem('userId', userId.toString());
+
+            setToken(accessToken);
+            setIsAdmin(isAdmin);
+            setCurrentUserId(userId);
+            
+            // ✨ 로그인 직후 방 확인
+            const roomId = await ChatRepositoryImpl.getMyActiveRoom(accessToken);
+            setActiveRoomId(roomId);
 
             // ✨ 로그인 시 전역 웹소켓 연결
             webSocketClient.connectGlobal(accessToken, userId, {
@@ -165,6 +203,18 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                 },
                 onAlarm: (alarmData) => {
                     Alert.alert(alarmData.title || "새로운 알림", alarmData.body || alarmData.message);
+                    
+                    // develop 브랜치 로직 통합
+                    const next: AlarmItem = {
+                        id: alarmData.id,
+                        message: alarmData.message ?? alarmData.body ?? alarmData.content ?? "",
+                        createdAt: alarmData.createdAt,
+                        read: false,
+                    };
+                    setAlarms((prev) => [next, ...prev]);
+                    if (!alarmScreenActiveRef.current) {
+                        setUnreadAlarmCount((c) => c + 1);
+                    }
                 }
             });
 
@@ -175,7 +225,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     };
 
     return (
-        <AuthContext.Provider value={{ isLoggedIn, token, loading, isAdmin, currentUserId, activeRoomId, checkActiveRoom, login, logout }}>
+        <AuthContext.Provider value={{ 
+            isLoggedIn, token, loading, isAdmin, currentUserId, activeRoomId, 
+            alarms, unreadAlarmCount, 
+            checkActiveRoom, login, logout, 
+            setAlarmScreenActive, markAllAlarmsRead 
+        }}>
             {children}
         </AuthContext.Provider>
     );

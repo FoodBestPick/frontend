@@ -5,4 +5,5 @@ export interface ChatMessage {
   senderAvatar?: string | null;
   content: string;
   formattedTime?: string;
+  isSystem?: boolean;
 };

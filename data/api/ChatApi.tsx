@@ -32,6 +32,13 @@ export const ChatApi = {
     }
   },
 
+   leaveRoom: async (token: string, roomId: number) => {
+    await client.delete(`/chat/${roomId}/leave`, {
+      headers: { Authorization: toBearer(token) },
+    });
+    return true;
+  },
+
   uploadImage: async (token: string, file: any) => {
     const formData = new FormData();
     formData.append('files', {

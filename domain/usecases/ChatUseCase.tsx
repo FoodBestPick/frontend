@@ -5,6 +5,10 @@ export const ChatUseCase = {
     return ChatRepositoryImpl.getMessages(token, roomId);
   },
 
+  leaveRoom(token: string, roomId: number) {
+    return ChatRepositoryImpl.leaveRoom(token, roomId);
+  },
+
   connect(roomId: number, token: string, onMessage: (msg: any) => void) {
     ChatRepositoryImpl.connect(roomId, token, onMessage);
   },

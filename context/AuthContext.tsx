@@ -1,4 +1,6 @@
-// src/context/AuthContext.tsx (최종 버전)
+import React, { createContext, useState, useEffect, useContext, useRef } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { Alert } from "react-native";
 
 import React, { createContext, useState, useEffect, useContext } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -8,27 +10,38 @@ import { webSocketClient } from '../core/utils/WebSocketClient'; // WebSocketCli
 import { Alert } from 'react-native';
 
 interface AuthContextType {
-    isLoggedIn: boolean;
-    token: string | null;
-    loading: boolean;
-    isAdmin: boolean;
-    currentUserId: number | null;
-    activeRoomId: number | null; // ✨ 추가: 현재 참여 중인 방 ID
-    checkActiveRoom: () => Promise<void>; // ✨ 추가: 방 상태 확인 함수
-    login: (accessToken: string, isAutoLogin: boolean, isAdmin: boolean, userId: number) => Promise<void>;
-    logout: () => Promise<void>;
+  isLoggedIn: boolean;
+  token: string | null;
+  loading: boolean;
+  isAdmin: boolean;
+  currentUserId: number | null;
+  activeRoomId: number | null;
+  checkActiveRoom: () => Promise<void>;
+  login: (accessToken: string, isAutoLogin: boolean, isAdmin: boolean, userId: number) => Promise<void>;
+  logout: () => Promise<void>;
+  alarms: AlarmItem[];
+  unreadAlarmCount: number;
+  setAlarmScreenActive: (active: boolean) => void;
+  markAllAlarmsRead: () => void;
 }
 
 export const AuthContext = createContext<AuthContextType>({
-    isLoggedIn: false,
-    token: null,
-    loading: true,
-    isAdmin: false,
-    currentUserId: null,
-    activeRoomId: null,
-    checkActiveRoom: async () => { },
-    login: async () => { },
-    logout: async () => { },
+  isLoggedIn: false,
+  token: null,
+  loading: true,
+  isAdmin: false,
+  currentUserId: null,
+
+  activeRoomId: null,
+  checkActiveRoom: async () => {},
+
+  login: async () => {},
+  logout: async () => {},
+
+  alarms: [],
+  unreadAlarmCount: 0,
+  setAlarmScreenActive: () => {},
+  markAllAlarmsRead: () => {},
 });
 
 export const useAuth = () => useContext(AuthContext);
@@ -125,6 +138,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             setLoading(false);
         }
     };
+  }, [token, isLoggedIn]);
 
     useEffect(() => {
         loadToken();
@@ -134,21 +148,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         };
     }, []); // 빈 배열: 최초 1회만 실행
 
-    // ✅ 로그인 함수
-    const login = async (accessToken: string, isAutoLogin: boolean, isAdmin: boolean, userId: number) => {
-        try {
-            await AsyncStorage.setItem('accessToken', accessToken);
-            await AsyncStorage.setItem('isAutoLogin', isAutoLogin ? 'true' : 'false');
-            await AsyncStorage.setItem('isAdmin', isAdmin ? 'true' : 'false');
-            await AsyncStorage.setItem('userId', userId.toString());
-
-            setToken(accessToken);
-            setIsAdmin(isAdmin);
-            setCurrentUserId(userId);
-            
-            // ✨ 로그인 직후 방 확인
-            const roomId = await ChatRepositoryImpl.getMyActiveRoom(accessToken);
-            setActiveRoomId(roomId);
+    try {
+      webSocketClient.connectAlarm?.(token, currentUserId, (alarm: any) => {
+        const next: AlarmItem = {
+          id: alarm.id,
+          message: alarm.message ?? alarm.body ?? alarm.content ?? "",
+          createdAt: alarm.createdAt,
+          read: false,
+        };
 
             // ✨ 로그인 시 전역 웹소켓 연결
             webSocketClient.connectGlobal(accessToken, userId, {

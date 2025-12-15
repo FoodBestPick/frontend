@@ -6,6 +6,8 @@ const WS_ENDPOINT = "http://13.125.213.115:8080/ws";
 class WebSocketClient {
   private client: Client | null = null;
   private matchingClient: Client | null = null;
+  private accountClient: Client | null = null;
+  private alarmClient: Client | null = null;
 
   private toBearer(token: string) {
     const t = token?.trim() ?? "";
@@ -93,9 +95,8 @@ class WebSocketClient {
   connect(roomId: number, token: string, onMessage: (msg: any) => void) {
     const auth = this.toBearer(token);
 
-    // 이미 살아있는 연결이 있으면 끊고 재연결(중복 방지)
     if (this.client) {
-      try { this.client.deactivate(); } catch {}
+      try { this.client.deactivate(); } catch { }
       this.client = null;
     }
 
@@ -196,6 +197,56 @@ class WebSocketClient {
       console.log("🔌 MATCH STOMP Disconnected");
     }
   }
+  connectAlarm(token: string, userId: number, onAlarm: (alarm: any) => void) {
+    const auth = this.toBearer(token);
+
+    // 이미 연결되어 있으면 재연결 안 함
+    if (this.alarmClient && this.alarmClient.connected) return;
+
+    // 기존 객체 있으면 정리
+    if (this.alarmClient) {
+      try {
+        this.alarmClient.deactivate();
+      } catch { }
+      this.alarmClient = null;
+    }
+
+    this.alarmClient = new Client({
+      webSocketFactory: () => new SockJS(WS_ENDPOINT),
+      reconnectDelay: 3000,
+      debug: (str) => console.log("🛠️ ALARM STOMP:", str),
+      connectHeaders: { Authorization: auth },
+
+      onConnect: () => {
+        console.log(`✅ ALARM STOMP Connected /topic/alarms/${userId}`);
+
+        this.alarmClient!.subscribe(`/topic/alarms/${userId}`, (frame) => {
+          try {
+            const data = JSON.parse(frame.body);
+            onAlarm(data);
+          } catch (e) {
+            console.error("❌ alarm frame parse error:", e, frame.body);
+          }
+        });
+      },
+
+      onStompError: (frame) => console.error("❌ ALARM STOMP ERROR:", frame.body),
+      onWebSocketError: (e) => console.error("❌ ALARM WS ERROR:", e),
+      onDisconnect: () => console.log("🔌 ALARM STOMP Disconnected"),
+    });
+
+    this.alarmClient.activate();
+  }
+
+  disconnectAlarm() {
+    if (this.alarmClient) {
+      this.alarmClient.deactivate();
+      this.alarmClient = null;
+      console.log("🔌 ALARM STOMP Disconnected (manual)");
+    }
+  }
 }
+
+
 
 export const webSocketClient = new WebSocketClient();

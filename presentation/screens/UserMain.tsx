@@ -12,7 +12,8 @@ import {
   LayoutAnimation,
   Platform,
   UIManager,
-  Alert
+  Alert,
+  PermissionsAndroid
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import messaging from '@react-native-firebase/messaging';
@@ -55,21 +56,28 @@ const UserMain = () => {
   const scrollY = useRef(new Animated.Value(0)).current;
   const [isStickyActive, setIsStickyActive] = useState(false);
 
+
   useEffect(() => {
-    // 🔥 FCM 권한 요청 및 리스너 등록
     const setupFCM = async () => {
       try {
+        // ✅ Android 13+ 알림 권한 (백그라운드 푸시 표시에 영향)
+        if (Platform.OS === "android" && Platform.Version >= 33) {
+          const result = await PermissionsAndroid.request(
+            PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS
+          );
+          console.log("POST_NOTIFICATIONS:", result);
+        }
+
         const authStatus = await messaging().requestPermission();
         const enabled =
           authStatus === messaging.AuthorizationStatus.AUTHORIZED ||
           authStatus === messaging.AuthorizationStatus.PROVISIONAL;
 
         if (enabled) {
-          console.log('FCM 권한 승인됨:', authStatus);
+          console.log("FCM 권한 승인됨:", authStatus);
           const token = await messaging().getToken();
-          console.log('FCM Token:', token);
-          
-          // ✨ 서버에 FCM 토큰 등록 (중요!)
+          console.log("FCM Token:", token);
+
           try {
             await UserAuthRepositoryImpl.registerFcmToken(token);
             console.log("✅ FCM 토큰 서버 등록 성공");
@@ -78,7 +86,7 @@ const UserMain = () => {
           }
         }
       } catch (error) {
-        console.error('FCM 권한 요청 실패:', error);
+        console.error("FCM 권한 요청 실패:", error);
       }
     };
 

@@ -132,7 +132,7 @@ export const FilterModal = ({
 
   const handleApply = () => {
     onApply({
-      ...selectedFilters,
+      ...filters,
       priceMin: minPrice ? parseInt(minPrice) : 0,
       priceMax: maxPrice ? parseInt(maxPrice) : 0,
     });

@@ -4,10 +4,9 @@ import SockJS from "sockjs-client";
 const WS_ENDPOINT = "http://13.125.213.115:8080/ws";
 
 class WebSocketClient {
-  private client: Client | null = null;
-  private matchingClient: Client | null = null;
-  private accountClient: Client | null = null;
-  private alarmClient: Client | null = null;
+  private client: Client | null = null;          // 채팅용
+  private matchingClient: Client | null = null;  // 매칭용
+  private globalClient: Client | null = null;    // 전역(알림+계정)용
 
   private toBearer(token: string) {
     const t = token?.trim() ?? "";
@@ -15,13 +14,8 @@ class WebSocketClient {
     return t.startsWith("Bearer ") ? t : `Bearer ${t}`;
   }
 
-  private globalClient: Client | null = null; // 전역 웹소켓 클라이언트 추가
-
   /**
-   * 전역 웹소켓 연결 (알림 및 강제 로그아웃용)
-   * @param token 사용자 토큰
-   * @param userId 사용자 ID
-   * @param callbacks 강제 로그아웃 및 알림 수신 시 호출될 콜백 함수
+   * 전역 웹소켓 연결 (알림 및 강제 로그아웃 통합)
    */
   connectGlobal(
     token: string,
@@ -33,29 +27,26 @@ class WebSocketClient {
   ) {
     const auth = this.toBearer(token);
 
-    // 이미 살아있는 연결이 있으면 재연결하지 않음
     if (this.globalClient && this.globalClient.connected) return;
 
     this.globalClient = new Client({
       webSocketFactory: () => new SockJS(WS_ENDPOINT),
-      reconnectDelay: 3000, // 3초 후 재연결 시도
+      reconnectDelay: 3000,
       debug: (str) => {
-        // console.log("🛠️ GLOBAL STOMP DEBUG:", str); // 디버깅 시 주석 해제
+        // console.log("🛠️ GLOBAL STOMP DEBUG:", str); 
       },
-      connectHeaders: { Authorization: auth }, // 인증 헤더 포함
+      connectHeaders: { Authorization: auth },
 
       onConnect: () => {
         console.log(`✅ GLOBAL STOMP Connected for User ${userId}`);
 
-        // 1. 강제 로그아웃 구독 (/user/queue/force-logout)
-        // Spring Security STOMP 사용 시 /user/queue/... 로 구독해야 개인 메시지를 받음
+        // 1. 강제 로그아웃 구독
         this.globalClient!.subscribe(`/user/queue/force-logout`, (frame) => {
           console.warn("🚨 FORCE LOGOUT MESSAGE RECEIVED:", frame.body);
           callbacks.onForceLogout(frame.body);
         });
 
-        // 2. 실시간 알림 구독 (/topic/alarms/{userId})
-        // 전체 사용자에게 보내는 알림이 아닌, 특정 사용자에게 가는 알림
+        // 2. 실시간 알림 구독
         this.globalClient!.subscribe(`/topic/alarms/${userId}`, (frame) => {
           try {
             const data = JSON.parse(frame.body);
@@ -67,23 +58,14 @@ class WebSocketClient {
         });
       },
 
-      onStompError: (frame) => {
-        console.error("❌ GLOBAL STOMP ERROR:", frame.headers["message"], frame.body);
-      },
-      onWebSocketError: (error) => {
-        console.error("❌ GLOBAL WEBSOCKET ERROR:", error);
-      },
-      onDisconnect: () => {
-        console.log("🔌 GLOBAL STOMP Disconnected");
-      },
+      onStompError: (frame) => console.error("❌ GLOBAL STOMP ERROR:", frame.headers["message"], frame.body),
+      onWebSocketError: (error) => console.error("❌ GLOBAL WEBSOCKET ERROR:", error),
+      onDisconnect: () => console.log("🔌 GLOBAL STOMP Disconnected"),
     });
 
-    this.globalClient.activate(); // 웹소켓 활성화
+    this.globalClient.activate();
   }
 
-  /**
-   * 전역 웹소켓 연결 해제
-   */
   disconnectGlobal() {
     if (this.globalClient) {
       this.globalClient.deactivate();
@@ -92,6 +74,7 @@ class WebSocketClient {
     }
   }
 
+  // --- 채팅 관련 ---
   connect(roomId: number, token: string, onMessage: (msg: any) => void) {
     const auth = this.toBearer(token);
 
@@ -103,18 +86,12 @@ class WebSocketClient {
     this.client = new Client({
       webSocketFactory: () => new SockJS(WS_ENDPOINT),
       reconnectDelay: 3000,
-
       debug: (str) => {
         console.log("🛠️ CHAT STOMP:", str);
       },
-
-      connectHeaders: {
-        Authorization: auth,
-      },
-
+      connectHeaders: { Authorization: auth },
       onConnect: () => {
         console.log("✅ CHAT STOMP Connected");
-
         this.client!.subscribe(`/topic/chat/${roomId}`, (frame) => {
           try {
             const data = JSON.parse(frame.body);
@@ -124,18 +101,9 @@ class WebSocketClient {
           }
         });
       },
-
-      onStompError: (frame) => {
-        console.error("❌ CHAT STOMP ERROR:", frame.headers["message"], frame.body);
-      },
-
-      onWebSocketError: (error) => {
-        console.error("❌ CHAT WEBSOCKET ERROR:", error);
-      },
-
-      onDisconnect: () => {
-        console.log("🔌 CHAT STOMP Disconnected");
-      },
+      onStompError: (frame) => console.error("❌ CHAT STOMP ERROR:", frame.headers["message"], frame.body),
+      onWebSocketError: (error) => console.error("❌ CHAT WEBSOCKET ERROR:", error),
+      onDisconnect: () => console.log("🔌 CHAT STOMP Disconnected"),
     });
 
     console.log("🛠️ CHAT STOMP: Opening Web Socket...");
@@ -147,7 +115,6 @@ class WebSocketClient {
       console.warn("⚠️ send skipped: stomp not connected yet");
       return;
     }
-
     this.client.publish({
       destination: "/app/chat.send",
       body: JSON.stringify({ roomId, senderId, content }),
@@ -161,6 +128,8 @@ class WebSocketClient {
       console.log("🔌 CHAT STOMP Disconnected (manual)");
     }
   }
+
+  // --- 매칭 관련 ---
   connectMatching(
     token: string,
     userId: number,
@@ -175,7 +144,6 @@ class WebSocketClient {
       reconnectDelay: 3000,
       debug: (str) => console.log("🛠️ MATCH STOMP:", str),
       connectHeaders: { Authorization: auth },
-
       onConnect: () => {
         console.log(`✅ MATCH STOMP Connected /topic/match/${userId}`);
         this.matchingClient!.subscribe(`/topic/match/${userId}`, (frame) => {
@@ -197,56 +165,13 @@ class WebSocketClient {
       console.log("🔌 MATCH STOMP Disconnected");
     }
   }
-  connectAlarm(token: string, userId: number, onAlarm: (alarm: any) => void) {
-    const auth = this.toBearer(token);
-
-    // 이미 연결되어 있으면 재연결 안 함
-    if (this.alarmClient && this.alarmClient.connected) return;
-
-    // 기존 객체 있으면 정리
-    if (this.alarmClient) {
-      try {
-        this.alarmClient.deactivate();
-      } catch { }
-      this.alarmClient = null;
-    }
-
-    this.alarmClient = new Client({
-      webSocketFactory: () => new SockJS(WS_ENDPOINT),
-      reconnectDelay: 3000,
-      debug: (str) => console.log("🛠️ ALARM STOMP:", str),
-      connectHeaders: { Authorization: auth },
-
-      onConnect: () => {
-        console.log(`✅ ALARM STOMP Connected /topic/alarms/${userId}`);
-
-        this.alarmClient!.subscribe(`/topic/alarms/${userId}`, (frame) => {
-          try {
-            const data = JSON.parse(frame.body);
-            onAlarm(data);
-          } catch (e) {
-            console.error("❌ alarm frame parse error:", e, frame.body);
-          }
-        });
-      },
-
-      onStompError: (frame) => console.error("❌ ALARM STOMP ERROR:", frame.body),
-      onWebSocketError: (e) => console.error("❌ ALARM WS ERROR:", e),
-      onDisconnect: () => console.log("🔌 ALARM STOMP Disconnected"),
-    });
-
-    this.alarmClient.activate();
-  }
-
-  disconnectAlarm() {
-    if (this.alarmClient) {
-      this.alarmClient.deactivate();
-      this.alarmClient = null;
-      console.log("🔌 ALARM STOMP Disconnected (manual)");
-    }
-  }
+  
+  // develop 브랜치 호환성을 위한 stub 메서드 (AuthContext에서 호출 시 에러 방지)
+  // connectGlobal로 통합되었으므로 기능은 비워둠
+  disconnectAccount() {}
+  disconnectAlarm() {}
+  connectAccount() {}
+  connectAlarm() {}
 }
-
-
 
 export const webSocketClient = new WebSocketClient();

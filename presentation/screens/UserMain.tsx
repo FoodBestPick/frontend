@@ -13,7 +13,9 @@ import {
   Platform,
   UIManager,
   Alert,
-  PermissionsAndroid
+  PermissionsAndroid,
+  AppState,
+  AppStateStatus
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import messaging from '@react-native-firebase/messaging';
@@ -21,8 +23,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 // import { foodRes, CategoryKey, Store } from '../../data/mock/foodRes'; // Mock data removed
 import { useUserMainViewModel, Store } from '../viewmodels/UserMainViewModel';
-import { UserAuthRepositoryImpl } from '../../data/repositoriesImpl/UserAuthRepositoryImpl'; // ✨ Import 추가
-import { useAuth } from '../../context/AuthContext'; // ✨ useAuth 임포트 추가
+import { UserAuthRepositoryImpl } from '../../data/repositoriesImpl/UserAuthRepositoryImpl'; 
+import { useAuth } from '../../context/AuthContext'; 
 
 if (
   Platform.OS === 'android' &&
@@ -36,10 +38,9 @@ const MAIN_COLOR = '#FFA847';
 
 const SCROLL_THRESHOLD = 220;
 
-// 스크롤바 트랙의 길이 (화면 너비의 75%)
 const TRACK_WIDTH = width * 0.75;
 
-type CategoryKey = string; // Define CategoryKey locally or import if needed
+type CategoryKey = string; 
 
 const UserMain = () => {
   const [selectedCategory, setSelectedCategory] = useState<CategoryKey>('전체');
@@ -58,10 +59,41 @@ const UserMain = () => {
 
 
   useEffect(() => {
+    const lastRegisteredTokenRef = { current: null as string | null };
+
+    const isSystemAllowed = async (): Promise<boolean> => {
+      if (Platform.OS === "android" && Number(Platform.Version) >= 33) {
+        return PermissionsAndroid.check(PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS);
+      }
+
+      const authStatus = await messaging().hasPermission();
+      return (
+        authStatus === messaging.AuthorizationStatus.AUTHORIZED ||
+        authStatus === messaging.AuthorizationStatus.PROVISIONAL
+      );
+    };
+
+    const registerTokenIfPossible = async (force: boolean = false) => {
+      try {
+        const ok = await isSystemAllowed();
+        if (!ok) return;
+
+        const token = await messaging().getToken();
+        if (!token) return;
+
+        if (!force && lastRegisteredTokenRef.current === token) return;
+
+        await UserAuthRepositoryImpl.registerFcmToken(token);
+        lastRegisteredTokenRef.current = token;
+        console.log("✅ FCM 토큰 서버 등록 성공(자동):", token);
+      } catch (e) {
+        console.error("❌ FCM 토큰 서버 등록 실패(자동):", e);
+      }
+    };
+
     const setupFCM = async () => {
       try {
-        // ✅ Android 13+ 알림 권한 (백그라운드 푸시 표시에 영향)
-        if (Platform.OS === "android" && Platform.Version >= 33) {
+        if (Platform.OS === "android" && Number(Platform.Version) >= 33) {
           const result = await PermissionsAndroid.request(
             PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS
           );
@@ -75,15 +107,7 @@ const UserMain = () => {
 
         if (enabled) {
           console.log("FCM 권한 승인됨:", authStatus);
-          const token = await messaging().getToken();
-          console.log("FCM Token:", token);
-
-          try {
-            await UserAuthRepositoryImpl.registerFcmToken(token);
-            console.log("✅ FCM 토큰 서버 등록 성공");
-          } catch (e) {
-            console.error("❌ FCM 토큰 서버 등록 실패:", e);
-          }
+          await registerTokenIfPossible(true);
         }
       } catch (error) {
         console.error("FCM 권한 요청 실패:", error);
@@ -92,16 +116,34 @@ const UserMain = () => {
 
     setupFCM();
 
-    // 포그라운드 알림 리스너
-    const unsubscribe = messaging().onMessage(async remoteMessage => {
-      console.log('포그라운드 알림 수신:', remoteMessage);
+    const unsubscribeOnMessage = messaging().onMessage(async (remoteMessage) => {
+      console.log("포그라운드 알림 수신:", remoteMessage);
       Alert.alert(
-        remoteMessage.notification?.title || '알림',
-        remoteMessage.notification?.body || '새로운 알림이 도착했습니다.'
+        remoteMessage.notification?.title || "알림",
+        remoteMessage.notification?.body || "새로운 알림이 도착했습니다."
       );
     });
 
-    return unsubscribe;
+    const unsubscribeTokenRefresh = messaging().onTokenRefresh(async (token) => {
+      try {
+        await UserAuthRepositoryImpl.registerFcmToken(token);
+        lastRegisteredTokenRef.current = token;
+        console.log("✅ FCM 토큰 갱신 등록:", token);
+      } catch (e) {
+        console.error("❌ FCM 토큰 갱신 등록 실패:", e);
+      }
+    });
+    const appStateSub = AppState.addEventListener("change", (state: AppStateStatus) => {
+      if (state === "active") {
+        registerTokenIfPossible(false);
+      }
+    });
+
+    return () => {
+      unsubscribeOnMessage();
+      unsubscribeTokenRefresh();
+      appStateSub.remove();
+    };
   }, []);
 
   useEffect(() => {

@@ -1,18 +1,18 @@
 import React, { createContext, useState, useEffect, useContext, useRef, useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import CookieManager from '@react-native-cookies/cookies';
-import { UserAuthRepositoryImpl } from '../data/repositoriesImpl/UserAuthRepositoryImpl'; 
+import { UserAuthRepositoryImpl } from '../data/repositoriesImpl/UserAuthRepositoryImpl';
 import { ChatRepositoryImpl } from '../data/repositoriesImpl/ChatRepositoryImpl';
-import { webSocketClient } from '../core/utils/WebSocketClient'; 
+import { webSocketClient } from '../core/utils/WebSocketClient';
 import { Alert } from 'react-native';
 import { API_BASE_URL } from "@env";
 
 // ✨ AlarmItem 타입 정의
 export type AlarmItem = {
-  id?: number;
-  message: string;
-  createdAt?: string;
-  read?: boolean;
+    id?: number;
+    message: string;
+    createdAt?: string;
+    read?: boolean;
 };
 
 interface AuthContextType {
@@ -21,14 +21,14 @@ interface AuthContextType {
     loading: boolean;
     isAdmin: boolean;
     currentUserId: number | null;
-    activeRoomId: number | null; 
-    alarms: AlarmItem[]; 
-    unreadAlarmCount: number; 
-    checkActiveRoom: () => Promise<void>; 
+    activeRoomId: number | null;
+    alarms: AlarmItem[];
+    unreadAlarmCount: number;
+    checkActiveRoom: () => Promise<void>;
     login: (accessToken?: string | null, isAutoLogin?: boolean, isAdmin?: boolean, userId?: number) => Promise<void>;
     logout: () => Promise<void>;
-    setAlarmScreenActive: (active: boolean) => void; 
-    markAllAlarmsRead: () => void; 
+    setAlarmScreenActive: (active: boolean) => void;
+    markAllAlarmsRead: () => void;
 }
 
 export const AuthContext = createContext<AuthContextType>({
@@ -43,8 +43,8 @@ export const AuthContext = createContext<AuthContextType>({
     checkActiveRoom: async () => { },
     login: async () => { },
     logout: async () => { },
-    setAlarmScreenActive: () => {},
-    markAllAlarmsRead: () => {},
+    setAlarmScreenActive: () => { },
+    markAllAlarmsRead: () => { },
 });
 
 export const useAuth = () => useContext(AuthContext);
@@ -56,7 +56,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const [isAdmin, setIsAdmin] = useState(false);
     const [currentUserId, setCurrentUserId] = useState<number | null>(null);
     const [activeRoomId, setActiveRoomId] = useState<number | null>(null);
-    
+
     const [alarms, setAlarms] = useState<AlarmItem[]>([]);
     const [unreadAlarmCount, setUnreadAlarmCount] = useState<number>(0);
     const alarmScreenActiveRef = useRef(false);
@@ -91,11 +91,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     };
 
     const persistAlarmList = (uid: number, list: AlarmItem[]) => {
-        AsyncStorage.setItem(ALARM_LIST_KEY(uid), JSON.stringify(list)).catch(() => {});
+        AsyncStorage.setItem(ALARM_LIST_KEY(uid), JSON.stringify(list)).catch(() => { });
     };
 
     const persistAlarmCount = (uid: number, count: number) => {
-        AsyncStorage.setItem(ALARM_COUNT_KEY(uid), String(count)).catch(() => {});
+        AsyncStorage.setItem(ALARM_COUNT_KEY(uid), String(count)).catch(() => { });
     };
 
     const setAlarmScreenActive = (active: boolean) => {
@@ -117,7 +117,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const getTokenFromCookie = async (): Promise<string | null> => {
         try {
             const cookies = await CookieManager.get(API_BASE_URL);
-            
+
             // 1. accessToken
             if (cookies.accessToken) return cookies.accessToken.value;
             // 2. access_token
@@ -135,23 +135,23 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     // ✅ 로그아웃 함수
     const logout = useCallback(async () => {
         try {
-            await UserAuthRepositoryImpl.logout(); 
+            await UserAuthRepositoryImpl.logout();
         } catch (e) {
             console.error("Logout failed:", e);
-            try { await CookieManager.clearAll(); } catch {}
+            try { await CookieManager.clearAll(); } catch { }
             await AsyncStorage.multiRemove(['isAutoLogin', 'isAdmin', 'userId']);
         } finally {
             try {
                 webSocketClient.disconnect?.();
                 webSocketClient.disconnectMatching?.();
                 webSocketClient.disconnectGlobal?.();
-            } catch (e) {}
+            } catch (e) { }
 
             setToken(null);
             setIsLoggedIn(false);
             setIsAdmin(false);
             setCurrentUserId(null);
-            setActiveRoomId(null); 
+            setActiveRoomId(null);
             setAlarms([]);
             setUnreadAlarmCount(0);
         }
@@ -175,7 +175,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const loadToken = async () => {
         try {
             setLoading(true);
-            
+
             const storedAccessToken = await getTokenFromCookie();
             const storedIsAutoLogin = await AsyncStorage.getItem('isAutoLogin');
             const storedIsAdmin = await AsyncStorage.getItem('isAdmin');
@@ -184,7 +184,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             if (storedAccessToken && storedIsAutoLogin === 'true' && storedUserId) {
                 try {
                     await UserAuthRepositoryImpl.getMyProfile();
-                    
+
                     const parsedUserId = parseInt(storedUserId);
 
                     setToken(storedAccessToken);
@@ -202,14 +202,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                         },
                         onAlarm: (alarmData) => {
                             Alert.alert(alarmData.title || "새로운 알림", alarmData.body || alarmData.message);
-                            
+
                             const next: AlarmItem = {
                                 id: alarmData.id,
                                 message: alarmData.message ?? alarmData.body ?? alarmData.content ?? "",
                                 createdAt: alarmData.createdAt,
                                 read: false,
                             };
-                            
+
                             // 알람 저장 및 상태 업데이트 (Upstream 기능 통합)
                             setAlarms((prev) => {
                                 const updated = [next, ...prev].slice(0, MAX_ALARMS);
@@ -257,13 +257,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const login = async (accessTokenArg?: string | null, isAutoLogin?: boolean, isAdmin?: boolean, userId?: number) => {
         try {
             if (isAutoLogin !== undefined) {
-                 await AsyncStorage.setItem('isAutoLogin', isAutoLogin ? 'true' : 'false');
+                await AsyncStorage.setItem('isAutoLogin', isAutoLogin ? 'true' : 'false');
             }
             if (isAdmin !== undefined) {
-                 await AsyncStorage.setItem('isAdmin', isAdmin ? 'true' : 'false');
+                await AsyncStorage.setItem('isAdmin', isAdmin ? 'true' : 'false');
             }
             if (userId !== undefined) {
-                 await AsyncStorage.setItem('userId', userId.toString());
+                await AsyncStorage.setItem('userId', userId.toString());
             }
 
             let currentToken = await getTokenFromCookie();
@@ -291,13 +291,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                 return;
             } else {
                 setToken(currentToken);
-                
+
                 if (isAdmin !== undefined) setIsAdmin(isAdmin);
                 if (userId !== undefined) setCurrentUserId(userId);
-                
+
                 if (userId) await loadAlarmState(userId);
 
-                if (userId && currentToken) { 
+                if (userId && currentToken) {
                     const roomId = await ChatRepositoryImpl.getMyActiveRoom(currentToken);
                     setActiveRoomId(roomId);
 
@@ -308,14 +308,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                         },
                         onAlarm: (alarmData) => {
                             Alert.alert(alarmData.title || "새로운 알림", alarmData.body || alarmData.message);
-                            
+
                             const next: AlarmItem = {
                                 id: alarmData.id,
                                 message: alarmData.message ?? alarmData.body ?? alarmData.content ?? "",
                                 createdAt: alarmData.createdAt,
                                 read: false,
                             };
-                            
+
                             setAlarms((prev) => {
                                 const updated = [next, ...prev].slice(0, MAX_ALARMS);
                                 if (userId) persistAlarmList(userId, updated);
@@ -333,7 +333,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                     });
                 }
 
-                setIsLoggedIn(true); 
+                setIsLoggedIn(true);
             }
         } catch (e) {
             console.error(e);
@@ -346,19 +346,19 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     // ✨ 토큰 갱신 타이머
     useEffect(() => {
         const setupRefresh = () => {
-            if (isLoggedIn && currentUserId) { 
+            if (isLoggedIn && currentUserId) {
                 if (refreshIntervalRef.current) clearInterval(refreshIntervalRef.current);
 
                 refreshIntervalRef.current = setInterval(async () => {
                     console.log("🔄 [AuthContext] Access Token 갱신 타이머 동작...");
                     try {
                         await UserAuthRepositoryImpl.refreshAccessToken(); // 쿠키 갱신
-                        
+
                         const newToken = await getTokenFromCookie();
-                        
+
                         if (newToken) {
-                            setToken(newToken); 
-                            
+                            setToken(newToken);
+
                             webSocketClient.disconnectGlobal();
                             webSocketClient.connectGlobal(newToken, currentUserId, {
                                 onForceLogout: (message) => {
@@ -373,7 +373,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                                         createdAt: alarmData.createdAt,
                                         read: false,
                                     };
-                                    
+
                                     setAlarms((prev) => {
                                         const updated = [next, ...prev].slice(0, MAX_ALARMS);
                                         persistAlarmList(currentUserId, updated);
@@ -390,24 +390,35 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                                 }
                             });
                         } else {
-                             logout(); 
+                            logout();
                         }
 
-                    } catch (error) {
+                    } catch (error: any) {
                         console.error("❌ [AuthContext] Access Token 타이머 갱신 실패:", error);
+                        let alertMessage = "세션이 만료되어 다시 로그인해야 합니다.";
+
+                        if (error.response && error.response.status === 401) {
+                            alertMessage = "세션이 만료되었습니다. 다시 로그인해주세요.";
+                        } else if (error.message && error.message.includes("AuthError: NEW_ACCESS_TOKEN_NOT_FOUND")) {
+                            alertMessage = "새로운 토큰을 받아오지 못했습니다. 다시 로그인해주세요.";
+                        } else if (error.message) {
+                            alertMessage = `토큰 갱신 실패: ${error.message}. 다시 로그인해주세요.`;
+                        }
+
+                        Alert.alert("알림", alertMessage);
                         logout();
                         if (refreshIntervalRef.current) clearInterval(refreshIntervalRef.current);
                     }
-                }, 45 * 60 * 1000);
+                }, 7 * 60 * 1000); // 7분으로 변경
             } else {
-                 if (refreshIntervalRef.current) {
-                     clearInterval(refreshIntervalRef.current);
-                     refreshIntervalRef.current = null;
-                 }
+                if (refreshIntervalRef.current) {
+                    clearInterval(refreshIntervalRef.current);
+                    refreshIntervalRef.current = null;
+                }
             }
         };
 
-        setupRefresh(); 
+        setupRefresh();
         return () => {
             if (refreshIntervalRef.current) {
                 clearInterval(refreshIntervalRef.current);
@@ -417,11 +428,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }, [isLoggedIn, currentUserId, logout]);
 
     return (
-        <AuthContext.Provider value={{ 
-            isLoggedIn, token, loading, isAdmin, currentUserId, activeRoomId, 
-            alarms, unreadAlarmCount, 
-            checkActiveRoom, login, logout, 
-            setAlarmScreenActive, markAllAlarmsRead 
+        <AuthContext.Provider value={{
+            isLoggedIn, token, loading, isAdmin, currentUserId, activeRoomId,
+            alarms, unreadAlarmCount,
+            checkActiveRoom, login, logout,
+            setAlarmScreenActive, markAllAlarmsRead
         }}>
             {children}
         </AuthContext.Provider>

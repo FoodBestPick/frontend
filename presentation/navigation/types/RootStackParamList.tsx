@@ -22,6 +22,7 @@ export type RootStackParamList = {
   AdminFoodManage: undefined;
   AdminTagManage: undefined;
   AdminReportScreen: undefined;
+  AdminInquiryScreen: undefined;
 
   UserMain: undefined;
   RouletteScreen: undefined;

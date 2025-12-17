@@ -271,4 +271,28 @@ export const AdminApi = {
   async deleteFood(foodId: number) {
     return authApi.delete(`${API_BASE_URL}/food/${foodId}`);
   },
+
+  async getInquiries(status?: string) {
+    try {
+      const params: any = {};
+      if (status && status !== 'ALL') params.status = status;
+      const response = await authApi.get(`${API_BASE_URL}/admin/inquiry`, { params });
+      return response.data;
+    } catch (error: any) {
+      console.error("[AdminApi] getInquiries error:", error);
+      throw error;
+    }
+  },
+
+  async answerInquiry(inquiryId: number, adminContent: string) {
+    try {
+      const response = await authApi.patch(`${API_BASE_URL}/admin/inquiry/${inquiryId}/answer`, {
+        adminContent
+      });
+      return response.data;
+    } catch (error: any) {
+      console.error("[AdminApi] answerInquiry error:", error);
+      throw error;
+    }
+  },
 };

@@ -1,8 +1,5 @@
 import axios from "axios";
-import Config from "react-native-config";
-
-const LOCAL_HOST = 'http://10.0.2.2:8080/api/v1';
-const API_BASE_URL = Config.API_URL || LOCAL_HOST;
+import { API_BASE_URL } from "@env";
 
 export class AuthRepository {
     

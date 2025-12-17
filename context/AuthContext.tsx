@@ -6,6 +6,7 @@ import { ChatRepositoryImpl } from '../data/repositoriesImpl/ChatRepositoryImpl'
 import { webSocketClient } from '../core/utils/WebSocketClient';
 import { Alert } from 'react-native';
 import { API_BASE_URL } from "@env";
+import { setFallbackToken } from '../data/api/apiClientUtils';
 
 // ✨ AlarmItem 타입 정의
 export type AlarmItem = {
@@ -148,6 +149,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             } catch (e) { }
 
             setToken(null);
+            setFallbackToken(null);
             setIsLoggedIn(false);
             setIsAdmin(false);
             setCurrentUserId(null);
@@ -188,6 +190,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                     const parsedUserId = parseInt(storedUserId);
 
                     setToken(storedAccessToken);
+                    setFallbackToken(storedAccessToken);
                     setIsLoggedIn(true);
                     setIsAdmin(storedIsAdmin === 'true');
                     setCurrentUserId(parsedUserId);
@@ -291,6 +294,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                 return;
             } else {
                 setToken(currentToken);
+                setFallbackToken(currentToken);
 
                 if (isAdmin !== undefined) setIsAdmin(isAdmin);
                 if (userId !== undefined) setCurrentUserId(userId);
@@ -358,6 +362,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
                         if (newToken) {
                             setToken(newToken);
+                            setFallbackToken(newToken);
 
                             webSocketClient.disconnectGlobal();
                             webSocketClient.connectGlobal(newToken, currentUserId, {

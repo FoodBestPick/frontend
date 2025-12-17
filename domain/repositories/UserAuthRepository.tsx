@@ -14,8 +14,10 @@ export interface UserAuthRepository {
         email: string;
         password: string;
     }): Promise<{
-        accessToken: string;
         isAdmin: boolean;
+        userId?: number;
+        accessToken: string;
+        refreshToken?: string;
     }>;
     resetPassword(payload: {
         email: string;
@@ -66,4 +68,7 @@ export interface UserAuthRepository {
 
     // ⭐ [추가됨] 로그아웃
     logout(): Promise<void>;
+
+    // ✨ [추가] Access Token 갱신
+    refreshAccessToken(): Promise<void>;
 }

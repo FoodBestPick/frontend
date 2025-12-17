@@ -12,7 +12,7 @@ export const AdminDashBoardViewModel = () => {
     if (!token) return;
     const usecase = new GetAdminStats(AdminRepositoryImpl);
     try {
-      const result = await usecase.execute(token);
+      const result = await usecase.execute();
       console.log("weekUserData =", result.data.weekUserData);
       console.log("barData      =", result.data.barData);
       console.log("pieData      =", result.data.pieData);

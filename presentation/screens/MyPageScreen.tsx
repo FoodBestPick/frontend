@@ -272,7 +272,7 @@ const MyPageScreen = () => {
               text="알림 설정"
               onPress={() => navigation.navigate('NotificationSetting')}
             />
-            <MenuItem text="고객센터" onPress={() => { }} />
+            <MenuItem text="고객센터" onPress={() => navigation.navigate('CustomerService')} />
             <MenuItem text="개인정보 처리방침" onPress={() => { }} />
           </MenuSection>
 

@@ -7,9 +7,10 @@ import { UserAuthRepositoryImpl } from "../../data/repositoriesImpl/UserAuthRepo
 import { useAuth } from "../../context/AuthContext";
 
 interface ExecuteResult {
-    accessToken?: string;
+    accessToken?: string; // 추가
+    refreshToken?: string; // 추가
     isAdmin?: boolean;
-    userId?: number; // ✨ 추가: userId
+    userId?: number; 
 }
 
 type SigninFunction = (email: string, password: string, saveToStorage: boolean) => Promise<boolean>;
@@ -26,20 +27,21 @@ export const useSigninViewModel = () => {
         try {
             const result = (await useCase.execute({ email, password })) as ExecuteResult;
 
-            // 토큰 존재 확인 (accessToken만 확인)
-            if (result.accessToken) {
+            // userId가 있으면 로그인 성공으로 간주
+            if (result.userId !== undefined) {
 
-                // ⭐ Context Login 호출 (refreshToken 제거됨)
+                // ⭐ Context Login 호출
+                // login(accessTokenArg?, isAutoLogin?, isAdmin?, userId?)
                 await contextLogin(
-                    result.accessToken,
+                    result.accessToken || null, // 수정: 토큰 직접 전달
                     saveToStorage,       
                     result.isAdmin || false,
-                    result.userId! // ✨ userId 전달 (SigninUseCase에서 userId를 반환한다고 가정)
+                    result.userId! 
                 );
                 return true;
 
             } else {
-                Alert.alert("로그인 실패", "서버로부터 유효한 인증 정보를 받지 못했습니다. (토큰 누락)");
+                Alert.alert("로그인 실패", "서버로부터 유효한 사용자 정보를 받지 못했습니다.");
                 return false;
             }
 

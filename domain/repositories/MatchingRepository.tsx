@@ -4,6 +4,7 @@ export interface MatchingRepository {
   requestMatch(
     token: string,
     body: MatchingRequest,
+    signal?: AbortSignal,
   ): Promise<ApiResponse<MatchingResponse>>;
 
   cancelMatch(token: string): Promise<ApiResponse<string>>;

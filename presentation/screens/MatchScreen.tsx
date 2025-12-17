@@ -51,7 +51,7 @@ const MatchingScreen = () => {
         </Text>
 
         <TouchableOpacity
-          style={[styles.ctaButton, activeRoomId && styles.ctaButtonDisabled]}
+          style={[styles.ctaButton, activeRoomId ? styles.ctaButtonDisabled : null]}
           onPress={handleStartMatch}
           activeOpacity={0.9}
         >

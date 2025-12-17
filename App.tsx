@@ -86,14 +86,17 @@ function AppInner() {
             }}
           >
             {isAdmin ? (
-              <Stack.Screen name="AdminMain" component={AdminMainStack} />
+              // 관리자인 경우 AdminMain만 등록 (필요시 UserMain으로 이동 가능하게 추가할 수도 있음)
+              <>
+                <Stack.Screen name="AdminMain" component={AdminMainStack} />
+                <Stack.Screen name="UserMain" component={UserNavigation} />
+              </>
             ) : (
+              // 일반 유저인 경우 UserMain만 등록
               <Stack.Screen name="UserMain" component={UserNavigation} />
             )}
 
-            {isAdmin && <Stack.Screen name="UserMain" component={UserNavigation} />}
-            {!isAdmin && <Stack.Screen name="AdminMain" component={AdminMainStack} />}
-
+            {/* 공통 스크린들 */}
             <Stack.Screen name="SearchScreen" component={SearchScreen} />
             <Stack.Screen name="SearchResult" component={SearchResultScreen} />
             <Stack.Screen name="RestaurantDetail" component={RestaurantDetailScreen} />

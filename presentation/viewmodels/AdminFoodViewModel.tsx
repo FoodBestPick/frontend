@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { API_BASE_URL } from '@env';
 import { useAuth } from '../../context/AuthContext';
-import axios from 'axios';
+import { authApi } from '../../data/api/UserAuthApi';
 
 interface Food {
   id: number;
@@ -9,7 +9,7 @@ interface Food {
 }
 
 export const useAdminFoodViewModel = () => {
-  const { token } = useAuth();
+  const { isLoggedIn } = useAuth();
   const [foods, setFoods] = useState<Food[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -23,7 +23,7 @@ export const useAdminFoodViewModel = () => {
       setLoading(true);
       setError(null);
 
-      const response = await axios.get(`${API_BASE_URL}/food`, {
+      const response = await authApi.get(`${API_BASE_URL}/food`, {
         timeout: 10000,
       });
       const result = response.data;
@@ -43,10 +43,13 @@ export const useAdminFoodViewModel = () => {
 
   const createFood = async (name: string) => {
     try {
-      const response = await axios.post(`${API_BASE_URL}/food`, { name }, {
+      if (!isLoggedIn) {
+        return { success: false, message: '로그인이 필요합니다.' };
+      }
+
+      const response = await authApi.post(`${API_BASE_URL}/food`, { name }, {
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
         },
         timeout: 10000,
       });
@@ -67,14 +70,13 @@ export const useAdminFoodViewModel = () => {
 
   const updateFood = async (id: number, name: string) => {
     try {
-      if (!token) {
+      if (!isLoggedIn) {
         return { success: false, message: '로그인이 필요합니다.' };
       }
 
-      const response = await axios.put(`${API_BASE_URL}/food/${id}`, { name }, {
+      const response = await authApi.put(`${API_BASE_URL}/food/${id}`, { name }, {
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
         },
         timeout: 10000,
       });
@@ -95,14 +97,11 @@ export const useAdminFoodViewModel = () => {
 
   const deleteFood = async (id: number) => {
     try {
-      if (!token) {
+      if (!isLoggedIn) {
         return { success: false, message: '로그인이 필요합니다.' };
       }
 
-      const response = await axios.delete(`${API_BASE_URL}/food/${id}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+      const response = await authApi.delete(`${API_BASE_URL}/food/${id}`, {
         timeout: 10000,
       });
 

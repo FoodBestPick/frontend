@@ -21,13 +21,15 @@ export const ChatApi = {
 
   getMyActiveRoom: async (token: string) => {
     try {
+      console.log(`🔍 [ChatApi] getMyActiveRoom 호출. URL: ${client.defaults.baseURL}, Token: ${token ? token.substring(0, 10) + '...' : 'null'}`);
       const res = await client.get(`/chat/my-room`, {
         headers: { Authorization: toBearer(token) },
       });
       // 데이터 구조: { code: 200, data: { roomId: 123 } }
+      console.log("✅ [ChatApi] getMyActiveRoom 응답:", res.data);
       return res.data?.data?.roomId ?? null;
-    } catch (e) {
-      console.log("getMyActiveRoom error:", e);
+    } catch (e: any) {
+      console.error("❌ [ChatApi] getMyActiveRoom error:", e.message, e.response?.data);
       return null;
     }
   },

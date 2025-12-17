@@ -17,7 +17,7 @@ import {
 import { Header } from '../components/Header';
 import { AdminApi } from '../../data/api/AdminApi';
 import { ThemeContext } from '../../context/ThemeContext';
-import { COLORS } from '../../core/constants/Colors';
+import { COLORS } from '../../core/constants/colors';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useNavigation } from '@react-navigation/native';
 

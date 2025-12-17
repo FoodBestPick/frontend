@@ -76,6 +76,36 @@ export const UserAuthRepositoryImpl: UserAuthRepository = {
         
         console.log("✅ [UserAuthRepository] Calculated isAdmin:", isAdmin);
 
+        // ✅ accessToken 변수를 여기서 선언합니다.
+        const accessToken = tokenData.accessToken || tokenData.access_token;
+        
+        // ✨ accessToken을 쿠키로 강제 설정 (서버가 Set-Cookie를 안 줄 경우 대비)
+        if (accessToken) {
+            try {
+                console.log(`🍪 [UserAuthRepository] accessToken 수동 설정. URL: ${API_BASE_URL}, Token: ${accessToken.substring(0, 10)}...`);
+                
+                await CookieManager.set(API_BASE_URL, {
+                    name: 'accessToken',
+                    value: accessToken,
+                    path: '/',
+                    version: '1'
+                });
+                // ✨ Refresh Token도 쿠키로 저장합니다.
+                if (rawData.refreshToken) {
+                    await CookieManager.set(API_BASE_URL, {
+                        name: 'refreshToken', // refreshToken 이름으로 저장
+                        value: rawData.refreshToken,
+                        path: '/',
+                        version: '1' // expires 필드 제거
+                    });
+                    console.log("✅ [UserAuthRepository] refreshToken 수동 설정 완료.");
+                }
+
+                console.log("✅ [UserAuthRepository] 쿠키 설정 완료.");
+            } catch (cookieError) {
+                console.error("❌ [UserAuthRepository] 쿠키 설정 실패:", cookieError);
+            }
+        }
         
         return {
             isAdmin,
@@ -263,10 +293,36 @@ export const UserAuthRepositoryImpl: UserAuthRepository = {
                 }
             });
 
-            console.log("✅ [UserAuthRepository] Access Token 갱신 성공 (쿠키로 관리됨).");
+            console.log("🔍 [UserAuthRepository] refreshAccessToken 서버 응답:", res.data); // 서버 응답 전체 로그
+
+            // 서버 응답 본문에서 새로운 토큰 추출 (예시: res.data.accessToken)
+            const newAccessToken = res.data.data?.accessToken; // ApiResponse<TokenResponse> 구조에 맞춰 추출
+            console.log("🔍 [UserAuthRepository] 추출된 newAccessToken:", newAccessToken ? newAccessToken.substring(0, 10) + '...' : '없음');
+
+            if (newAccessToken) {
+                await CookieManager.set(API_BASE_URL, {
+                    name: 'accessToken',
+                    value: newAccessToken,
+                    path: '/',
+                    version: '1',
+                    expires: '2030-01-01T12:00:00.00-05:00'
+                });
+                console.log("✅ [UserAuthRepository] Access Token 갱신 성공 및 쿠키 업데이트.");
+
+                // ✨ 방금 저장한 쿠키가 제대로 읽히는지 즉시 확인
+                const storedCookies = await CookieManager.get(API_BASE_URL);
+                const verifiedToken = storedCookies.accessToken?.value;
+                console.log("🔍 [UserAuthRepository] CookieManager에서 방금 확인된 토큰:", verifiedToken ? verifiedToken.substring(0, 10) + '...' : '없음');
+
+            } else {
+                console.warn("⚠️ [UserAuthRepository] Access Token 갱신 성공, 하지만 응답에서 새 토큰을 찾을 수 없음.");
+                // 서버 응답에서 토큰을 못 찾으면 여기서 에러를 던져서 로그아웃 처리하도록 유도
+                throw new Error("AuthError: NEW_ACCESS_TOKEN_NOT_FOUND");
+            }
+
             return;
         } catch (error: any) {
-            console.error("❌ [UserAuthRepository] Access Token 갱신 실패:", error.response?.status, error.response?.data);
+            console.error("❌ [UserAuthRepository] Access Token 갱신 실패:", error.message, error.response?.status, error.response?.data);
             throw error;
         }
     },

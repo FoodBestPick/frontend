@@ -19,7 +19,7 @@ import { launchImageLibrary } from 'react-native-image-picker';
 import { API_BASE_URL } from '@env';
 import { RootStackParamList } from '../navigation/types/RootStackParamList';
 import { useAuth } from '../../context/AuthContext';
-import axios from 'axios';
+import { authApi } from '../../data/api/UserAuthApi';
 
 type RouteParams = RouteProp<RootStackParamList, 'ReviewWrite'>;
 
@@ -27,7 +27,7 @@ const ReviewWriteScreen = () => {
   const navigation = useNavigation();
   const route = useRoute<RouteParams>();
   const { restaurantId, restaurantName, review } = route.params;
-  const { token } = useAuth();
+  const { isLoggedIn } = useAuth();
 
   const [rating, setRating] = useState(review ? review.rating : 5);
   const [content, setContent] = useState(review ? review.content : '');
@@ -77,24 +77,22 @@ const ReviewWriteScreen = () => {
 
     try {
       setLoading(true);
-      if (!token) {
+      if (!isLoggedIn) {
         Alert.alert('오류', '로그인이 필요합니다.');
         return;
       }
 
       const formData = new FormData();
       
-      // JSON 데이터
       const reviewData = {
         restaurantId: restaurantId,
         content: content,
         rating: rating,
-        images: images.filter(img => img.isExisting).map(img => img.uri), // 기존 이미지 URL
+        images: images.filter(img => img.isExisting).map(img => img.uri), 
       };
 
       formData.append('data', JSON.stringify(reviewData));
 
-      // 새 이미지 파일만 전송
       images.forEach((image) => {
         if (!image.isExisting) {
           const file = {
@@ -109,14 +107,12 @@ const ReviewWriteScreen = () => {
       const url = review ? `${API_BASE_URL}/api/review/${review.id}` : `${API_BASE_URL}/api/review`;
       const method = review ? 'PUT' : 'POST';
 
-      // Axios 사용 (transformRequest로 Android FormData 이슈 해결)
-      const response = await axios.request({
+      const response = await authApi.request({
         method: method,
         url: url,
         data: formData,
         headers: {
           'Content-Type': 'multipart/form-data',
-          Authorization: `Bearer ${token}`,
         },
         transformRequest: (data) => data,
       });

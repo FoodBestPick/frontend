@@ -1,53 +1,47 @@
-import axios from "axios";
 import { API_BASE_URL } from "@env";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { AdminUserList } from "../../domain/entities/AdminUserList";
-
-// 토큰 가져오는 헬퍼 함수
-const getToken = async () => {
-  return await AsyncStorage.getItem("accessToken");
-};
-
+import { authApi } from "./UserAuthApi";
 
 export const AdminApi = {
-  async getStats(token: string) {
+  async getStats() {
     try {
-      const response = await axios.get(
+      console.log(`🔍 [AdminApi] getStats 요청: ${API_BASE_URL}/admin/user/dashboard`);
+      const response = await authApi.get(
         `${API_BASE_URL}/admin/user/dashboard`,
         {
-          headers: { Authorization: `Bearer ${token}` },
-          timeout: 10000, // Timeout 추가
+          timeout: 10000, 
         }
       );
-      // 팀원 코드 병합: allRestaurantData가 없을 경우 기본값 추가
       if (response.data.data && !response.data.data.allRestaurantData) {
         response.data.data.allRestaurantData = [0, 0, 0, 0, 0, 0, 0];
       }
       return response.data;
-    } catch (error) {
-      console.error("getStats error", error);
+    } catch (error: any) {
+      console.error("❌ [AdminApi] getStats error:", error.message);
+      console.error("  Status:", error.response?.status);
+      console.error("  Data:", error.response?.data);
       throw error;
     }
   },
 
-  async getDetailStats(token: string, startDate?: string, endDate?: string) {
+  async getDetailStats(startDate?: string, endDate?: string) {
     try {
       const params: any = {};
       if (startDate) params.startDate = startDate;
       if (endDate) params.endDate = endDate;
 
-      const response = await axios.get(
+      console.log(`🔍 [AdminApi] getDetailStats 요청: ${API_BASE_URL}/admin/user/dashboard/detail`, params);
+
+      const response = await authApi.get(
         `${API_BASE_URL}/admin/user/dashboard/detail`,
         {
-          headers: { Authorization: `Bearer ${token}` },
           params,
           timeout: 10000,
         }
       );
 
       const rawData = response.data.data;
-
-      // 🛡️ 데이터 정제 (숫자 변환 및 null 처리)
+      // ... (데이터 정제 로직은 그대로) ...
       const sanitizeStats = (stats: any) => {
         if (!stats) return {};
         return {
@@ -74,8 +68,10 @@ export const AdminApi = {
         ...response.data,
         data: sanitizedData,
       };
-    } catch (error) {
-      console.error("getDetailStats Error:", error);
+    } catch (error: any) {
+      console.error("❌ [AdminApi] getDetailStats Error:", error.message);
+      console.error("  Status:", error.response?.status);
+      console.error("  Data:", error.response?.data);
       return { code: 500, message: "통계 로드 실패", data: null };
     }
   },
@@ -90,7 +86,7 @@ export const AdminApi = {
       const params: any = { page, size };
       if (keyword) params.keyword = keyword;
 
-      const response = await axios.get(`${API_BASE_URL}/restaurant`, { params });
+      const response = await authApi.get(`${API_BASE_URL}/restaurant`, { params });
       return response.data;
     } catch (error) {
       console.error("Error fetching restaurant list:", error);
@@ -102,7 +98,6 @@ export const AdminApi = {
     }
   },
 
-  // ✅ [API 연동] 유저 목록 조회 (클라이언트 사이드 페이징/필터링 구현)
   async getUserList(
     page: number,
     size: number,
@@ -111,12 +106,9 @@ export const AdminApi = {
     keyword?: string
   ): Promise<AdminUserList> {
     try {
-      const token = await getToken();
       console.log(`[AdminApi] Fetching users from: ${API_BASE_URL}/admin/user`);
       
-      const response = await axios.get(`${API_BASE_URL}/admin/user`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await authApi.get(`${API_BASE_URL}/admin/user`);
 
       console.log("[AdminApi] User list response status:", response.status);
 
@@ -128,7 +120,7 @@ export const AdminApi = {
         const isRecent = (dateStr: string) => {
             if (!dateStr) return false;
             const diff = new Date().getTime() - new Date(dateStr).getTime();
-            return diff < 10 * 60 * 1000; // 10분 이내 활동
+            return diff < 10 * 60 * 1000; 
         };
 
         let statusStr = "미접속";
@@ -146,7 +138,7 @@ export const AdminApi = {
             lastActive: u.updatedAt,
             status: statusStr,
             warnings: u.warnings,
-            role: u.role, // ✨ 추가: 백엔드에서 받은 role 정보를 매핑
+            role: u.role, 
         };
       });
 
@@ -160,13 +152,7 @@ export const AdminApi = {
         );
       }
 
-      // 3. 필터링 (Status) - API Status와 UI Status 매핑이 중요
-      // Debugging logs
-      if (status && status !== "전체") {
-          console.log(`[AdminApi] Filtering by status: '${status}'`);
-          console.log(`[AdminApi] Available statuses in list:`, [...new Set(allUsers.map((u: any) => u.status))]);
-      }
-
+      // 3. 필터링 (Status)
       if (status && status !== "전체") {
         filtered = filtered.filter((u) => u.status === status);
       }
@@ -203,7 +189,7 @@ export const AdminApi = {
         message: "success",
         data: paginated,
         page,
-        size: size, // size 변수명이 겹치지 않게 수정
+        size: size, 
         totalPages: totalPages || 1,
       };
     } catch (error: any) {
@@ -224,45 +210,37 @@ export const AdminApi = {
   },
 
   async updateUserWarning(userId: number, warnings: number, message: string) {
-    const token = await getToken();
-    await axios.patch(
+    await authApi.patch(
       `${API_BASE_URL}/admin/user/${userId}/warning`,
-      { warnings, message },
-      { headers: { Authorization: `Bearer ${token}` } }
+      { warnings, message }
     );
   },
 
   async suspendUser(userId: number, days: number, message: string) {
-    const token = await getToken();
-    await axios.patch(
+    await authApi.patch(
       `${API_BASE_URL}/admin/user/${userId}/suspende`,
-      { day: days, message },
-      { headers: { Authorization: `Bearer ${token}` } }
+      { day: days, message }
     );
   },
 
   async unsuspendUser(userId: number) {
-    const token = await getToken();
-    await axios.patch(
+    await authApi.patch(
       `${API_BASE_URL}/admin/user/${userId}/unsuspend`,
-      {},
-      { headers: { Authorization: `Bearer ${token}` } }
+      {}
     );
   },
 
   async updateUserRole(userId: number, role: string) {
-    const token = await getToken();
     try {
-      const response = await axios.patch(
+      const response = await authApi.patch(
         `${API_BASE_URL}/admin/user/${userId}/role`,
-        { role }, // UserRoleRequest DTO에 맞춤
-        { headers: { Authorization: `Bearer ${token}` } }
+        { role } 
       );
       console.log(`[AdminApi] updateUserRole success for userId ${userId}:`, response.status, response.data);
-      return response.data; // Return data for potential further checks
+      return response.data; 
     } catch (error: any) {
       console.error(`[AdminApi] updateUserRole error for userId ${userId}:`, error.response?.status, error.response?.data || error.message);
-      throw error; // Re-throw to propagate error to ViewModel
+      throw error; 
     }
   },
 
@@ -270,38 +248,27 @@ export const AdminApi = {
     return { code: 200, message: "OK", data: [] };
   },
 
-  // 🍔 [Food API 추가]
   async getAllFoods() {
-    const token = await getToken();
-    return axios.get(`${API_BASE_URL}/food`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
+    return authApi.get(`${API_BASE_URL}/food`);
   },
 
   async createFood(name: string) {
-    const token = await getToken();
-    return axios.post(`${API_BASE_URL}/food`, { name }, {
+    return authApi.post(`${API_BASE_URL}/food`, { name }, {
       headers: {
-        Authorization: `Bearer ${token}`,
         "Content-Type": "application/json",
       },
     });
   },
 
   async updateFood(id: number, name: string) {
-    const token = await getToken();
-    return axios.put(`${API_BASE_URL}/food/${id}`, { name }, {
+    return authApi.put(`${API_BASE_URL}/food/${id}`, { name }, {
       headers: {
-        Authorization: `Bearer ${token}`,
         "Content-Type": "application/json",
       },
     });
   },
 
   async deleteFood(foodId: number) {
-    const token = await getToken();
-    return axios.delete(`${API_BASE_URL}/food/${foodId}`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
+    return authApi.delete(`${API_BASE_URL}/food/${foodId}`);
   },
 };

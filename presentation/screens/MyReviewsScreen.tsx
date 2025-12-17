@@ -15,11 +15,10 @@ import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { useAuth } from '../../context/AuthContext';
 import { ThemeContext } from '../../context/ThemeContext';
 import { API_BASE_URL } from "@env";
-import axios from 'axios';
+import { authApi } from '../../data/api/UserAuthApi';
 
 const MyReviewsScreen = () => {
   const navigation = useNavigation<any>();
-  const { token } = useAuth();
   const { theme, isDarkMode } = useContext(ThemeContext);
   const [reviews, setReviews] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -32,9 +31,7 @@ const MyReviewsScreen = () => {
 
   const fetchReviews = async () => {
     try {
-      console.log('Fetching reviews with token:', token);
-      const response = await axios.get(`${API_BASE_URL}/api/review/my`, {
-        headers: { Authorization: `Bearer ${token}` },
+      const response = await authApi.get(`${API_BASE_URL}/api/review/my`, {
         timeout: 10000,
       });
       const json = response.data;

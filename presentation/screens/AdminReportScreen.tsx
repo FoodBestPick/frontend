@@ -24,7 +24,7 @@ type Navigation = NativeStackNavigationProp<RootStackParamList>;
 
 const AdminReportScreen = () => {
   const navigation = useNavigation<Navigation>();
-  const { token } = useAuth();
+  // const { token } = useAuth(); // 토큰은 AdminApi에서 자동으로 처리
   const { theme, isDarkMode } = useContext(ThemeContext);
   const insets = useSafeAreaInsets();
 
@@ -45,7 +45,7 @@ const AdminReportScreen = () => {
   const [suspensionDays, setSuspensionDays] = useState('7');
 
   const fetchReports = async (pageNum: number, isRefresh = false, filter = selectedFilter) => {
-    if (!token) return;
+    // if (!token) return; // authApi가 토큰 처리하므로 불필요
     if (loading) return;
 
     setLoading(true);
@@ -53,17 +53,12 @@ const AdminReportScreen = () => {
       // Map filter to targetType
       let targetTypeParam: string | undefined;
       if (filter === 'RESTAURANT') targetTypeParam = 'RESTAURANT';
-      else if (filter === 'USER') targetTypeParam = 'USER'; // Note: This might need to include REVIEW/CHAT if backend supports multiple or we filter client-side
+      else if (filter === 'USER') targetTypeParam = 'USER'; 
 
-      const response = await ReportApi.getAllReports(token, pageNum, 10, undefined, targetTypeParam);
+      const response = await ReportApi.getAllReports(pageNum, 10, undefined, targetTypeParam); // token 인자 제거
 
       if (response.code === 200) {
         const newReports = response.data.reports;
-
-        // Client-side filtering if backend doesn't support complex OR queries (e.g. USER includes REVIEW/CHAT)
-        // For now, assuming backend handles 'USER' strictly or we just show what we get.
-        // If 'USER' filter is meant to show User + Review + Chat, we might need to fetch ALL and filter, or backend needs adjustment.
-        // Let's assume for now we just fetch what matches.
 
         if (isRefresh) {
           setReports(newReports);
@@ -103,7 +98,6 @@ const AdminReportScreen = () => {
     setPage(0);
     setReports([]);
     setHasMore(true);
-    // fetchReports will be triggered by useFocusEffect dependency
   };
 
   const handleDeleteReport = (reportId: number) => {
@@ -113,9 +107,9 @@ const AdminReportScreen = () => {
         text: '삭제',
         style: 'destructive',
         onPress: async () => {
-          if (!token) return;
+          // if (!token) return; // authApi가 토큰 처리하므로 불필요
           try {
-            const response = await ReportApi.deleteReport(token, reportId);
+            const response = await ReportApi.deleteReport(reportId); // token 인자 제거
             if (response.code === 200) {
               Alert.alert('알림', '신고가 삭제되었습니다.');
               handleRefresh();
@@ -140,7 +134,8 @@ const AdminReportScreen = () => {
   };
 
   const handleActionSubmit = async () => {
-    if (!token || !selectedReport || !actionType) return;
+    // if (!token || !selectedReport || !actionType) return; // authApi가 토큰 처리하므로 불필요
+    if (!selectedReport || !actionType) return;
     if (!actionReason.trim()) {
       Alert.alert('알림', '사유를 입력해주세요.');
       return;
@@ -149,12 +144,12 @@ const AdminReportScreen = () => {
     try {
       let response;
       if (actionType === 'WARNING') {
-        response = await ReportApi.approveWithWarning(token, selectedReport.id, {
+        response = await ReportApi.approveWithWarning(selectedReport.id, { // token 인자 제거
           userId: selectedReport.targetId,
           reason: actionReason,
         });
       } else {
-        response = await ReportApi.approveWithSuspension(token, selectedReport.id, {
+        response = await ReportApi.approveWithSuspension(selectedReport.id, { // token 인자 제거
           userId: selectedReport.targetId,
           reason: actionReason,
           durationDays: parseInt(suspensionDays, 10),

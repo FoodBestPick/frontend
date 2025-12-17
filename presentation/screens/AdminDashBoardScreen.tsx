@@ -451,9 +451,7 @@ export const AdminDashBoardScreen = () => {
               textColor={isDarkMode ? theme.textPrimary : COLORS.text}
               cardColor={isDarkMode ? theme.card : COLORS.card}
               borderColor={theme.border}
-              onPress={() => {
-                /* TODO */
-              }}
+              onPress={() => navigation.navigate('AdminInquiryScreen')}
             />
           </View>
         </View>

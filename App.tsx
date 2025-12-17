@@ -38,6 +38,7 @@ import NotificationSettingScreen from "./presentation/screens/NotificationSettin
 import { AdminRestaurantAddScreen } from './presentation/screens/AdminRestaurantAddScreen';
 import { AdminNotificationScreen } from './presentation/screens/AdminNotificationScreen';
 import AdminReportScreen from './presentation/screens/AdminReportScreen';
+import { AdminInquiryScreen } from './presentation/screens/AdminInquiryScreen';
 
 // Contexts
 import { ThemeProvider, ThemeContext } from "./context/ThemeContext";
@@ -117,6 +118,7 @@ function AppInner() {
             <Stack.Screen name="AdminRestaurantAdd" component={AdminRestaurantAddScreen} />
             <Stack.Screen name="NotificationScreen" component={AdminNotificationScreen} />
             <Stack.Screen name="AdminReportScreen" component={AdminReportScreen} />
+            <Stack.Screen name="AdminInquiryScreen" component={AdminInquiryScreen} />
             <Stack.Screen name="AdminManageSelect" component={AdminManageSelectScreen} />
             <Stack.Screen name="AdminFoodManage" component={AdminFoodManageScreen} />
             <Stack.Screen name="AdminTagManage" component={AdminTagManageScreen} />

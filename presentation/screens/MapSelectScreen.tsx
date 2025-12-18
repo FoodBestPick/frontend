@@ -1,4 +1,4 @@
-import React, { useState, useRef, useContext, useEffect } from 'react';
+import React, { useState, useRef, useContext, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -16,12 +16,14 @@ import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../navigation/types/RootStackParamList';
 import { KAKAO_JAVASCRIPT_KEY } from '@env';
-import { getCoordsByAddress } from '../../core/utils/KakaoMaps';
+import { getCoordsByAddress, getAddressByCoords } from '../../core/utils/KakaoMaps';
 import { ThemeContext } from '../../context/ThemeContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Geolocation from '@react-native-community/geolocation';
 
 type Navigation = NativeStackNavigationProp<RootStackParamList>;
 type MapSelectRouteProp = RouteProp<RootStackParamList, 'MapSelectScreen'>;
+type GeoPosition = { coords: { latitude: number; longitude: number } };
 
 export const MapSelectScreen = () => {
   const navigation = useNavigation<Navigation>();
@@ -32,9 +34,9 @@ export const MapSelectScreen = () => {
 
   const [searchQuery, setSearchQuery] = useState('');
   const [address, setAddress] = useState('');
-  const [marker, setMarker] = useState<{ lat: number; lng: number } | null>(
-    null,
-  );
+  const [marker, setMarker] = useState<{ lat: number; lng: number } | null>(null);
+
+  const [mapReady, setMapReady] = useState(false);
   const [loading, setLoading] = useState(true);
 
   const kakaoMapHTML = `
@@ -62,7 +64,8 @@ export const MapSelectScreen = () => {
           const geocoder = new kakao.maps.services.Geocoder();
           let marker = new kakao.maps.Marker();
 
-          // 지도 클릭 시 마커 이동
+          window.ReactNativeWebView.postMessage(JSON.stringify({ type: "ready" }));
+
           kakao.maps.event.addListener(map, "click", function(mouseEvent) {
             const latlng = mouseEvent.latLng;
             marker.setMap(null);
@@ -100,10 +103,66 @@ export const MapSelectScreen = () => {
   </html>
   `;
 
+  const requestLocationPermission = useCallback(async () => {
+    if (Platform.OS !== 'android') return true;
+
+    const granted = await PermissionsAndroid.request(
+      PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
+      {
+        title: '위치 권한 요청',
+        message: '현재 위치를 확인하려면 권한이 필요합니다.',
+        buttonPositive: '확인',
+      },
+    );
+
+    return granted === PermissionsAndroid.RESULTS.GRANTED;
+  }, []);
+
+  const moveToMyLocation = useCallback(async () => {
+    setLoading(true);
+    try {
+      const ok = await requestLocationPermission();
+      if (!ok) return;
+
+
+      const pos = await new Promise<GeoPosition>((resolve, reject) => {
+        Geolocation.getCurrentPosition(
+          resolve,
+          reject,
+          { enableHighAccuracy: false, timeout: 8000, maximumAge: 5000 },
+        );
+      });
+
+      const lat = pos.coords.latitude;
+      const lng = pos.coords.longitude;
+
+      const addr = (await getAddressByCoords(lat, lng)) ?? '';
+
+      webViewRef.current?.injectJavaScript(`
+        if (window.moveToLocation) {
+          window.moveToLocation(${lat}, ${lng}, ${JSON.stringify(addr)});
+        }
+        true;
+      `);
+    } catch (e) {
+      console.log('moveToMyLocation error:', e);
+    } finally {
+      setLoading(false);
+    }
+  }, [requestLocationPermission]);
+
   /** WebView → RN */
-  const onMessage = (event: any) => {
+  const onMessage = async (event: any) => {
     try {
       const data = JSON.parse(event.nativeEvent.data);
+
+      if (data.type === 'ready') {
+        setMapReady(true);
+        setLoading(false); 
+        moveToMyLocation();
+        return;
+      }
+
       if (data.type === 'select') {
         setMarker({ lat: data.lat, lng: data.lng });
         setAddress(data.address);
@@ -113,37 +172,15 @@ export const MapSelectScreen = () => {
     }
   };
 
-  /** 위치 권한 요청 + 이동 */
-  const moveToMyLocation = async () => {
-    try {
-      if (Platform.OS === 'android') {
-        const granted = await PermissionsAndroid.request(
-          PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
-          {
-            title: '위치 권한 요청',
-            message: '현재 위치를 확인하려면 권한이 필요합니다.',
-            buttonPositive: '확인',
-          },
-        );
-        if (granted !== PermissionsAndroid.RESULTS.GRANTED) {
-          setLoading(false);
-          return;
-        }
-      }
-    } catch (e) {
-      console.log(e);
-      setLoading(false);
-    }
-  };
-
-  /** WebView 로딩 끝나면 현재 위치로 이동 */
-  const handleWebViewLoadEnd = () => {
-    moveToMyLocation();
-  };
-
   /** 검색 */
   const handleSearch = async () => {
     if (!searchQuery.trim()) return;
+
+    if (!mapReady) {
+      Alert.alert('지도 로딩 중', '지도가 준비되면 검색할 수 있어요.');
+      return;
+    }
+
     setLoading(true);
     const result = await getCoordsByAddress(searchQuery);
     setLoading(false);
@@ -151,16 +188,14 @@ export const MapSelectScreen = () => {
     if (result) {
       webViewRef.current?.injectJavaScript(`
         if (window.moveToLocation) {
-          window.moveToLocation(${result.lat}, ${result.lng}, "${result.address}");
+          window.moveToLocation(${result.lat}, ${result.lng}, ${JSON.stringify(result.address)});
         }
+        true;
       `);
       setMarker({ lat: result.lat, lng: result.lng });
       setAddress(result.address);
     } else {
-      Alert.alert(
-        '검색 결과 없음',
-        '입력한 주소 또는 장소를 찾을 수 없습니다.',
-      );
+      Alert.alert('검색 결과 없음', '입력한 주소 또는 장소를 찾을 수 없습니다.');
     }
   };
 
@@ -181,6 +216,7 @@ export const MapSelectScreen = () => {
         showBackButton
         onBackPress={() => navigation.goBack()}
       />
+
       {/* 검색창 */}
       <View
         style={[
@@ -218,7 +254,6 @@ export const MapSelectScreen = () => {
         onMessage={onMessage}
         javaScriptEnabled
         domStorageEnabled
-        onLoadEnd={handleWebViewLoadEnd}
         style={{ flex: 1 }}
       />
 
@@ -233,10 +268,10 @@ export const MapSelectScreen = () => {
       <View
         style={[
           styles.footer,
-          { 
-            backgroundColor: theme.card, 
+          {
+            backgroundColor: theme.card,
             borderColor: theme.border,
-            paddingBottom: insets.bottom > 0 ? insets.bottom : 16 
+            paddingBottom: insets.bottom > 0 ? insets.bottom : 16,
           },
         ]}
       >

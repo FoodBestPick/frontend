@@ -58,15 +58,81 @@ export const AdminUserScreen = () => {
     extra: "",
   });
 
-  useEffect(() => {
-    refresh();
-  }, [page, status, sort, keyword]);
-
   const toggleUser = (id: number) => {
     setExpandedUsers((prev) =>
       prev.includes(id)
         ? prev.filter((userId) => userId !== id)
         : [...prev, id]
+    );
+  };
+
+  const getAvatarUri = (u: any): string | null => {
+    const raw =
+      u?.avatarUrl ??
+      u?.avatar ??
+      u?.profileImageUrl ??
+      u?.profileImage ??
+      u?.imageUrl ??
+      u?.image ??
+      null;
+
+    if (!raw) return null;
+
+    if (typeof raw === "object" && typeof raw.uri === "string") {
+      const v = raw.uri.trim();
+      return v.length ? v : null;
+    }
+
+    if (typeof raw === "string") {
+      const v = raw.trim();
+      return v.length ? v : null;
+    }
+
+    return null;
+  };
+
+  const UserAvatar = ({
+    uri,
+    size = 44,
+    theme,
+  }: {
+    uri?: string | null;
+    size?: number;
+    theme: any;
+  }) => {
+    const [failed, setFailed] = React.useState(false);
+    const safeUri = uri && uri.length > 0 ? uri : null;
+
+    // 이미지 없거나 / 로딩 실패하면 기본 프로필
+    if (!safeUri || failed) {
+      return (
+        <View
+          style={[
+            styles.avatarFallback,
+            {
+              width: size,
+              height: size,
+              borderRadius: size / 2,
+              backgroundColor: theme.border,
+            },
+          ]}
+        >
+          <Ionicons
+            name="person"
+            size={Math.round(size * 0.55)}
+            color={theme.textSecondary}
+          />
+        </View>
+      );
+    }
+
+    return (
+      <Image
+        source={{ uri: safeUri }}
+        style={{ width: size, height: size, borderRadius: size / 2 }}
+        resizeMode="cover"
+        onError={() => setFailed(true)}
+      />
     );
   };
 
@@ -130,7 +196,7 @@ export const AdminUserScreen = () => {
             <View key={user.id} style={[styles.card, { backgroundColor: theme.card, borderColor: theme.border, borderWidth: 1 }]}>
               <TouchableOpacity style={styles.cardHeader} onPress={() => toggleUser(user.id)} activeOpacity={0.7}>
                 <View style={styles.userInfo}>
-                  <Image source={user.avatar || require("../../assets/user1.png")} style={styles.avatar} />
+                  <UserAvatar uri={getAvatarUri(user)} size={44} theme={theme} />
                   <View>
                     <Text style={[styles.userName, { color: theme.textPrimary }]}>{user.name}</Text>
                     <Text style={[styles.userEmail, { color: theme.textSecondary }]}>{user.email}</Text>
@@ -240,7 +306,7 @@ const PermissionModal = ({ visible, onClose, user, theme, onConfirm }: any) => {
         <View style={[styles.modalBox, { backgroundColor: theme.card }]}>
           <Text style={styles.modalTitle}>권한 변경</Text>
           <Text style={styles.modalSub}>{user?.name}님의 권한을 변경합니다.</Text>
-          
+
           <View style={styles.permissionRow}>
             <Text style={[styles.modalLabel, { color: theme.textSecondary }]}>현재 권한</Text>
             <Text style={[styles.modalValue, { color: theme.textPrimary }]}>{user?.role === "ADMIN" ? "관리자" : "사용자"}</Text>
@@ -267,7 +333,7 @@ const PermissionModal = ({ visible, onClose, user, theme, onConfirm }: any) => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F6F7FB', paddingHorizontal: 30 }, // 20에서 30으로 확대
+  container: { flex: 1, backgroundColor: '#F6F7FB', paddingHorizontal: 20 },
   center: { flex: 1, justifyContent: "center", alignItems: "center" },
   searchBar: { flexDirection: "row", alignItems: "center", backgroundColor: "#fff", borderRadius: 10, paddingHorizontal: 12, height: 44, marginBottom: 12, marginTop: 15, width: '100%' },
   input: { flex: 1, marginLeft: 8, fontSize: 14, paddingVertical: 0 },
@@ -305,4 +371,9 @@ const styles = StyleSheet.create({
   applyBtn: { flex: 1, padding: 14, borderRadius: 12, alignItems: "center" },
   cancelText: { color: "#4E5968", fontWeight: "bold" },
   applyText: { color: "#fff", fontWeight: "bold" },
+  avatarFallback: {
+  alignItems: "center",
+  justifyContent: "center",
+  overflow: "hidden",
+},
 });

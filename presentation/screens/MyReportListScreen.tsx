@@ -1,17 +1,19 @@
 import React, { useState, useCallback, useRef } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { ReportApi, ReportListResponse } from '../../data/api/ReportApi';
 import { useAuth } from '../../context/AuthContext';
 import { format } from 'date-fns';
+import { useAlert } from '../../context/AlertContext';
 
 const MAIN_COLOR = '#FFA847';
 
 const MyReportListScreen = () => {
   const navigation = useNavigation<any>();
   const { token } = useAuth();
+  const { showAlert } = useAlert();
   const [reports, setReports] = useState<ReportListResponse[]>([]);
   const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(0);
@@ -62,15 +64,15 @@ const MyReportListScreen = () => {
       console.error("  전체 에러 객체:", e); // 상세 에러 객체 전체 출력
 
       if (e.response && e.response.status === 400) {
-         Alert.alert("오류", `잘못된 요청입니다: ${e.response.data?.message || e.response.data || '알 수 없는 오류'}`);
+         showAlert({ title: "오류", message: `잘못된 요청입니다: ${e.response.data?.message || e.response.data || '알 수 없는 오류'}` });
          console.warn("400 Error on fetchReports. Check backend alignment.");
       } else if (e.response && e.response.status === 401) {
-         Alert.alert("오류", "로그인 세션이 만료되었습니다. 다시 로그인해주세요.");
+         showAlert({ title: "오류", message: "로그인 세션이 만료되었습니다. 다시 로그인해주세요." });
          // TODO: AuthContext의 logout 함수를 호출하여 로그아웃 처리할 수 있습니다.
          // logout();
       }
       else {
-         Alert.alert("오류", "신고 내역을 불러오는데 실패했습니다.");
+         showAlert({ title: "오류", message: "신고 내역을 불러오는데 실패했습니다." });
       }
     } finally {
       loadingRef.current = false;
@@ -102,45 +104,45 @@ const MyReportListScreen = () => {
   };
 
   const handleDelete = (reportId: number) => {
-    Alert.alert("삭제 확인", "이 신고 내역을 삭제하시겠습니까?", [
-      { text: "취소", style: "cancel" },
-      {
-        text: "삭제",
-        style: "destructive",
-        onPress: async () => {
-          if (!token) return;
-          try {
-            await ReportApi.deleteMyReport(reportId);
-            setReports(prev => prev.filter(item => item.id !== reportId));
-            Alert.alert("알림", "삭제되었습니다.");
-          } catch (e) {
-            Alert.alert("오류", "삭제 중 문제가 발생했습니다.");
-          }
+    showAlert({
+      title: "삭제 확인",
+      message: "이 신고 내역을 삭제하시겠습니까?",
+      confirmText: "삭제",
+      cancelText: "취소",
+      showCancel: true,
+      onConfirm: async () => {
+        if (!token) return;
+        try {
+          await ReportApi.deleteMyReport(reportId);
+          setReports(prev => prev.filter(item => item.id !== reportId));
+          showAlert({ title: "알림", message: "삭제되었습니다." });
+        } catch (e) {
+          showAlert({ title: "오류", message: "삭제 중 문제가 발생했습니다." });
         }
       }
-    ]);
+    });
   };
 
   const handleDeleteAll = () => {
     if (reports.length === 0) return;
     
-    Alert.alert("전체 삭제", "모든 신고 내역을 삭제하시겠습니까?", [
-      { text: "취소", style: "cancel" },
-      {
-        text: "삭제",
-        style: "destructive",
-        onPress: async () => {
-          if (!token) return;
-          try {
-            await ReportApi.deleteAllMyReports();
-            setReports([]);
-            Alert.alert("알림", "모든 내역이 삭제되었습니다.");
-          } catch (e) {
-            Alert.alert("오류", "전체 삭제 중 문제가 발생했습니다.");
-          }
+    showAlert({
+      title: "전체 삭제",
+      message: "모든 신고 내역을 삭제하시겠습니까?",
+      confirmText: "삭제",
+      cancelText: "취소",
+      showCancel: true,
+      onConfirm: async () => {
+        if (!token) return;
+        try {
+          await ReportApi.deleteAllMyReports();
+          setReports([]);
+          showAlert({ title: "알림", message: "모든 내역이 삭제되었습니다." });
+        } catch (e) {
+          showAlert({ title: "오류", message: "전체 삭제 중 문제가 발생했습니다." });
         }
       }
-    ]);
+    });
   };
 
   const renderItem = ({ item }: { item: ReportListResponse }) => (

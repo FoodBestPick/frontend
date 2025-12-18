@@ -21,12 +21,6 @@ import { Dropdown } from 'react-native-element-dropdown';
 import { useCustomerServiceViewModel } from '../viewmodels/useCustomerServiceViewModel';
 import { Inquiry, InquiryCategory } from '../../domain/entities/Inquiry';
 
-if (Platform.OS === 'android') {
-    if (UIManager.setLayoutAnimationEnabledExperimental) {
-        UIManager.setLayoutAnimationEnabledExperimental(true);
-    }
-}
-
 const MAIN_COLOR = '#FFA847';
 
 const CATEGORY_DATA = [
@@ -184,10 +178,10 @@ const InquiryItem = ({ item, onDelete }: { item: Inquiry; onDelete: (id: number)
                     <Text style={styles.dateText}>{item.createdAt.split('T')[0]}</Text>
                 </View>
                 <Text style={styles.itemTitle}>{item.title}</Text>
-                <Icon 
-                    name={expanded ? "chevron-up" : "chevron-down"} 
-                    size={20} 
-                    color="#999" 
+                <Icon
+                    name={expanded ? "chevron-up" : "chevron-down"}
+                    size={20}
+                    color="#999"
                     style={{ position: 'absolute', right: 0, bottom: 10 }}
                 />
             </TouchableOpacity>
@@ -196,7 +190,7 @@ const InquiryItem = ({ item, onDelete }: { item: Inquiry; onDelete: (id: number)
                 <View style={styles.itemBody}>
                     <Text style={styles.questionLabel}>Q. 질문 내용</Text>
                     <Text style={styles.contentText}>{item.userContent}</Text>
-                    
+
                     {item.images && item.images.length > 0 && (
                         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.imageScroll}>
                             {item.images.map((img, idx) => (
@@ -282,7 +276,7 @@ const InquiryWrite = ({
                 </ScrollView>
             </View>
 
-            <TouchableOpacity 
+            <TouchableOpacity
                 style={[styles.submitButton, loading && styles.submitButtonDisabled]}
                 onPress={onSubmit}
                 disabled={loading}
@@ -310,7 +304,7 @@ const styles = StyleSheet.create({
     },
     backButton: { padding: 5 },
     headerTitle: { fontSize: 18, fontWeight: '700', color: '#333' },
-    
+
     // Tabs
     tabBar: {
         flexDirection: 'row',
@@ -393,7 +387,7 @@ const styles = StyleSheet.create({
     categoryText: { fontSize: 12, color: '#888' },
     dateText: { fontSize: 12, color: '#aaa' },
     itemTitle: { fontSize: 16, fontWeight: '600', color: '#333', paddingRight: 20 },
-    
+
     itemBody: {
         marginTop: 16,
         borderTopWidth: 1,
@@ -434,7 +428,7 @@ const styles = StyleSheet.create({
     },
     placeholderStyle: { fontSize: 14, color: '#999' },
     selectedTextStyle: { fontSize: 14, color: '#333' },
-    
+
     imageAttachContainer: { flexDirection: 'row', alignItems: 'center', marginTop: 5 },
     addImageButton: {
         width: 70, height: 70,
@@ -448,7 +442,7 @@ const styles = StyleSheet.create({
     previewImageContainer: { marginRight: 10, position: 'relative' },
     previewImage: { width: 70, height: 70, borderRadius: 8 },
     removeImageButton: { position: 'absolute', top: -5, right: -5, backgroundColor: '#fff', borderRadius: 10 },
-    
+
     submitButton: {
         backgroundColor: MAIN_COLOR,
         height: 50,

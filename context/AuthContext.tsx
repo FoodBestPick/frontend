@@ -6,7 +6,7 @@ import { ChatRepositoryImpl } from '../data/repositoriesImpl/ChatRepositoryImpl'
 import { webSocketClient } from '../core/utils/WebSocketClient';
 import { Alert } from 'react-native';
 import { API_BASE_URL } from "@env";
-import { setFallbackToken } from '../data/api/apiClientUtils';
+import { setFallbackToken, setOnUnauthorizedCallback } from '../data/api/apiClientUtils';
 
 // ✨ AlarmItem 타입 정의
 export type AlarmItem = {
@@ -62,7 +62,18 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const [unreadAlarmCount, setUnreadAlarmCount] = useState<number>(0);
     const alarmScreenActiveRef = useRef(false);
 
-    // Upstream에서 추가된 알람 관련 상수 및 헬퍼 함수 통합
+    // 🚨 전역 로그아웃 감지 등록
+    useEffect(() => {
+        setOnUnauthorizedCallback(() => {
+            console.log("🚨 [전역 감지] 토큰 갱신 불가. 로그아웃 진행...");
+            if (isLoggedIn) {
+                Alert.alert("알림", "세션이 만료되어 다시 로그인해야 합니다.");
+                logout();
+            }
+        });
+        return () => setOnUnauthorizedCallback(null);
+    }, [isLoggedIn, logout]);
+
     const MAX_ALARMS = 99;
     const ALARM_LIST_KEY = (uid: number) => `alarms:${uid}`;
     const ALARM_COUNT_KEY = (uid: number) => `unreadAlarmCount:${uid}`;
@@ -114,18 +125,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         });
     };
 
-    // 🍪 쿠키에서 토큰 가져오는 헬퍼 함수
     const getTokenFromCookie = async (): Promise<string | null> => {
         try {
             const cookies = await CookieManager.get(API_BASE_URL);
-
-            // 1. accessToken
             if (cookies.accessToken) return cookies.accessToken.value;
-            // 2. access_token
             if (cookies.access_token) return cookies.access_token.value;
-            // 3. Authorization (Bearer 제외 필요할 수도 있음)
             if (cookies.Authorization) return cookies.Authorization.value;
-
             return null;
         } catch (e) {
             console.warn("[AuthContext] 쿠키 로드 실패:", e);
@@ -133,7 +138,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         }
     };
 
-    // ✅ 로그아웃 함수
     const logout = useCallback(async () => {
         try {
             await UserAuthRepositoryImpl.logout();
@@ -159,13 +163,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         }
     }, []);
 
-    // ✨ 내 방 확인 함수
     const checkActiveRoom = async () => {
         const currentToken = await getTokenFromCookie();
         if (!currentToken) return;
-
         try {
-            console.log("[AuthContext] 방 확인 시작 (Token exists in cookie)");
             const roomId = await ChatRepositoryImpl.getMyActiveRoom(currentToken);
             setActiveRoomId(roomId);
         } catch (e) {
@@ -173,11 +174,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         }
     };
 
-    // 🚀 앱 시작 시 토큰 및 isAdmin 로드 로직
     const loadToken = async () => {
         try {
             setLoading(true);
-
             const storedAccessToken = await getTokenFromCookie();
             const storedIsAutoLogin = await AsyncStorage.getItem('isAutoLogin');
             const storedIsAdmin = await AsyncStorage.getItem('isAdmin');
@@ -186,40 +185,52 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             if (storedAccessToken && storedIsAutoLogin === 'true' && storedUserId) {
                 try {
                     await UserAuthRepositoryImpl.getMyProfile();
+                } catch (verifyError: any) {
+                    try {
+                        await UserAuthRepositoryImpl.refreshAccessToken();
+                        const newToken = await getTokenFromCookie();
+                        if (newToken) {
+                            setToken(newToken);
+                            setFallbackToken(newToken);
+                        } else {
+                            throw new Error("갱신 후 토큰을 찾을 수 없음");
+                        }
+                    } catch (refreshError) {
+                        await logout();
+                        return;
+                    }
+                }
 
+                try {
                     const parsedUserId = parseInt(storedUserId);
+                    const currentToken = await getTokenFromCookie();
+                    if (!currentToken) throw new Error("토큰 없음");
 
-                    setToken(storedAccessToken);
-                    setFallbackToken(storedAccessToken);
+                    setToken(currentToken);
+                    setFallbackToken(currentToken);
                     setIsLoggedIn(true);
                     setIsAdmin(storedIsAdmin === 'true');
                     setCurrentUserId(parsedUserId);
-
-                    // 알람 상태 로드 (Upstream 기능)
                     await loadAlarmState(parsedUserId);
 
-                    webSocketClient.connectGlobal(storedAccessToken, parsedUserId, {
+                    webSocketClient.connectGlobal(currentToken, parsedUserId, {
                         onForceLogout: (message) => {
                             Alert.alert("알림", message || "관리자에 의해 로그아웃되었습니다.");
                             logout();
                         },
                         onAlarm: (alarmData) => {
                             Alert.alert(alarmData.title || "새로운 알림", alarmData.body || alarmData.message);
-
                             const next: AlarmItem = {
                                 id: alarmData.id,
                                 message: alarmData.message ?? alarmData.body ?? alarmData.content ?? "",
                                 createdAt: alarmData.createdAt,
                                 read: false,
                             };
-
-                            // 알람 저장 및 상태 업데이트 (Upstream 기능 통합)
                             setAlarms((prev) => {
                                 const updated = [next, ...prev].slice(0, MAX_ALARMS);
                                 persistAlarmList(parsedUserId, updated);
                                 return updated;
                             });
-
                             if (!alarmScreenActiveRef.current) {
                                 setUnreadAlarmCount((c) => {
                                     const nextCount = c + 1;
@@ -230,18 +241,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                         }
                     });
 
-                    const roomId = await ChatRepositoryImpl.getMyActiveRoom(storedAccessToken);
+                    const roomId = await ChatRepositoryImpl.getMyActiveRoom(currentToken);
                     setActiveRoomId(roomId);
-
-                } catch (verifyError) {
-                    console.error("❌ 자동 로그인 토큰 검증 실패:", verifyError);
+                } catch (setupError) {
                     await logout();
                 }
-
             } else {
                 await logout();
             }
-
         } catch (e) {
             console.error('Failed to load token', e);
         } finally {
@@ -256,55 +263,27 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         };
     }, []);
 
-    // ✅ 로그인 함수
     const login = async (accessTokenArg?: string | null, isAutoLogin?: boolean, isAdmin?: boolean, userId?: number) => {
         try {
-            if (isAutoLogin !== undefined) {
-                await AsyncStorage.setItem('isAutoLogin', isAutoLogin ? 'true' : 'false');
-            }
-            if (isAdmin !== undefined) {
-                await AsyncStorage.setItem('isAdmin', isAdmin ? 'true' : 'false');
-            }
-            if (userId !== undefined) {
-                await AsyncStorage.setItem('userId', userId.toString());
-            }
+            if (isAutoLogin !== undefined) await AsyncStorage.setItem('isAutoLogin', isAutoLogin ? 'true' : 'false');
+            if (isAdmin !== undefined) await AsyncStorage.setItem('isAdmin', isAdmin ? 'true' : 'false');
+            if (userId !== undefined) await AsyncStorage.setItem('userId', userId.toString());
 
             let currentToken = await getTokenFromCookie();
-
-            // ⚠️ 쿠키가 바로 안 잡힐 수 있으므로 재시도 로직 추가
-            if (!currentToken && !accessTokenArg) {
-                for (let i = 1; i <= 3; i++) {
-                    console.log(`⏳ [AuthContext] 토큰 재조회 시도 ${i}/3...`);
-                    await new Promise(resolve => setTimeout(() => resolve(null), 500)); // 0.5초 대기
-                    currentToken = await getTokenFromCookie();
-                    if (currentToken) {
-                        console.log(`✅ [AuthContext] 재조회 성공! (${i}번째 시도)`);
-                        break;
-                    }
-                }
-            }
-
-            if (!currentToken && accessTokenArg) {
-                currentToken = accessTokenArg;
-            }
+            if (!currentToken && accessTokenArg) currentToken = accessTokenArg;
 
             if (!currentToken) {
-                console.error("🚨 [AuthContext] 로그인 후 유효한 토큰을 찾을 수 없습니다.");
                 setIsLoggedIn(false);
                 return;
             } else {
                 setToken(currentToken);
                 setFallbackToken(currentToken);
-
                 if (isAdmin !== undefined) setIsAdmin(isAdmin);
                 if (userId !== undefined) setCurrentUserId(userId);
-
                 if (userId) await loadAlarmState(userId);
-
                 if (userId && currentToken) {
                     const roomId = await ChatRepositoryImpl.getMyActiveRoom(currentToken);
                     setActiveRoomId(roomId);
-
                     webSocketClient.connectGlobal(currentToken, userId, {
                         onForceLogout: (message) => {
                             Alert.alert("알림", message || "관리자에 의해 로그아웃되었습니다.");
@@ -312,20 +291,17 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                         },
                         onAlarm: (alarmData) => {
                             Alert.alert(alarmData.title || "새로운 알림", alarmData.body || alarmData.message);
-
                             const next: AlarmItem = {
                                 id: alarmData.id,
                                 message: alarmData.message ?? alarmData.body ?? alarmData.content ?? "",
                                 createdAt: alarmData.createdAt,
                                 read: false,
                             };
-
                             setAlarms((prev) => {
                                 const updated = [next, ...prev].slice(0, MAX_ALARMS);
                                 if (userId) persistAlarmList(userId, updated);
                                 return updated;
                             });
-
                             if (!alarmScreenActiveRef.current) {
                                 setUnreadAlarmCount((c) => {
                                     const nextCount = c + 1;
@@ -336,101 +312,27 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                         }
                     });
                 }
-
                 setIsLoggedIn(true);
             }
         } catch (e) {
-            console.error(e);
             setIsLoggedIn(false);
         }
     };
 
-    const refreshIntervalRef = useRef<number | null>(null);
-
-    // ✨ 토큰 갱신 타이머
+    // ✨ 7분 주기 자동 갱신 타이머 유지 (에러 처리만 인터셉터와 맞춤)
     useEffect(() => {
-        const setupRefresh = () => {
-            if (isLoggedIn && currentUserId) {
-                if (refreshIntervalRef.current) clearInterval(refreshIntervalRef.current);
-
-                refreshIntervalRef.current = setInterval(async () => {
-                    console.log("🔄 [AuthContext] Access Token 갱신 타이머 동작...");
-                    try {
-                        await UserAuthRepositoryImpl.refreshAccessToken(); // 쿠키 갱신
-
-                        const newToken = await getTokenFromCookie();
-
-                        if (newToken) {
-                            setToken(newToken);
-                            setFallbackToken(newToken);
-
-                            webSocketClient.disconnectGlobal();
-                            webSocketClient.connectGlobal(newToken, currentUserId, {
-                                onForceLogout: (message) => {
-                                    Alert.alert("알림", message || "관리자에 의해 로그아웃되었습니다.");
-                                    logout();
-                                },
-                                onAlarm: (alarmData) => {
-                                    Alert.alert(alarmData.title || "새로운 알림", alarmData.body || alarmData.message);
-                                    const next: AlarmItem = {
-                                        id: alarmData.id,
-                                        message: alarmData.message ?? alarmData.body ?? alarmData.content ?? "",
-                                        createdAt: alarmData.createdAt,
-                                        read: false,
-                                    };
-
-                                    setAlarms((prev) => {
-                                        const updated = [next, ...prev].slice(0, MAX_ALARMS);
-                                        persistAlarmList(currentUserId, updated);
-                                        return updated;
-                                    });
-
-                                    if (!alarmScreenActiveRef.current) {
-                                        setUnreadAlarmCount((c) => {
-                                            const nextCount = c + 1;
-                                            persistAlarmCount(currentUserId, nextCount);
-                                            return nextCount;
-                                        });
-                                    }
-                                }
-                            });
-                        } else {
-                            logout();
-                        }
-
-                    } catch (error: any) {
-                        console.error("❌ [AuthContext] Access Token 타이머 갱신 실패:", error);
-                        let alertMessage = "세션이 만료되어 다시 로그인해야 합니다.";
-
-                        if (error.response && error.response.status === 401) {
-                            alertMessage = "세션이 만료되었습니다. 다시 로그인해주세요.";
-                        } else if (error.message && error.message.includes("AuthError: NEW_ACCESS_TOKEN_NOT_FOUND")) {
-                            alertMessage = "새로운 토큰을 받아오지 못했습니다. 다시 로그인해주세요.";
-                        } else if (error.message) {
-                            alertMessage = `토큰 갱신 실패: ${error.message}. 다시 로그인해주세요.`;
-                        }
-
-                        Alert.alert("알림", alertMessage);
-                        logout();
-                        if (refreshIntervalRef.current) clearInterval(refreshIntervalRef.current);
-                    }
-                }, 7 * 60 * 1000); // 7분으로 변경
-            } else {
-                if (refreshIntervalRef.current) {
-                    clearInterval(refreshIntervalRef.current);
-                    refreshIntervalRef.current = null;
+        if (isLoggedIn && currentUserId) {
+            const interval = setInterval(async () => {
+                console.log("🔄 [AuthContext] Access Token 정기 갱신 중...");
+                try {
+                    await UserAuthRepositoryImpl.refreshAccessToken();
+                } catch (error) {
+                    console.log("⚠️ 정기 갱신 타이머 실패 (인터셉터가 처리할 수 있음)");
                 }
-            }
-        };
-
-        setupRefresh();
-        return () => {
-            if (refreshIntervalRef.current) {
-                clearInterval(refreshIntervalRef.current);
-                refreshIntervalRef.current = null;
-            }
-        };
-    }, [isLoggedIn, currentUserId, logout]);
+            }, 7 * 60 * 1000);
+            return () => clearInterval(interval);
+        }
+    }, [isLoggedIn, currentUserId]);
 
     return (
         <AuthContext.Provider value={{

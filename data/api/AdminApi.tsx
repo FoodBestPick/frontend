@@ -284,11 +284,12 @@ export const AdminApi = {
     }
   },
 
-  async answerInquiry(inquiryId: number, adminContent: string) {
+  async answerInquiry(inquiryId: number, adminContent: string, status?: string) {
     try {
-      const response = await authApi.patch(`${API_BASE_URL}/admin/inquiry/${inquiryId}/answer`, {
-        adminContent
-      });
+      const payload: any = { adminContent };
+      if (status) payload.status = status;
+
+      const response = await authApi.patch(`${API_BASE_URL}/admin/inquiry/${inquiryId}/answer`, payload);
       return response.data;
     } catch (error: any) {
       console.error("[AdminApi] answerInquiry error:", error);

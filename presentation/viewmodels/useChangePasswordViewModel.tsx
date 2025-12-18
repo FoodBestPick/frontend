@@ -1,10 +1,11 @@
 import { useState } from "react";
-import { Alert } from "react-native";
 import { ChangePasswordUseCase } from "../../domain/usecases/ChangePasswordUseCase";
 import { UserAuthRepositoryImpl } from "../../data/repositoriesImpl/UserAuthRepositoryImpl";
+import { useAlert } from "../../context/AlertContext";
 
 export const useChangePasswordViewModel = () => {
     const [isLoading, setIsLoading] = useState(false);
+    const { showAlert } = useAlert();
 
     // Repository 주입
     const usecase = new ChangePasswordUseCase(UserAuthRepositoryImpl);
@@ -21,22 +22,22 @@ export const useChangePasswordViewModel = () => {
     ): Promise<boolean> => {
         // 1. 빈 값 검사
         if (!newPassword || !confirmPassword) {
-            Alert.alert('알림', '모든 항목을 입력해주세요.');
+            showAlert({ title: "알림", message: "모든 항목을 입력해주세요." });
             return false;
         }
 
         // 2. 정규식 검사
         if (!validatePassword(newPassword)) {
-            Alert.alert(
-                '비밀번호 규칙 미준수',
-                '비밀번호는 영문과 숫자를 반드시 포함하여 10자 이상이어야 합니다.'
-            );
+            showAlert({
+                title: "비밀번호 규칙 미준수",
+                message: "비밀번호는 영문과 숫자를 반드시 포함하여 10자 이상이어야 합니다."
+            });
             return false;
         }
 
         // 3. 일치 검사
         if (newPassword !== confirmPassword) {
-            Alert.alert('오류', '새 비밀번호가 서로 일치하지 않습니다.');
+            showAlert({ title: "오류", message: "새 비밀번호가 서로 일치하지 않습니다." });
             return false;
         }
 
@@ -50,7 +51,7 @@ export const useChangePasswordViewModel = () => {
         } catch (error: any) {
             console.error("[ChangePassword error]", error);
             const errorMsg = error.response?.data?.message || '비밀번호 변경에 실패했습니다.';
-            Alert.alert('오류', errorMsg);
+            showAlert({ title: "오류", message: errorMsg });
             return false;
         } finally {
             setIsLoading(false);

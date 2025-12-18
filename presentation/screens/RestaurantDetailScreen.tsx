@@ -9,7 +9,6 @@ import {
   StatusBar,
   Dimensions,
   ActivityIndicator,
-  Alert,
   Linking,
   Platform,
  } from 'react-native';
@@ -22,6 +21,7 @@ import { useRestaurantDetailViewModel } from '../viewmodels/RestaurantDetailView
 import { ThemeContext } from '../../context/ThemeContext';
 import ReportModal from '../components/ReportModal';
 import Swiper from 'react-native-swiper';
+import { useAlert } from '../../context/AlertContext';
 
 const { width } = Dimensions.get('window');
 
@@ -33,6 +33,7 @@ const RestaurantDetailScreen = () => {
   const route = useRoute<RouteParamsProp>();
   const { restaurantId } = route.params;
   const { theme } = useContext(ThemeContext);
+  const { showAlert } = useAlert();
 
   // ViewModel 연결
   const { restaurant, loading, error, toggleLike, deleteReview, toggleReviewLike, refresh, reportRestaurant, reportReview } = useRestaurantDetailViewModel(restaurantId);
@@ -60,21 +61,21 @@ const RestaurantDetailScreen = () => {
   };
 
   const handleDeleteReview = (reviewId: number) => {
-    Alert.alert('리뷰 삭제', '정말로 삭제하시겠습니까?', [
-      { text: '취소', style: 'cancel' },
-      {
-        text: '삭제',
-        style: 'destructive',
-        onPress: async () => {
-          const success = await deleteReview(reviewId);
-          if (success) {
-            Alert.alert('알림', '리뷰가 삭제되었습니다.');
-          } else {
-            Alert.alert('오류', '리뷰 삭제에 실패했습니다.');
-          }
-        },
-      },
-    ]);
+    showAlert({
+      title: '리뷰 삭제',
+      message: '정말로 삭제하시겠습니까?',
+      confirmText: '삭제',
+      cancelText: '취소',
+      showCancel: true,
+      onConfirm: async () => {
+        const success = await deleteReview(reviewId);
+        if (success) {
+          showAlert({ title: "알림", message: "리뷰가 삭제되었습니다." });
+        } else {
+          showAlert({ title: "오류", message: "리뷰 삭제에 실패했습니다." });
+        }
+      }
+    });
   };
 
   const handleEditReview = (review: any) => {
@@ -126,7 +127,7 @@ const RestaurantDetailScreen = () => {
 
   const openKakaoMap = () => {
     if (!restaurant.latitude || !restaurant.longitude) {
-      Alert.alert('알림', '위치 정보가 없습니다.');
+      showAlert({ title: "알림", message: "위치 정보가 없습니다." });
       return;
     }
     

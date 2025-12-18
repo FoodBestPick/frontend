@@ -2,8 +2,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { API_BASE_URL } from '@env';
 import { useAuth } from '../../context/AuthContext';
 import { ReportApi } from '../../data/api/ReportApi';
-import { Alert } from 'react-native';
 import { authApi } from '../../data/api/UserAuthApi';
+import { useAlert } from '../../context/AlertContext';
 
 interface Menu {
   id: number;
@@ -56,6 +56,7 @@ export const useRestaurantDetailViewModel = (restaurantId: number) => {
   const [restaurant, setRestaurant] = useState<RestaurantDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { showAlert } = useAlert();
 
   const fetchRestaurantDetail = useCallback(async () => {
     try {
@@ -272,13 +273,13 @@ export const useRestaurantDetailViewModel = (restaurantId: number) => {
         reasonDetail,
       });
       if (result.code === 200) {
-        Alert.alert('알림', '신고가 접수되었습니다.');
+        showAlert({ title: "알림", message: "신고가 접수되었습니다." });
       } else {
-        Alert.alert('오류', result.message || '신고 접수에 실패했습니다.');
+        showAlert({ title: "오류", message: result.message || '신고 접수에 실패했습니다.' });
       }
     } catch (error) {
       console.error('신고 오류:', error);
-      Alert.alert('오류', '신고 중 문제가 발생했습니다.');
+      showAlert({ title: "오류", message: "신고 중 문제가 발생했습니다." });
     }
   };
 
@@ -292,13 +293,13 @@ export const useRestaurantDetailViewModel = (restaurantId: number) => {
         reasonDetail,
       });
       if (result.code === 200) {
-        Alert.alert('알림', '리뷰 신고가 접수되었습니다.');
+        showAlert({ title: "알림", message: "리뷰 신고가 접수되었습니다." });
       } else {
-        Alert.alert('오류', result.message || '신고 접수에 실패했습니다.');
+        showAlert({ title: "오류", message: result.message || '신고 접수에 실패했습니다.' });
       }
     } catch (err) {
       console.error('리뷰 신고 오류:', err);
-      Alert.alert('오류', '신고 중 문제가 발생했습니다.');
+      showAlert({ title: "오류", message: "신고 중 문제가 발생했습니다." });
     }
   };
 

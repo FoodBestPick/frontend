@@ -84,19 +84,27 @@ export const UserAuthRepositoryImpl: UserAuthRepository = {
             try {
                 console.log(`🍪 [UserAuthRepository] accessToken 수동 설정. URL: ${API_BASE_URL}, Token: ${accessToken.substring(0, 10)}...`);
                 
+                const expires = new Date();
+                expires.setDate(expires.getDate() + 14); // 14일 후 만료
+
                 await CookieManager.set(API_BASE_URL, {
                     name: 'accessToken',
                     value: accessToken,
                     path: '/',
-                    version: '1'
+                    version: '1',
+                    expires: expires.toISOString()
                 });
                 // ✨ Refresh Token도 쿠키로 저장합니다.
                 if (rawData.refreshToken) {
+                    const refreshExpires = new Date();
+                    refreshExpires.setDate(refreshExpires.getDate() + 14);
+
                     await CookieManager.set(API_BASE_URL, {
                         name: 'refreshToken', // refreshToken 이름으로 저장
                         value: rawData.refreshToken,
                         path: '/',
-                        version: '1' // expires 필드 제거
+                        version: '1',
+                        expires: refreshExpires.toISOString() // ✨ 14일 후 만료
                     });
                     console.log("✅ [UserAuthRepository] refreshToken 수동 설정 완료.");
                 }
@@ -300,12 +308,15 @@ export const UserAuthRepositoryImpl: UserAuthRepository = {
             console.log("🔍 [UserAuthRepository] 추출된 newAccessToken:", newAccessToken ? newAccessToken.substring(0, 10) + '...' : '없음');
 
             if (newAccessToken) {
+                const expires = new Date();
+                expires.setDate(expires.getDate() + 14);
+
                 await CookieManager.set(API_BASE_URL, {
                     name: 'accessToken',
                     value: newAccessToken,
                     path: '/',
                     version: '1',
-                    expires: '2030-01-01T12:00:00.00-05:00'
+                    expires: expires.toISOString()
                 });
                 console.log("✅ [UserAuthRepository] Access Token 갱신 성공 및 쿠키 업데이트.");
 

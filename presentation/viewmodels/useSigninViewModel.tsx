@@ -1,10 +1,10 @@
 // src/viewmodels/useSigninViewModel.tsx (최종 버전)
 
 import { useState } from "react";
-import { Alert } from "react-native";
 import { SigninUseCase } from "../../domain/usecases/SigninUseCase";
 import { UserAuthRepositoryImpl } from "../../data/repositoriesImpl/UserAuthRepositoryImpl";
 import { useAuth } from "../../context/AuthContext";
+import { useAlert } from "../../context/AlertContext";
 
 interface ExecuteResult {
     accessToken?: string; // 추가
@@ -20,6 +20,7 @@ export const useSigninViewModel = () => {
 
     const useCase = new SigninUseCase(UserAuthRepositoryImpl);
     const { login: contextLogin } = useAuth();
+    const { showAlert } = useAlert();
 
     const signin: SigninFunction = async (email, password, saveToStorage) => {
         setLoading(true);
@@ -41,7 +42,10 @@ export const useSigninViewModel = () => {
                 return true;
 
             } else {
-                Alert.alert("로그인 실패", "서버로부터 유효한 사용자 정보를 받지 못했습니다.");
+                showAlert({
+                    title: "로그인 실패",
+                    message: "서버로부터 유효한 사용자 정보를 받지 못했습니다."
+                });
                 return false;
             }
 
@@ -51,7 +55,10 @@ export const useSigninViewModel = () => {
             const serverMessage = error.response?.data?.message;
             const fallbackMessage = "이메일 또는 비밀번호를 확인해주세요.";
 
-            Alert.alert("로그인 실패", serverMessage || fallbackMessage);
+            showAlert({
+                title: "로그인 실패",
+                message: serverMessage || fallbackMessage
+            });
             return false;
 
         } finally {

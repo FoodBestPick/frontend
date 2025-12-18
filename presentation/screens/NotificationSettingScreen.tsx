@@ -5,7 +5,6 @@ import {
   StyleSheet,
   Switch,
   TouchableOpacity,
-  Alert,
   ActivityIndicator,
   Platform,
   PermissionsAndroid,
@@ -18,6 +17,7 @@ import Icon from "react-native-vector-icons/Ionicons";
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import messaging, { AuthorizationStatus } from "@react-native-firebase/messaging";
 import { NotificationSettingRepositoryImpl } from "../../data/repositoriesImpl/NotificationSettingRepositoryImpl";
+import { useAlert } from "../../context/AlertContext";
 
 const MAIN_COLOR = "#FFA847";
 
@@ -38,6 +38,7 @@ const DEFAULTS: AlarmSettingsMap = {
 
 const NotificationSettingScreen = () => {
   const navigation = useNavigation();
+  const { showAlert } = useAlert();
   const [loading, setLoading] = useState(false);
 
   const [systemAllowed, setSystemAllowed] = useState<boolean>(false);
@@ -114,14 +115,14 @@ const NotificationSettingScreen = () => {
 
   const toggleSwitch = async (alarmType: AlarmType) => {
     if (!systemAllowed) {
-      Alert.alert(
-        "알림 권한이 꺼져있어요",
-        "기기 설정에서 알림을 켜야 변경할 수 있어요.",
-        [
-          { text: "취소", style: "cancel" },
-          { text: "설정으로 이동", onPress: () => Linking.openSettings() },
-        ]
-      );
+      showAlert({
+        title: "알림 권한이 꺼져있어요",
+        message: "기기 설정에서 알림을 켜야 변경할 수 있어요.",
+        confirmText: "설정으로 이동",
+        cancelText: "취소",
+        showCancel: true,
+        onConfirm: () => Linking.openSettings()
+      });
       return;
     }
 
@@ -135,7 +136,7 @@ const NotificationSettingScreen = () => {
     } catch (e) {
       console.error("저장 실패", e);
       setSettings((prev) => ({ ...prev, [alarmType]: previousValue }));
-      Alert.alert("저장 실패", "설정을 변경하지 못했습니다.");
+      showAlert({ title: "저장 실패", message: "설정을 변경하지 못했습니다." });
     }
   };
 

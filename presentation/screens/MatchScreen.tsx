@@ -7,12 +7,12 @@ import {
   StatusBar,
   Image,
   Dimensions,
-  Alert
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../../context/AuthContext';
+import { useAlert } from '../../context/AlertContext';
 
 const AppLogo = require('../../assets/logo.png');
 
@@ -22,11 +22,15 @@ const MAIN_COLOR = '#FFA847';
 const MatchingScreen = () => {
   const navigation = useNavigation<any>();
   const { activeRoomId } = useAuth();
+  const { showAlert } = useAlert();
 
   // 매칭 조건 설정으로 이동
   const handleStartMatch = () => {
     if (activeRoomId) {
-        Alert.alert("알림", "이미 참여 중인 채팅방이 있습니다.\n기존 채팅방을 나가야 새로운 매칭이 가능합니다.");
+        showAlert({ 
+            title: "알림", 
+            message: "이미 참여 중인 채팅방이 있습니다.\n기존 채팅방을 나가야 새로운 매칭이 가능합니다."
+        });
         return;
     }
     navigation.navigate("MatchingSetupScreen" as never);

@@ -1,55 +1,55 @@
 import React, { useState } from 'react';
 import {
-    View, Text, StyleSheet, ScrollView, TouchableOpacity, StatusBar, Dimensions, FlatList, Alert
+    View, Text, StyleSheet, ScrollView, TouchableOpacity, StatusBar, Dimensions, FlatList, Image
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useNavigation } from '@react-navigation/native';
+import { Header } from '../components/Header';
+import { useAlert } from '../../context/AlertContext';
 
 const { width } = Dimensions.get('window');
 const MAIN_COLOR = '#FFA847';
 
+// 📐 아이콘 크기를 더 슬림하게 조정 (14%)
+const ITEM_WIDTH = width * 0.14; 
+const GRID_PADDING = 36; // 좌우 여백을 넓혀서 답답함 해소
+
 const FOOD_CATEGORIES = [
-    { name: '랜덤', icon: 'shuffle-outline' },
-    { name: '한식', icon: 'rice-bowl-outline' },
-    { name: '중식', icon: 'cube-outline' },
-    { name: '일식', icon: 'fish-outline' },
-    { name: '양식', icon: 'pizza-outline' },
-    { name: '분식', icon: 'ice-cream-outline' },
-    { name: '퓨전', icon: 'sparkles-outline' },
-    { name: '카페', icon: 'cafe-outline' },
-    { name: '패스트푸드', icon: 'burger-outline' },
-    { name: '아시안', icon: 'restaurant-outline' },
+    { name: '랜덤', image: require('../../assets/icons/all.png') },
+    { name: '한식', image: require('../../assets/icons/korean.png') },
+    { name: '중식', image: require('../../assets/icons/chinese.png') },
+    { name: '일식', image: require('../../assets/icons/japanese.png') },
+    { name: '양식', image: require('../../assets/icons/western.png') },
+    { name: '분식', image: require('../../assets/icons/snack.png') },
+    { name: '패스트푸드', image: require('../../assets/icons/fastfood.png') },
+    { name: '족발/보쌈', image: require('../../assets/icons/pork.png') },
+    { name: '카페', image: require('../../assets/icons/cafe.png') },
+    { name: '야식', image: require('../../assets/icons/night.png') },
 ];
 
-const ITEM_WIDTH = (width - 32) / 5;
-
-// 🔥 [수정] 2명부터 10명까지 빠짐없이 + 무관 (총 10개)
 const GROUP_SIZES = [
     { size: 2, label: '2명' },
     { size: 3, label: '3명' },
     { size: 4, label: '4명' },
     { size: 5, label: '5명' },
-    { size: 6, label: '6명' },
-    { size: 7, label: '7명' }, // 🔥 복구
-    { size: 8, label: '8명' },
-    { size: 9, label: '9명' }, // 🔥 복구
-    { size: 10, label: '10명' },
     { size: 0, label: '인원무관' },
 ];
 
-function MatchingSetupScreen() {
+export default function MatchingSetupScreen() {
     const navigation = useNavigation<any>();
+    const insets = useSafeAreaInsets();
+    const { showAlert } = useAlert();
     const [selectedFood, setSelectedFood] = useState<string | null>(null);
     const [selectedSize, setSelectedSize] = useState<number | null>(null);
 
     const handleNext = () => {
         if (!selectedFood) {
-            Alert.alert("알림", '원하는 음식 종류를 선택해 주세요!');
+            showAlert({ title: "알림", message: '원하는 음식 종류를 선택해 주세요!' });
             return;
         }
         if (selectedSize === null) {
-            Alert.alert("알림", '인원수를 선택해 주세요!');
+            showAlert({ title: "알림", message: '인원수를 선택해 주세요!' });
             return;
         }
 
@@ -59,22 +59,19 @@ function MatchingSetupScreen() {
         });
     };
 
-    const renderFoodItem = ({ item }: { item: typeof FOOD_CATEGORIES[0] }) => {
+    const renderFoodItem = ({ item }: { item: any }) => {
         const isSelected = selectedFood === item.name;
         return (
             <TouchableOpacity
-                style={[
-                    styles.foodItemWrapper,
-                    { width: ITEM_WIDTH }
-                ]}
+                style={[styles.foodItemWrapper, { width: ITEM_WIDTH }]}
                 onPress={() => setSelectedFood(item.name)}
                 activeOpacity={0.7}
             >
                 <View style={[styles.iconCircle, isSelected && styles.selectedIconCircle]}>
-                    <Icon
-                        name={item.icon}
-                        size={24}
-                        color={isSelected ? '#fff' : '#555'}
+                    <Image 
+                        source={item.image} 
+                        style={[styles.categoryIcon, isSelected && { tintColor: '#fff' }]} 
+                        resizeMode="contain"
                     />
                 </View>
                 <Text style={[styles.foodText, isSelected && styles.selectedFoodText]}>
@@ -88,11 +85,7 @@ function MatchingSetupScreen() {
         const isSelected = selectedSize === sizeOption.size;
         return (
             <TouchableOpacity
-                style={[
-                    styles.sizeButton,
-                    { width: ITEM_WIDTH }, // 5열 그리드 너비 적용
-                    isSelected && styles.selectedSizeButton
-                ]}
+                style={[styles.sizeButton, { width: ITEM_WIDTH }]}
                 onPress={() => setSelectedSize(sizeOption.size)}
                 activeOpacity={0.8}
             >
@@ -109,19 +102,16 @@ function MatchingSetupScreen() {
     };
 
     return (
-        <SafeAreaView style={styles.container}>
+        <SafeAreaView style={styles.container} edges={['bottom', 'left', 'right']}>
             <StatusBar barStyle="dark-content" backgroundColor="#fff" />
 
-            <View style={styles.header}>
-                <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-                    <Icon name="arrow-back" size={24} color="#000" />
-                </TouchableOpacity>
-                <Text style={styles.headerTitle}>매칭 조건 설정</Text>
-                <View style={{ width: 44 }} />
-            </View>
+            <Header 
+                title="매칭 조건 설정" 
+                showBackButton={true} 
+                onBackPress={() => navigation.goBack()} 
+            />
 
-            <ScrollView contentContainerStyle={styles.scrollContent}>
-
+            <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
                 <View style={styles.section}>
                     <Text style={styles.sectionTitle}>1. 메뉴 선택</Text>
                     <Text style={styles.sectionSubtitle}>오늘 땡기는 메뉴를 골라보세요.</Text>
@@ -131,9 +121,9 @@ function MatchingSetupScreen() {
                             data={FOOD_CATEGORIES}
                             renderItem={renderFoodItem}
                             keyExtractor={item => item.name}
-                            numColumns={5}
+                            numColumns={5} 
                             scrollEnabled={false}
-                            columnWrapperStyle={{ justifyContent: 'flex-start' }}
+                            columnWrapperStyle={styles.columnWrapper}
                         />
                     </View>
                 </View>
@@ -150,10 +140,9 @@ function MatchingSetupScreen() {
                         ))}
                     </View>
                 </View>
-
             </ScrollView>
 
-            <View style={styles.footer}>
+            <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 20) }]}>
                 <TouchableOpacity
                     style={[styles.nextButton, (!selectedFood || selectedSize === null) && styles.disabledButton]}
                     onPress={handleNext}
@@ -161,7 +150,7 @@ function MatchingSetupScreen() {
                     activeOpacity={0.9}
                 >
                     <Text style={styles.nextButtonText}>
-                        다음 ({selectedFood || '메뉴'} · {selectedSize !== null ? (selectedSize === 0 ? '인원무관' : selectedSize + '명') : '인원'})
+                        다음 단계로 이동
                     </Text>
                 </TouchableOpacity>
             </View>
@@ -169,87 +158,76 @@ function MatchingSetupScreen() {
     );
 }
 
-export default MatchingSetupScreen;
-
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: '#fff' },
+    scrollContent: { paddingHorizontal: GRID_PADDING, paddingBottom: 120 },
 
-    header: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        paddingHorizontal: 16,
-        height: 50,
-        borderBottomWidth: 1,
-        borderBottomColor: '#F0F0F0',
-    },
-    backButton: { width: 44, justifyContent: 'center', alignItems: 'center', marginLeft: -10 },
-    headerTitle: { fontSize: 18, fontWeight: '700', color: '#000', flex: 1, textAlign: 'center' },
+    section: { marginTop: 25 },
+    sectionTitle: { fontSize: 18, fontWeight: 'bold', color: '#333', marginBottom: 4 },
+    sectionSubtitle: { fontSize: 14, color: '#888', marginBottom: 20 },
 
-    scrollContent: { paddingHorizontal: 16, paddingBottom: 100 },
+    divider: { height: 8, backgroundColor: '#F8F9FA', marginHorizontal: -GRID_PADDING, marginVertical: 25 },
 
-    section: { marginTop: 25, marginBottom: 10 },
-    sectionTitle: { fontSize: 18, fontWeight: 'bold', color: '#333', marginBottom: 5 },
-    sectionSubtitle: { fontSize: 14, color: '#666', marginBottom: 15 },
-
-    divider: { height: 8, backgroundColor: '#F9F9F9', marginHorizontal: -16, marginTop: 10 },
-
-    gridContainer: { marginTop: 10 },
-    foodItemWrapper: { alignItems: 'center', marginBottom: 20 },
+    gridContainer: { width: '100%' },
+    columnWrapper: { justifyContent: 'space-between', marginBottom: 20 },
+    
+    foodItemWrapper: { alignItems: 'center' },
     iconCircle: {
-        width: 50, height: 50, borderRadius: 25, backgroundColor: '#F5F5F5',
-        justifyContent: 'center', alignItems: 'center', marginBottom: 6,
+        width: ITEM_WIDTH, 
+        height: ITEM_WIDTH, 
+        borderRadius: ITEM_WIDTH / 2, 
+        backgroundColor: '#F5F5F5',
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        marginBottom: 8,
     },
     selectedIconCircle: { backgroundColor: MAIN_COLOR },
-    foodText: { fontSize: 12, color: '#555', fontWeight: '500', textAlign: 'center' },
-    selectedFoodText: { color: MAIN_COLOR, fontWeight: '700' },
+    categoryIcon: { width: '55%', height: '55%' },
+    foodText: { fontSize: 11, color: '#666', fontWeight: '500', textAlign: 'center' }, // 텍스트도 살짝 축소
+    selectedFoodText: { color: MAIN_COLOR, fontWeight: 'bold' },
 
     sizeGridWrapper: {
         flexDirection: 'row',
-        flexWrap: 'wrap',
-        justifyContent: 'flex-start',
+        justifyContent: 'space-between',
         marginTop: 10,
     },
-    sizeButton: {
-        alignItems: 'center',
-        marginBottom: 20,
-    },
-    selectedSizeButton: {},
+    sizeButton: { alignItems: 'center' },
     sizeCircle: {
-        width: 50,
-        height: 50,
-        borderRadius: 12,
-        borderWidth: 1,
-        borderColor: '#DDD',
+        width: ITEM_WIDTH,
+        height: ITEM_WIDTH,
+        borderRadius: 12, 
+        borderWidth: 1.5,
+        borderColor: '#EEE',
         backgroundColor: '#fff',
         justifyContent: 'center',
         alignItems: 'center',
-        marginBottom: 6,
+        marginBottom: 8,
     },
     selectedSizeCircle: {
         backgroundColor: MAIN_COLOR,
         borderColor: MAIN_COLOR,
     },
-    sizeButtonText: {
-        color: '#333',
-        fontWeight: 'bold',
-        fontSize: 16,
-    },
-    selectedSizeButtonText: {
-        color: '#fff',
-    },
-    sizeLabel: {
-        fontSize: 12,
-        color: '#555',
-        fontWeight: '500',
-    },
+    sizeButtonText: { color: '#333', fontWeight: 'bold', fontSize: 15 },
+    selectedSizeButtonText: { color: '#fff' },
+    sizeLabel: { fontSize: 11, color: '#666', fontWeight: '500' },
 
     footer: {
         position: 'absolute', bottom: 0, left: 0, right: 0,
-        paddingHorizontal: 16, paddingTop: 10, paddingBottom: 25,
+        paddingHorizontal: GRID_PADDING, paddingTop: 15,
         backgroundColor: '#fff', borderTopWidth: 1, borderTopColor: '#f0f0f0',
     },
-    nextButton: { backgroundColor: MAIN_COLOR, paddingVertical: 15, borderRadius: 10, alignItems: 'center' },
-    disabledButton: { backgroundColor: '#CCC' },
+    nextButton: { 
+        backgroundColor: MAIN_COLOR, 
+        height: 54, 
+        borderRadius: 27, 
+        justifyContent: 'center', 
+        alignItems: 'center',
+        shadowColor: MAIN_COLOR,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 4,
+        elevation: 4,
+    },
+    disabledButton: { backgroundColor: '#DDD', shadowOpacity: 0, elevation: 0 },
     nextButtonText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
 });

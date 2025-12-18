@@ -8,7 +8,6 @@ import {
   PermissionsAndroid,
   Platform,
   TouchableOpacity,
-  Alert
 } from 'react-native';
 import Geolocation from '@react-native-community/geolocation';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -16,6 +15,7 @@ import Icon from 'react-native-vector-icons/Ionicons';
 import { useNavigation, useRoute, CommonActions } from '@react-navigation/native';
 import { useMatchingViewModel } from "../viewmodels/MatchingViewModel";
 import { useAuth } from "../../context/AuthContext";
+import { useAlert } from "../../context/AlertContext";
 
 const MAIN_COLOR = '#FFA847';
 
@@ -48,6 +48,7 @@ const MatchingFindingScreen = () => {
   const route = useRoute<any>();
   const { food, size } = route.params;
   const { checkActiveRoom } = useAuth();
+  const { showAlert } = useAlert();
 
   const {
     isMatched,
@@ -93,7 +94,7 @@ const MatchingFindingScreen = () => {
       if (cancelledRef.current) return;
 
       if (!hasPermission) {
-        Alert.alert("위치 권한 필요", "위치 권한이 없으면 매칭이 불가능합니다.");
+        showAlert({ title: "위치 권한 필요", message: "위치 권한이 없으면 매칭이 불가능합니다." });
         navigation.goBack();
         return;
       }
@@ -111,7 +112,7 @@ const MatchingFindingScreen = () => {
         if (cancelledRef.current) return;
 
         console.log("위치 가져오기 실패:", e);
-        Alert.alert("위치 오류", "현재 위치를 가져올 수 없습니다.\n잠시 후 다시 시도해주세요.");
+        showAlert({ title: "위치 오류", message: "현재 위치를 가져올 수 없습니다.\n잠시 후 다시 시도해주세요." });
         navigation.goBack();
       }
     })();
@@ -180,7 +181,7 @@ const MatchingFindingScreen = () => {
         disabled={isMatched}
         onPress={async () => {
           if (isMatched) {
-            Alert.alert("알림", "매칭이 완료되어 채팅방으로 이동합니다.");
+            showAlert({ title: "알림", message: "매칭이 완료되어 채팅방으로 이동합니다." });
             return;
           }
 

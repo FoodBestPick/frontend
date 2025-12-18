@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useContext } from 'react';
+import React, { useState, useCallback, useContext } from "react";
 import {
   View,
   Text,
@@ -7,177 +7,183 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Alert,
-  Modal,
-  TextInput,
-} from 'react-native';
-import { useFocusEffect, useNavigation } from '@react-navigation/native';
-import { ReportApi, ReportListResponse } from '../../data/api/ReportApi';
-import { useAuth } from '../../context/AuthContext';
-import { COLORS } from '../../core/constants/colors';
-import { ThemeContext } from '../../context/ThemeContext';
-import { Header } from '../components/Header';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { RootStackParamList } from '../navigation/types/RootStackParamList';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+} from "react-native";
+import { useFocusEffect, useNavigation } from "@react-navigation/native";
+import { ReportApi, ReportListResponse } from "../../data/api/ReportApi";
+import { COLORS } from "../../core/constants/colors";
+import { ThemeContext } from "../../context/ThemeContext";
+import { Header } from "../components/Header";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { RootStackParamList } from "../navigation/types/RootStackParamList";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+
+import { WarningModal } from "../components/WarningModal";
+import { SuspendModal } from "../components/SuspendModal";
+import { SuccessModal } from "../components/SuccessModal";
+
+import { AdminRepositoryImpl } from "../../data/repositoriesImpl/AdminRepositoryImpl";
 
 type Navigation = NativeStackNavigationProp<RootStackParamList>;
 
 const AdminReportScreen = () => {
   const navigation = useNavigation<Navigation>();
-  // const { token } = useAuth(); // 토큰은 AdminApi에서 자동으로 처리
   const { theme, isDarkMode } = useContext(ThemeContext);
   const insets = useSafeAreaInsets();
 
-  const [reports, setReports] = useState<ReportListResponse[]>([]);
+  const [allReports, setAllReports] = useState<ReportListResponse[]>([]);
+  const [filteredReports, setFilteredReports] = useState<ReportListResponse[]>([]);
   const [loading, setLoading] = useState(false);
-  const [page, setPage] = useState(0);
-  const [hasMore, setHasMore] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
   // Filter State
-  const [selectedFilter, setSelectedFilter] = useState<'ALL' | 'USER' | 'RESTAURANT'>('ALL');
+  const [selectedFilter, setSelectedFilter] = useState<"ALL" | "USER" | "RESTAURANT">("ALL");
 
-  // Action Modal State
-  const [selectedReport, setSelectedReport] = useState<ReportListResponse | null>(null);
-  const [actionModalVisible, setActionModalVisible] = useState(false);
-  const [actionType, setActionType] = useState<'WARNING' | 'SUSPENSION' | null>(null);
-  const [actionReason, setActionReason] = useState('');
-  const [suspensionDays, setSuspensionDays] = useState('7');
+  // 모달 상태
+  const [activeModal, setActiveModal] = useState<{
+    type: "warning" | "suspend" | null;
+    user?: any;
+  }>({ type: null, user: null });
 
-  const fetchReports = async (pageNum: number, isRefresh = false, filter = selectedFilter) => {
-    // if (!token) return; // authApi가 토큰 처리하므로 불필요
-    if (loading) return;
+  const [successModal, setSuccessModal] = useState<{
+    visible: boolean;
+    type: string;
+    user: any;
+    extra: string;
+  }>({
+    visible: false,
+    type: "",
+    user: null,
+    extra: "",
+  });
 
-    setLoading(true);
+  const fetchReports = async (isRefresh = false) => {
+    if (loading && !isRefresh) return;
+
+    if (isRefresh) setRefreshing(true);
+    else setLoading(true);
+
     try {
-      // Map filter to targetType
-      let targetTypeParam: string | undefined;
-      if (filter === 'RESTAURANT') targetTypeParam = 'RESTAURANT';
-      else if (filter === 'USER') targetTypeParam = 'USER'; 
-
-      const response = await ReportApi.getAllReports(pageNum, 10, undefined, targetTypeParam); // token 인자 제거
+      const response = await ReportApi.getAllReports(0, 10000);
 
       if (response.code === 200) {
-        const newReports = response.data.reports;
-
-        if (isRefresh) {
-          setReports(newReports);
-        } else {
-          setReports((prev) => [...prev, ...newReports]);
-        }
-        setHasMore(pageNum < response.data.totalPages - 1);
-        setPage(pageNum);
+        const newReports = response.data?.reports || response.data || [];
+        setAllReports(newReports);
+        applyFilter(newReports, selectedFilter);
+      } else {
+        Alert.alert("오류", response.message || "신고 목록을 불러오는데 실패했습니다.");
       }
     } catch (error) {
-      console.error('신고 목록 조회 실패:', error);
+      console.error("신고 목록 조회 실패:", error);
+      Alert.alert("오류", "신고 목록을 불러오는데 실패했습니다.");
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
   };
 
+  // 필터 적용 함수
+  const applyFilter = (reports: ReportListResponse[], filter: "ALL" | "USER" | "RESTAURANT") => {
+    let filtered = [...reports];
+
+    if (filter === "USER") {
+      filtered = filtered.filter((r) => r.targetType === "USER" || r.targetType === "REVIEW");
+    } else if (filter === "RESTAURANT") {
+      filtered = filtered.filter((r) => r.targetType === "RESTAURANT");
+    }
+
+    setFilteredReports(filtered);
+  };
+
   useFocusEffect(
     useCallback(() => {
-      fetchReports(0, true, selectedFilter);
-    }, [selectedFilter])
+      fetchReports(true);
+    }, [])
   );
 
-  const handleRefresh = () => {
-    setRefreshing(true);
-    fetchReports(0, true, selectedFilter);
-  };
-
-  const handleLoadMore = () => {
-    if (hasMore && !loading) {
-      fetchReports(page + 1, false, selectedFilter);
-    }
-  };
-
-  const handleFilterChange = (filter: 'ALL' | 'USER' | 'RESTAURANT') => {
+  const handleFilterChange = (filter: "ALL" | "USER" | "RESTAURANT") => {
+    if (selectedFilter === filter) return;
     setSelectedFilter(filter);
-    setPage(0);
-    setReports([]);
-    setHasMore(true);
+    applyFilter(allReports, filter);
   };
 
   const handleDeleteReport = (reportId: number) => {
-    Alert.alert('신고 삭제', '이 신고를 삭제하시겠습니까?', [
-      { text: '취소', style: 'cancel' },
+    Alert.alert("신고 삭제", "이 신고를 삭제하시겠습니까?", [
+      { text: "취소", style: "cancel" },
       {
-        text: '삭제',
-        style: 'destructive',
+        text: "삭제",
+        style: "destructive",
         onPress: async () => {
-          // if (!token) return; // authApi가 토큰 처리하므로 불필요
           try {
-            const response = await ReportApi.deleteReport(reportId); // token 인자 제거
+            const response = await ReportApi.deleteReport(reportId);
             if (response.code === 200) {
-              Alert.alert('알림', '신고가 삭제되었습니다.');
-              handleRefresh();
+              Alert.alert("알림", "신고가 삭제되었습니다.");
+              fetchReports(true);
             } else {
-              Alert.alert('오류', '신고 삭제 실패');
+              Alert.alert("오류", response.message || "신고 삭제 실패");
             }
           } catch (error) {
             console.error(error);
-            Alert.alert('오류', '신고 삭제 중 오류 발생');
+            Alert.alert("오류", "신고 삭제 중 오류 발생");
           }
         },
       },
     ]);
   };
 
-  const openActionModal = (report: ReportListResponse, type: 'WARNING' | 'SUSPENSION') => {
-    setSelectedReport(report);
-    setActionType(type);
-    setActionReason('');
-    setSuspensionDays('7');
-    setActionModalVisible(true);
+  // ✅ 정지/해제 처리 (AdminUserScreen과 동일 흐름)
+  const handleSuspend = async (userId: number, days: number, reason: string) => {
+    try {
+      if (days === 0) {
+        await AdminRepositoryImpl.unsuspendUser(userId);
+      } else {
+        await AdminRepositoryImpl.suspendUser(userId, days, reason);
+      }
+      return true;
+    } catch (error) {
+      console.error("정지 처리 실패:", error);
+      return false;
+    }
   };
 
-  const handleActionSubmit = async () => {
-    // if (!token || !selectedReport || !actionType) return; // authApi가 토큰 처리하므로 불필요
-    if (!selectedReport || !actionType) return;
-    if (!actionReason.trim()) {
-      Alert.alert('알림', '사유를 입력해주세요.');
-      return;
-    }
-
+  // ✅ 경고 처리 (AdminUserViewModel과 동일 API 사용)
+  const handleGiveWarning = async (userId: number, warningsToAdd: number, reason: string) => {
     try {
-      let response;
-      if (actionType === 'WARNING') {
-        response = await ReportApi.approveWithWarning(selectedReport.id, { // token 인자 제거
-          userId: selectedReport.targetId,
-          reason: actionReason,
-        });
-      } else {
-        response = await ReportApi.approveWithSuspension(selectedReport.id, { // token 인자 제거
-          userId: selectedReport.targetId,
-          reason: actionReason,
-          durationDays: parseInt(suspensionDays, 10),
-        });
-      }
-
-      if (response.code === 200) {
-        Alert.alert('알림', '처리가 완료되었습니다.');
-        setActionModalVisible(false);
-        handleRefresh();
-      } else {
-        Alert.alert('오류', response.message || '처리 실패');
-      }
+      await AdminRepositoryImpl.updateUserWarning(userId, warningsToAdd, reason);
+      return true;
     } catch (error) {
-      console.error(error);
-      Alert.alert('오류', '처리 중 오류 발생');
+      console.error("경고 처리 실패:", error);
+      return false;
+    }
+  };
+
+  const getStatusText = (status: string) => {
+    switch (status) {
+      case "PENDING":
+        return "처리중";
+      case "APPROVED":
+      case "COMPLETED":
+        return "처리 완료";
+      case "REJECTED":
+        return "반려됨";
+      default:
+        return status;
     }
   };
 
   const renderItem = ({ item }: { item: ReportListResponse }) => {
-    const isRestaurantReport = item.targetType === 'RESTAURANT';
+    const isRestaurantReport = item.targetType === "RESTAURANT";
+    const isUserOrReviewReport = item.targetType === "USER" || item.targetType === "REVIEW";
+    const statusText = getStatusText(item.status);
+
+    const reporterName = item.reporterNickname || `유저 ${item.reporterId}`;
+    const targetName = item.targetNickname || `유저 ${item.targetId}`;
 
     return (
-      <View style={[styles.card, { backgroundColor: isDarkMode ? theme.card : '#fff' }]}>
+      <View style={[styles.card, { backgroundColor: isDarkMode ? theme.card : "#fff" }]}>
         <View style={styles.cardHeader}>
-          <View style={[styles.badge, { backgroundColor: isRestaurantReport ? '#E3F2FD' : '#FFF3E0' }]}>
-            <Text style={[styles.badgeText, { color: isRestaurantReport ? '#1976D2' : '#F57C00' }]}>
-              {item.targetType}
+          <View style={[styles.badge, { backgroundColor: isRestaurantReport ? "#E3F2FD" : "#FFF3E0" }]}>
+            <Text style={[styles.badgeText, { color: isRestaurantReport ? "#1976D2" : "#F57C00" }]}>
+              {isRestaurantReport ? "맛집" : "사용자/리뷰"}
             </Text>
           </View>
           <Text style={[styles.date, { color: theme.textSecondary }]}>{item.createdAt}</Text>
@@ -187,47 +193,68 @@ const AdminReportScreen = () => {
         <Text style={[styles.reasonDetail, { color: theme.textSecondary }]}>{item.reasonDetail}</Text>
 
         <View style={styles.infoContainer}>
-          <Text style={[styles.infoText, { color: theme.textSecondary }]}>신고자 ID: {item.reporterId}</Text>
-          <Text style={[styles.infoText, { color: theme.textSecondary }]}>대상 ID: {item.targetId}</Text>
+          <Text style={[styles.infoText, { color: theme.textSecondary }]}>신고자: {reporterName}</Text>
+          <Text style={[styles.infoText, { color: theme.textSecondary }]}>피신고자: {targetName}</Text>
         </View>
 
         <View style={styles.statusContainer}>
           <Text style={[styles.statusLabel, { color: theme.textSecondary }]}>상태: </Text>
-          <Text style={[styles.statusValue, item.status === 'PENDING' ? styles.pending : styles.completed]}>
-            {item.status}
+          <Text style={[styles.statusValue, item.status === "PENDING" ? styles.pending : styles.completed]}>
+            {statusText}
           </Text>
         </View>
 
-        {item.status === 'PENDING' && (
+        {item.status === "PENDING" && (
           <View style={styles.actionButtons}>
             {isRestaurantReport ? (
+              // ✅ 기존 기능 유지: 맛집 수정 이동
               <TouchableOpacity
                 style={[styles.button, styles.checkButton]}
-                onPress={() => navigation.navigate('AdminRestaurantAdd', { id: item.targetId })}
+                onPress={() => navigation.navigate("AdminRestaurantAdd", { id: item.targetId })}
               >
                 <Text style={styles.buttonText}>맛집 확인/수정</Text>
               </TouchableOpacity>
-            ) : (
+            ) : isUserOrReviewReport ? (
               <>
+                {/* ✅ 경고: AdminUserScreen과 동일하게 "WarningModal"로 처리 */}
                 <TouchableOpacity
                   style={[styles.button, styles.warningButton]}
-                  onPress={() => openActionModal(item, 'WARNING')}
+                  onPress={() =>
+                    setActiveModal({
+                      type: "warning",
+                      user: {
+                        id: item.targetId,
+                        name: targetName,
+                        email: item.targetNickname || `유저 ${item.targetId}`, // WarningModal 표시용
+                      },
+                    })
+                  }
                 >
                   <Text style={styles.buttonText}>경고</Text>
                 </TouchableOpacity>
+
+                {/* ✅ 정지: AdminUserScreen과 동일하게 "SuspendModal"로 처리 */}
                 <TouchableOpacity
                   style={[styles.button, styles.suspendButton]}
-                  onPress={() => openActionModal(item, 'SUSPENSION')}
+                  onPress={() =>
+                    setActiveModal({
+                      type: "suspend",
+                      user: {
+                        id: item.targetId,
+                        name: targetName,
+                        email: item.targetNickname || `유저 ${item.targetId}`,
+                        status: "미접속", // SuspendModal이 status==="정지"로 해제 UI 판단하면 일단 미접속으로 넣음
+                      },
+                    })
+                  }
                 >
                   <Text style={styles.buttonText}>정지</Text>
                 </TouchableOpacity>
               </>
-            )}
+            ) : null}
 
-            <TouchableOpacity
-              style={[styles.button, styles.deleteButton]}
-              onPress={() => handleDeleteReport(item.id)}
-            >
+            {/* ✅ 기존 기능 유지: 신고 삭제 */}
+            <TouchableOpacity style={[styles.button, styles.deleteButton]} onPress={() => handleDeleteReport(item.id)}>
               <Text style={styles.buttonText}>삭제</Text>
             </TouchableOpacity>
           </View>
@@ -236,105 +263,95 @@ const AdminReportScreen = () => {
     );
   };
 
+  if (loading && allReports.length === 0) {
+    return (
+      <View style={[styles.container, { backgroundColor: theme.background }]}>
+        <Header title="신고 관리" showBackButton onBackPress={() => navigation.goBack()} />
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={theme.icon} />
+          <Text style={[styles.loadingText, { color: theme.textSecondary }]}>신고 데이터를 불러오는 중...</Text>
+        </View>
+      </View>
+    );
+  }
+
   return (
-    <View style={[styles.container, { backgroundColor: isDarkMode ? theme.background : '#f5f5f5' }]}>
+    <View style={[styles.container, { backgroundColor: isDarkMode ? theme.background : "#f5f5f5" }]}>
       <Header title="신고 관리" showBackButton onBackPress={() => navigation.goBack()} />
 
       {/* Filter Tabs */}
-      <View style={[styles.filterContainer, { backgroundColor: isDarkMode ? theme.card : '#fff' }]}>
-        {(['ALL', 'USER', 'RESTAURANT'] as const).map((filter) => (
+      <View style={[styles.filterContainer, { backgroundColor: isDarkMode ? theme.card : "#fff" }]}>
+        {(["ALL", "USER", "RESTAURANT"] as const).map((filter) => (
           <TouchableOpacity
             key={filter}
             style={[
               styles.filterTab,
               selectedFilter === filter && styles.activeFilterTab,
-              { borderColor: selectedFilter === filter ? COLORS.primary : 'transparent' }
+              { borderColor: selectedFilter === filter ? COLORS.primary : "transparent" },
             ]}
             onPress={() => handleFilterChange(filter)}
           >
             <Text
               style={[
                 styles.filterText,
-                selectedFilter === filter ? styles.activeFilterText : { color: theme.textSecondary }
+                selectedFilter === filter ? styles.activeFilterText : { color: theme.textSecondary },
               ]}
             >
-              {filter === 'ALL' ? '전체' : filter === 'USER' ? '사용자/리뷰' : '맛집'}
+              {filter === "ALL" ? "전체" : filter === "USER" ? "사용자/리뷰" : "맛집"}
             </Text>
           </TouchableOpacity>
         ))}
       </View>
 
       <FlatList
-        data={reports}
+        data={filteredReports}
         renderItem={renderItem}
         keyExtractor={(item) => item.id.toString()}
-        onRefresh={handleRefresh}
+        onRefresh={() => fetchReports(true)}
         refreshing={refreshing}
-        onEndReached={handleLoadMore}
-        onEndReachedThreshold={0.5}
-        contentContainerStyle={[
-          styles.listContent,
-          { paddingBottom: insets.bottom + 16 }
-        ]}
+        contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + 16 }]}
         ListEmptyComponent={
-          !loading ? <Text style={[styles.emptyText, { color: theme.textSecondary }]}>신고 내역이 없습니다.</Text> : null
+          <View style={styles.emptyContainer}>
+            <Text style={[styles.emptyText, { color: theme.textSecondary }]}>신고 내역이 없습니다.</Text>
+          </View>
         }
-        ListFooterComponent={loading && !refreshing ? <ActivityIndicator size="small" color={COLORS.primary} /> : null}
       />
 
-      <Modal
-        visible={actionModalVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setActionModalVisible(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalContainer, { backgroundColor: isDarkMode ? theme.card : 'white' }]}>
-            <Text style={[styles.modalTitle, { color: theme.textPrimary }]}>
-              {actionType === 'WARNING' ? '경고 처리' : '정지 처리'}
-            </Text>
+      {/* ✅ 모달들: AdminUserScreen과 완전 동일한 패턴으로 연결 */}
+      <WarningModal
+        visible={activeModal.type === "warning"}
+        onClose={() => setActiveModal({ type: null })}
+        user={activeModal.user}
+        setSuccessModal={setSuccessModal}
+        theme={theme}
+        onConfirm={async (id: number, warningsToAdd: number, reason: string) => {
+          const success = await handleGiveWarning(id, warningsToAdd, reason);
+          if (success) fetchReports(true);
+          return success;
+        }}
+      />
 
-            <Text style={[styles.label, { color: theme.textPrimary }]}>처리 사유</Text>
-            <TextInput
-              style={[styles.input, { color: theme.textPrimary, borderColor: theme.border }]}
-              placeholder="사유를 입력하세요"
-              placeholderTextColor={theme.textSecondary}
-              value={actionReason}
-              onChangeText={setActionReason}
-              multiline
-            />
+      <SuspendModal
+        visible={activeModal.type === "suspend"}
+        onClose={() => setActiveModal({ type: null })}
+        user={activeModal.user}
+        setSuccessModal={setSuccessModal}
+        theme={theme}
+        onConfirm={async (id: number, days: number, reason: string) => {
+          const success = await handleSuspend(id, days, reason);
+          if (success) fetchReports(true);
+          return success;
+        }}
+      />
 
-            {actionType === 'SUSPENSION' && (
-              <>
-                <Text style={[styles.label, { color: theme.textPrimary }]}>정지 기간 (일)</Text>
-                <TextInput
-                  style={[styles.input, { color: theme.textPrimary, borderColor: theme.border }]}
-                  placeholder="7"
-                  placeholderTextColor={theme.textSecondary}
-                  value={suspensionDays}
-                  onChangeText={setSuspensionDays}
-                  keyboardType="number-pad"
-                />
-              </>
-            )}
-
-            <View style={styles.modalButtons}>
-              <TouchableOpacity
-                style={[styles.modalButton, styles.cancelButton]}
-                onPress={() => setActionModalVisible(false)}
-              >
-                <Text style={styles.cancelButtonText}>취소</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.modalButton, styles.confirmButton]}
-                onPress={handleActionSubmit}
-              >
-                <Text style={styles.confirmButtonText}>확인</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
+      <SuccessModal
+        visible={successModal.visible}
+        onClose={() => setSuccessModal({ visible: false, type: "", user: null, extra: "" })}
+        type={successModal.type}
+        user={successModal.user}
+        extra={successModal.extra}
+        theme={theme}
+      />
     </View>
   );
 };
@@ -343,8 +360,17 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  loadingText: {
+    marginTop: 10,
+    fontSize: 15,
+  },
   filterContainer: {
-    flexDirection: 'row',
+    flexDirection: "row",
     paddingVertical: 10,
     paddingHorizontal: 16,
     marginBottom: 10,
@@ -360,7 +386,7 @@ const styles = StyleSheet.create({
   },
   filterText: {
     fontSize: 15,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   activeFilterText: {
     color: COLORS.primary,
@@ -368,20 +394,27 @@ const styles = StyleSheet.create({
   listContent: {
     padding: 16,
   },
+  emptyContainer: {
+    padding: 40,
+    alignItems: "center",
+  },
+  emptyText: {
+    fontSize: 15,
+  },
   card: {
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
   },
   cardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: 12,
   },
   badge: {
@@ -391,14 +424,14 @@ const styles = StyleSheet.create({
   },
   badgeText: {
     fontSize: 12,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
   date: {
     fontSize: 12,
   },
   reasonTitle: {
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     marginBottom: 6,
   },
   reasonDetail: {
@@ -407,39 +440,39 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   infoContainer: {
-    flexDirection: 'row',
-    gap: 12,
+    flexDirection: "column",
+    gap: 4,
     marginBottom: 8,
   },
   infoText: {
     fontSize: 12,
   },
   statusContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginBottom: 12,
   },
   statusLabel: {
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   statusValue: {
     fontSize: 13,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
   pending: {
-    color: '#F57C00',
+    color: "#F57C00",
   },
   completed: {
-    color: '#388E3C',
+    color: "#388E3C",
   },
   actionButtons: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
+    flexDirection: "row",
+    justifyContent: "flex-end",
     gap: 8,
     marginTop: 8,
     borderTopWidth: 1,
-    borderTopColor: '#eee',
+    borderTopColor: "#eee",
     paddingTop: 12,
   },
   button: {
@@ -448,81 +481,21 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   checkButton: {
-    backgroundColor: '#2196F3',
+    backgroundColor: "#2196F3",
   },
   warningButton: {
-    backgroundColor: '#FFB74D',
+    backgroundColor: "#FF9800",
   },
   suspendButton: {
-    backgroundColor: '#EF5350',
+    backgroundColor: "#EC407A",
   },
   deleteButton: {
-    backgroundColor: '#9E9E9E',
+    backgroundColor: "#78909C",
   },
   buttonText: {
-    color: 'white',
+    color: "white",
     fontSize: 13,
-    fontWeight: 'bold',
-  },
-  emptyText: {
-    textAlign: 'center',
-    marginTop: 50,
-    fontSize: 15,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  modalContainer: {
-    width: '85%',
-    borderRadius: 16,
-    padding: 24,
-    elevation: 5,
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 20,
-    textAlign: 'center',
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    marginBottom: 8,
-  },
-  input: {
-    borderWidth: 1,
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 20,
-    minHeight: 40,
-  },
-  modalButtons: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: 12,
-  },
-  modalButton: {
-    flex: 1,
-    padding: 14,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  cancelButton: {
-    backgroundColor: '#f0f0f0',
-  },
-  confirmButton: {
-    backgroundColor: COLORS.primary,
-  },
-  cancelButtonText: {
-    color: '#333',
-    fontWeight: 'bold',
-  },
-  confirmButtonText: {
-    color: 'white',
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
 });
 

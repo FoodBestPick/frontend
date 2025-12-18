@@ -11,14 +11,16 @@ export interface SendReportRequest {
 export interface ReportListResponse {
   id: number;
   reporterId: number;
+  reporterNickname?: string;
   targetId: number;
+  targetNickname?: string;
   targetType: string;
   reason: string;
   reasonDetail: string;
   status: string;
-  isImposed: boolean; 
+  isImposed: boolean;
   createdAt: string;
-  updatedAt: string; 
+  updatedAt: string;
 }
 
 export const ReportApi = {

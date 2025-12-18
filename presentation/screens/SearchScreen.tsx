@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -7,16 +7,16 @@ import {
   StyleSheet,
   ScrollView,
   StatusBar,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
-import { useNavigation } from '@react-navigation/native';
-import { StackNavigationProp } from '@react-navigation/stack';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { FilterModal } from '../components/FilterModal';
-import { RootStackParamList } from '../navigation/types/RootStackParamList';
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import MaterialIcons from "react-native-vector-icons/MaterialIcons";
+import { useNavigation } from "@react-navigation/native";
+import { StackNavigationProp } from "@react-navigation/stack";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { FilterModal } from "../components/FilterModal";
+import { RootStackParamList } from "../navigation/types/RootStackParamList";
 
-import { useAdminRestaurantAddViewModel } from '../viewmodels/AdminRestaurantAddViewModel';
+import { useAdminRestaurantAddViewModel } from "../viewmodels/AdminRestaurantAddViewModel";
 
 interface FilterState {
   location: string;
@@ -31,26 +31,29 @@ interface FilterState {
   delivery: boolean;
 }
 
-type NavigationProp = StackNavigationProp<RootStackParamList, 'SearchScreen'>;
+type NavigationProp = StackNavigationProp<RootStackParamList, "SearchScreen">;
+
+const H_PADDING = 24;
 
 const SearchScreen = () => {
   const navigation = useNavigation<NavigationProp>();
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState("");
   const [filterVisible, setFilterVisible] = useState(false);
   const [selectedFilters, setSelectedFilters] = useState<Partial<FilterState>>(
-    {},
+    {}
   );
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
 
   // ✅ 백엔드 데이터 로드
-  const { categories, purposeTags, facilityTags, atmosphereTags } = useAdminRestaurantAddViewModel();
+  const { categories, purposeTags, facilityTags, atmosphereTags } =
+    useAdminRestaurantAddViewModel();
 
   // 인기 검색어 (Mock Data - 백엔드 API 필요 시 구현)
   const popularSearches = [
-    { rank: 1, term: '떡볶이', trend: 'up' as const },
-    { rank: 2, term: '김치찌개', trend: 'same' as const },
-    { rank: 3, term: '파스타', trend: 'up' as const },
-    { rank: 4, term: '초밥', trend: 'down' as const },
+    { rank: 1, term: "떡볶이", trend: "up" as const },
+    { rank: 2, term: "김치찌개", trend: "same" as const },
+    { rank: 3, term: "파스타", trend: "up" as const },
+    { rank: 4, term: "초밥", trend: "down" as const },
   ];
 
   useEffect(() => {
@@ -59,44 +62,44 @@ const SearchScreen = () => {
 
   const loadRecentSearches = async () => {
     try {
-      const savedSearches = await AsyncStorage.getItem('recentSearches');
+      const savedSearches = await AsyncStorage.getItem("recentSearches");
       if (savedSearches) {
         setRecentSearches(JSON.parse(savedSearches));
       }
     } catch (error) {
-      console.error('Failed to load recent searches', error);
+      console.error("Failed to load recent searches", error);
     }
   };
 
   const saveRecentSearch = async (term: string) => {
     try {
-      const newSearches = [
-        term,
-        ...recentSearches.filter(item => item !== term),
-      ].slice(0, 10); // 최대 10개 유지
+      const newSearches = [term, ...recentSearches.filter((item) => item !== term)].slice(
+        0,
+        10
+      ); // 최대 10개 유지
       setRecentSearches(newSearches);
-      await AsyncStorage.setItem('recentSearches', JSON.stringify(newSearches));
+      await AsyncStorage.setItem("recentSearches", JSON.stringify(newSearches));
     } catch (error) {
-      console.error('Failed to save recent search', error);
+      console.error("Failed to save recent search", error);
     }
   };
 
   const removeRecentSearch = async (term: string) => {
     try {
-      const newSearches = recentSearches.filter(item => item !== term);
+      const newSearches = recentSearches.filter((item) => item !== term);
       setRecentSearches(newSearches);
-      await AsyncStorage.setItem('recentSearches', JSON.stringify(newSearches));
+      await AsyncStorage.setItem("recentSearches", JSON.stringify(newSearches));
     } catch (error) {
-      console.error('Failed to remove recent search', error);
+      console.error("Failed to remove recent search", error);
     }
   };
 
   const clearAllRecentSearches = async () => {
     try {
       setRecentSearches([]);
-      await AsyncStorage.removeItem('recentSearches');
+      await AsyncStorage.removeItem("recentSearches");
     } catch (error) {
-      console.error('Failed to clear recent searches', error);
+      console.error("Failed to clear recent searches", error);
     }
   };
 
@@ -104,7 +107,7 @@ const SearchScreen = () => {
     const query = term || searchQuery;
     if (query.trim()) {
       saveRecentSearch(query);
-      navigation.navigate('SearchResult', {
+      navigation.navigate("SearchResult", {
         keyword: query,
         category: selectedFilters.category,
         tags: selectedFilters.tags,
@@ -117,40 +120,44 @@ const SearchScreen = () => {
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#fff" />
 
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <MaterialIcons name="arrow-back" size={24} color="#000" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>검색</Text>
-        <View style={{ width: 24 }} />
-      </View>
-
-      <View style={styles.searchBar}>
-        <MaterialIcons name="search" size={20} color="#999" />
-        <TextInput
-          style={styles.searchInput}
-          placeholder="맛집 메뉴를 검색해보세요"
-          placeholderTextColor="#999"
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-          onSubmitEditing={() => handleSearch()}
-        />
-        {searchQuery.length > 0 && (
-          <TouchableOpacity onPress={() => setSearchQuery('')}>
-            <MaterialIcons name="cancel" size={20} color="#999" />
+      {/* ✅ 상단 영역 공통 좌우 padding */}
+      <View style={styles.content}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => navigation.goBack()}>
+            <MaterialIcons name="arrow-back" size={24} color="#000" />
           </TouchableOpacity>
-        )}
+          <Text style={styles.headerTitle}>검색</Text>
+          <View style={{ width: 24 }} />
+        </View>
+
+        <View style={styles.searchBar}>
+          <MaterialIcons name="search" size={20} color="#999" />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="맛집 메뉴를 검색해보세요"
+            placeholderTextColor="#999"
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            onSubmitEditing={() => handleSearch()}
+          />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity onPress={() => setSearchQuery("")}>
+              <MaterialIcons name="cancel" size={20} color="#999" />
+            </TouchableOpacity>
+          )}
+        </View>
+
+        <TouchableOpacity style={styles.filterButton} onPress={() => setFilterVisible(true)}>
+          <MaterialIcons name="tune" size={18} color="#FFA847" />
+          <Text style={styles.filterText}>상세 검색</Text>
+        </TouchableOpacity>
       </View>
 
-      <TouchableOpacity
-        style={styles.filterButton}
-        onPress={() => setFilterVisible(true)}
+      {/* ✅ 스크롤 본문도 공통 좌우 padding */}
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={[styles.content, { paddingBottom: 24 }]}
       >
-        <MaterialIcons name="tune" size={18} color="#FFA847" />
-        <Text style={styles.filterText}>상세 검색</Text>
-      </TouchableOpacity>
-
-      <ScrollView showsVerticalScrollIndicator={false}>
         {recentSearches.length > 0 && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
@@ -159,6 +166,7 @@ const SearchScreen = () => {
                 <Text style={styles.clearText}>전체 삭제</Text>
               </TouchableOpacity>
             </View>
+
             <View style={styles.chipContainer}>
               {recentSearches.map((term, index) => (
                 <TouchableOpacity
@@ -181,7 +189,8 @@ const SearchScreen = () => {
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>인기 검색어</Text>
-          {popularSearches.map(item => (
+
+          {popularSearches.map((item) => (
             <TouchableOpacity
               key={item.rank}
               style={styles.rankItem}
@@ -190,30 +199,25 @@ const SearchScreen = () => {
                 handleSearch(item.term);
               }}
             >
-              <Text
-                style={[
-                  styles.rankNumber,
-                  item.rank <= 3 && styles.rankNumberTop,
-                ]}
-              >
+              <Text style={[styles.rankNumber, item.rank <= 3 && styles.rankNumberTop]}>
                 {item.rank}
               </Text>
               <Text style={styles.rankTerm}>{item.term}</Text>
               <MaterialIcons
                 name={
-                  item.trend === 'up'
-                    ? 'arrow-upward'
-                    : item.trend === 'down'
-                    ? 'arrow-downward'
-                    : 'remove'
+                  item.trend === "up"
+                    ? "arrow-upward"
+                    : item.trend === "down"
+                    ? "arrow-downward"
+                    : "remove"
                 }
                 size={16}
                 color={
-                  item.trend === 'up'
-                    ? '#2ECC71'
-                    : item.trend === 'down'
-                    ? '#E74C3C'
-                    : '#999'
+                  item.trend === "up"
+                    ? "#2ECC71"
+                    : item.trend === "down"
+                    ? "#E74C3C"
+                    : "#999"
                 }
               />
             </TouchableOpacity>
@@ -225,11 +229,10 @@ const SearchScreen = () => {
         visible={filterVisible}
         onClose={() => setFilterVisible(false)}
         selectedFilters={selectedFilters}
-        onApply={filters => {
+        onApply={(filters) => {
           setSelectedFilters(filters);
           setFilterVisible(false);
-          // 필터 적용 시 바로 검색 결과로 이동
-          navigation.navigate('SearchResult', {
+          navigation.navigate("SearchResult", {
             keyword: searchQuery,
             category: filters.category,
             tags: filters.tags,
@@ -250,81 +253,90 @@ export default SearchScreen;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
   },
+
+  // ✅ 화면 공통 좌우 여백
+  content: {
+    paddingHorizontal: H_PADDING,
+  },
+
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingVertical: 12,
   },
   headerTitle: {
     fontSize: 18,
-    fontWeight: '700',
-    color: '#000',
+    fontWeight: "700",
+    color: "#000",
   },
+
   searchBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F5F5F5',
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    marginHorizontal: 16,
-    marginBottom: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#F5F5F5",
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    minHeight: 44,
+    marginBottom: 14,
   },
+
   searchInput: {
     flex: 1,
     marginLeft: 8,
     fontSize: 15,
-    color: '#000',
+    color: "#000",
+    paddingVertical: 0, 
   },
+
   filterButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-    backgroundColor: '#FFF4E6',
+    flexDirection: "row",
+    alignItems: "center",
+    alignSelf: "flex-start",
+    backgroundColor: "#FFF4E6",
     paddingHorizontal: 14,
-    paddingVertical: 8,
+    paddingVertical: 9,
     borderRadius: 20,
-    marginHorizontal: 16,
     marginBottom: 16,
   },
   filterText: {
-    color: '#FFA847',
+    color: "#FFA847",
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: "600",
     marginLeft: 4,
   },
+
   section: {
-    paddingHorizontal: 16,
     marginBottom: 24,
   },
   sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: 12,
   },
   sectionTitle: {
     fontSize: 16,
-    fontWeight: '700',
-    color: '#000',
+    fontWeight: "700",
+    color: "#000",
   },
   clearText: {
     fontSize: 13,
-    color: '#999',
+    color: "#999",
   },
+
   chipContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexDirection: "row",
+    flexWrap: "wrap",
     gap: 8,
   },
   chip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F5F5F5',
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#F5F5F5",
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 20,
@@ -332,29 +344,30 @@ const styles = StyleSheet.create({
   },
   chipText: {
     fontSize: 14,
-    color: '#333',
+    color: "#333",
   },
+
   rankItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
+    borderBottomColor: "#F0F0F0",
   },
   rankNumber: {
     width: 24,
     fontSize: 15,
-    fontWeight: '600',
-    color: '#666',
+    fontWeight: "600",
+    color: "#666",
   },
   rankNumberTop: {
-    color: '#FFA847',
-    fontWeight: '700',
+    color: "#FFA847",
+    fontWeight: "700",
   },
   rankTerm: {
     flex: 1,
     fontSize: 15,
-    color: '#000',
+    color: "#000",
     marginLeft: 12,
   },
 });

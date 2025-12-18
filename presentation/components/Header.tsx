@@ -9,6 +9,8 @@ type HeaderProps = {
   showBackButton?: boolean;
   onIconPress?: () => void;
   onBackPress?: () => void;
+  badgeCount?: number; 
+  onBadgePress?: () => void; 
 };
 
 export const Header = ({
@@ -17,8 +19,13 @@ export const Header = ({
   showBackButton = false,
   onIconPress,
   onBackPress,
+  badgeCount = 0,
+  onBadgePress,
 }: HeaderProps) => {
   const { theme } = useContext(ThemeContext);
+
+  const handleIconPress = onIconPress;
+  const handleBadgePress = onBadgePress ?? onIconPress;
 
   return (
     <View
@@ -43,14 +50,29 @@ export const Header = ({
       {/* 가운데: 제목 */}
       <Text style={[styles.title, { color: theme.textPrimary }]}>{title}</Text>
 
-      {/* 오른쪽: 선택적 아이콘 */}
+      {/* 오른쪽: 선택적 아이콘 + 뱃지 */}
       {iconName ? (
         <TouchableOpacity
-          onPress={onIconPress}
+          onPress={handleIconPress}
           style={styles.rightButton}
           activeOpacity={0.7}
         >
-          <MaterialIcons name={iconName} size={24} color={theme.icon} />
+          <View style={styles.iconWrap}>
+            <MaterialIcons name={iconName} size={24} color={theme.icon} />
+
+            {badgeCount > 0 && (
+              <TouchableOpacity
+                onPress={handleBadgePress}
+                activeOpacity={0.8}
+                style={styles.badge}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <Text style={styles.badgeText}>
+                  {badgeCount > 99 ? "99+" : String(badgeCount)}
+                </Text>
+              </TouchableOpacity>
+            )}
+          </View>
         </TouchableOpacity>
       ) : (
         <View style={styles.rightPlaceholder} />
@@ -88,5 +110,28 @@ const styles = StyleSheet.create({
   },
   rightPlaceholder: {
     width: 30,
+  },
+
+  iconWrap: {
+    position: "relative",
+    width: 30,
+    alignItems: "flex-end",
+  },
+  badge: {
+    position: "absolute",
+    right: -6,
+    top: -6,
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
+    paddingHorizontal: 5,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#FF3B30",
+  },
+  badgeText: {
+    color: "#fff",
+    fontSize: 11,
+    fontWeight: "800",
   },
 });

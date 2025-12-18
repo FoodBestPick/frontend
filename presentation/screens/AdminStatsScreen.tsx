@@ -29,6 +29,7 @@ export const AdminStatsScreen = () => {
   const [startDate, setStartDate] = useState<string | null>(null);
   const [endDate, setEndDate] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+
   const { statsDetail, refetch, loading, error } = AdminStatsViewModels();
 
   const onRefresh = useCallback(async () => {
@@ -50,7 +51,7 @@ export const AdminStatsScreen = () => {
       case "월간":
         return statsDetail?.data?.month;
       case "사용자 지정":
-        return statsDetail?.data?.custom;
+        return statsDetail?.data?.custom ?? statsDetail?.data?.today;
       default:
         return statsDetail?.data?.today;
     }
@@ -84,18 +85,18 @@ export const AdminStatsScreen = () => {
       barPercentage: 0.8,
     };
 
-    function getCustomLabels(startDateStr: string, endDateStr: string) {
-      const start = new Date(startDateStr);
-      const end = new Date(endDateStr);
+    function getCustomLabels(start: string, end: string) {
+      const s = new Date(start);
+      const e = new Date(end);
       const diffDays =
-        Math.floor((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+        Math.floor((e.getTime() - s.getTime()) / (1000 * 60 * 60 * 24)) + 1;
 
       if (diffDays === 1) return ["오전", "정오", "오후", "저녁"];
 
       if (diffDays <= 7) {
         const labels: string[] = [];
         for (let i = 0; i < diffDays; i++) {
-          const d = new Date(start.getTime() + i * 86400000);
+          const d = new Date(s.getTime() + i * 86400000);
           labels.push(`${d.getMonth() + 1}/${d.getDate()}`);
         }
         return labels;
@@ -107,13 +108,12 @@ export const AdminStatsScreen = () => {
       }
 
       const months = new Set<string>();
-      for (let d = new Date(start); d <= end; d.setMonth(d.getMonth() + 1)) {
+      for (let d = new Date(s); d <= e; d.setMonth(d.getMonth() + 1)) {
         months.add(`${d.getMonth() + 1}월`);
       }
       return Array.from(months);
     }
 
-    // ✅ categories가 null/undefined로 올 수도 있으니 안전처리
     const safeCategories =
       categories && typeof categories === "object" ? categories : {};
 
@@ -153,19 +153,19 @@ export const AdminStatsScreen = () => {
         title: "방문자 추이",
         kpi: {
           value: visitors.toLocaleString(),
-          // ✅ 여기 수정: +를 무조건 붙이지 말고 양수일 때만
           sub: `${selectedTab} ${visitorRate > 0 ? "+" : ""}${visitorRate}%`,
+          up: visitorRate >= 0,
         },
         labels:
           selectedTab === "오늘"
             ? ["오전", "정오", "오후", "저녁"]
             : selectedTab === "주간"
-            ? ["월", "화", "수", "목", "금", "토", "일"]
-            : selectedTab === "월간"
-            ? ["1주", "2주", "3주", "4주"]
-            : startDate && endDate
-            ? getCustomLabels(startDate, endDate)
-            : [],
+              ? ["월", "화", "수", "목", "금", "토", "일"]
+              : selectedTab === "월간"
+                ? Array.from({ length: timeSeries.length }, (_, i) => `${i + 1}주`)
+                : startDate && endDate
+                  ? getCustomLabels(startDate, endDate)
+                  : [],
         data: timeSeries,
       },
 
@@ -179,15 +179,12 @@ export const AdminStatsScreen = () => {
 
       centerTop: joins.toLocaleString(),
       centerBottom: "신규 가입",
-
-      categories: categoriesArr,
-
-      bar: {
-        labels: ["1점", "2점", "3점", "4점", "5점"],
-        data: ratingDistribution,
-      },
-
-      ranks: (topSearches ?? []).map((r: any, i: number) => ({
+      categories: Object.entries(categories).map(([label, pct]) => ({
+        label,
+        pct,
+      })),
+      bar: { labels: ["1점", "2점", "3점", "4점", "5점"], data: ratingDistribution },
+      ranks: topSearches.map((r: any, i: number) => ({
         rank: i + 1,
         term: r.term,
         count: `${r.count.toLocaleString()}회`,
@@ -197,7 +194,7 @@ export const AdminStatsScreen = () => {
     };
   }, [current, selectedTab, startDate, endDate, theme]);
 
-  if (loading)
+  if (loading && !statsDetail) {
     return (
       <View
         style={{
@@ -213,8 +210,9 @@ export const AdminStatsScreen = () => {
         </Text>
       </View>
     );
+  }
 
-  if (error)
+  if (error) {
     return (
       <View
         style={{
@@ -227,6 +225,7 @@ export const AdminStatsScreen = () => {
         <Text style={{ color: "red", fontSize: 16 }}>{error}</Text>
       </View>
     );
+  }
 
   if (!ui) return null;
 
@@ -270,7 +269,9 @@ export const AdminStatsScreen = () => {
         style={styles.modal}
       >
         <View style={[styles.modalContainer, { backgroundColor: theme.card }]}>
-          <Text style={[styles.modalTitle, { color: theme.textPrimary }]}>기간 선택</Text>
+          <Text style={[styles.modalTitle, { color: theme.textPrimary }]}>
+            기간 선택
+          </Text>
 
           <Calendar
             markingType="period"
@@ -295,7 +296,8 @@ export const AdminStatsScreen = () => {
                     Array.from(
                       {
                         length:
-                          (new Date(endDate).getTime() - new Date(startDate).getTime()) /
+                          (new Date(endDate).getTime() -
+                            new Date(startDate).getTime()) /
                             (1000 * 60 * 60 * 24) -
                           1,
                       },
@@ -343,7 +345,9 @@ export const AdminStatsScreen = () => {
                 setSelectedTab("오늘");
               }}
             >
-              <Text style={[styles.modalCancelText, { color: theme.textPrimary }]}>취소</Text>
+              <Text style={[styles.modalCancelText, { color: theme.textPrimary }]}>
+                취소
+              </Text>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -364,7 +368,9 @@ export const AdminStatsScreen = () => {
       {/* 본문 */}
       <ScrollView
         contentContainerStyle={styles.scroll}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
       >
         {/* 요약 카드 */}
         <View style={styles.statsGrid}>
@@ -381,7 +387,9 @@ export const AdminStatsScreen = () => {
                 },
               ]}
             >
-              <Text style={[styles.statLabel, { color: theme.textSecondary }]}>{c.label}</Text>
+              <Text style={[styles.statLabel, { color: theme.textSecondary }]}>
+                {c.label}
+              </Text>
               <Text style={[styles.statValue, { color: theme.icon }]}>{c.value}</Text>
               <Text style={{ color: c.up ? "#2EAD50" : "#E53935" }}>{c.rate}</Text>
             </View>
@@ -400,10 +408,23 @@ export const AdminStatsScreen = () => {
             },
           ]}
         >
-          <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>{ui.line.title}</Text>
+          <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>
+            {ui.line.title}
+          </Text>
           <View style={styles.kpiRow}>
-            <Text style={[styles.kpiValue, { color: theme.textPrimary }]}>{ui.line.kpi.value}</Text>
-            <Text style={[styles.kpiSub, { color: "#3CB371" }]}>{ui.line.kpi.sub}</Text>
+            <Text style={[styles.kpiValue, { color: theme.textPrimary }]}>
+              {ui.line.kpi.value}
+            </Text>
+
+            {/* ✅ +면 초록 / -면 빨강 */}
+            <Text
+              style={[
+                styles.kpiSub,
+                { color: ui.line.kpi.up ? "#2EAD50" : "#E53935" },
+              ]}
+            >
+              {ui.line.kpi.sub}
+            </Text>
           </View>
 
           {ui.line.data.length > 0 && ui.line.data.some((v: number) => v > 0) ? (
@@ -441,8 +462,9 @@ export const AdminStatsScreen = () => {
               },
             ]}
           >
-            <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>신규 유입 경로</Text>
-
+            <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>
+              신규 유입 경로
+            </Text>
             <DonutChart
               data={ui.pie.map((d: any) => ({
                 name: d.name,
@@ -482,14 +504,19 @@ export const AdminStatsScreen = () => {
             맛집 카테고리 분포
           </Text>
 
-          {ui.categories && ui.categories.length > 0 ? (
-            ui.categories.map((c, index) => {
+          {/* ✅ 데이터 없을 때 메시지 */}
+          {ui.categories.length > 0 ? (
+            ui.categories.map((c: any, index: number) => {
               const colors = ["#FF6B6B", "#FFD93D", "#6BCB77", "#4D96FF", "#B185DB"];
               return (
                 <View key={c.label} style={{ marginTop: 10 }}>
                   <View style={styles.catRow}>
-                    <Text style={[styles.catLabel, { color: theme.textSecondary }]}>{c.label}</Text>
-                    <Text style={[styles.catPct, { color: theme.textSecondary }]}>{c.pct}%</Text>
+                    <Text style={[styles.catLabel, { color: theme.textSecondary }]}>
+                      {c.label}
+                    </Text>
+                    <Text style={[styles.catPct, { color: theme.textSecondary }]}>
+                      {c.pct}%
+                    </Text>
                   </View>
                   <View style={[styles.catTrack, { backgroundColor: theme.background }]}>
                     <View
@@ -509,7 +536,7 @@ export const AdminStatsScreen = () => {
             <View
               style={[
                 styles.chart,
-                { height: 180, justifyContent: "center", alignItems: "center" },
+                { height: 120, justifyContent: "center", alignItems: "center" },
               ]}
             >
               <Text style={{ color: theme.textSecondary }}>데이터가 없습니다.</Text>
@@ -529,7 +556,9 @@ export const AdminStatsScreen = () => {
             },
           ]}
         >
-          <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>리뷰 평점 분포</Text>
+          <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>
+            리뷰 평점 분포
+          </Text>
 
           {ui.bar.data.length > 0 && ui.bar.data.some((v: number) => v > 0) ? (
             <BarChart
@@ -567,10 +596,13 @@ export const AdminStatsScreen = () => {
             },
           ]}
         >
-          <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>인기 검색어</Text>
+          <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>
+            인기 검색어
+          </Text>
 
-          {ui.ranks && ui.ranks.length > 0 ? (
-            ui.ranks.map((r) => (
+          {/* ✅ 데이터 없을 때 메시지 */}
+          {ui.ranks.length > 0 ? (
+            ui.ranks.map((r: any) => (
               <View key={r.rank} style={styles.rankRow}>
                 <Text style={[styles.rankIndex, { color: theme.icon }]}>{r.rank}</Text>
                 <Text style={[styles.rankTerm, { color: theme.textPrimary }]}>{r.term}</Text>
@@ -581,7 +613,7 @@ export const AdminStatsScreen = () => {
             <View
               style={[
                 styles.chart,
-                { height: 180, justifyContent: "center", alignItems: "center" },
+                { height: 120, justifyContent: "center", alignItems: "center" },
               ]}
             >
               <Text style={{ color: theme.textSecondary }}>데이터가 없습니다.</Text>
@@ -626,9 +658,7 @@ const styles = StyleSheet.create({
 
   section: { borderRadius: 12, padding: 16, marginTop: 16 },
   sectionTitle: { fontWeight: "bold", fontSize: 16, marginBottom: 10 },
-
   chart: { borderRadius: 12, marginLeft: -16 },
-
   kpiRow: { flexDirection: "row", alignItems: "flex-end", marginBottom: 6 },
   kpiValue: { fontSize: 28, fontWeight: "800", marginRight: 6 },
   kpiSub: { fontSize: 13, fontWeight: "700" },

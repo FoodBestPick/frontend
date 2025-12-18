@@ -55,10 +55,21 @@ export const AdminUserScreen = () => {
     user: null,
     extra: "",
   });
+  const formatDateTime = (v?: string | null) => {
+    if (!v) return "-";
+    const s = String(v);
+
+    // "2025-11-24T10:55:04.123Z" / "+09:00" 같은 경우도 대비해서 tz/밀리초 제거
+    const noTz = s.replace(/(\.\d+)?(Z|[+-]\d{2}:\d{2})$/, "");
+    const replaced = noTz.replace("T", " ");
+
+    // 분까지만: "YYYY-MM-DD HH:mm"
+    return replaced.length >= 16 ? replaced.slice(0, 16) : replaced;
+  };
 
   useEffect(() => {
-    refresh(); // 인자 없이 호출
-  }, [page, status, sort, keyword]);
+    setPage(1);
+  }, [status, sort, keyword]);
 
   const toggleUser = (id: number) => {
     setExpandedUsers((prev) =>
@@ -204,7 +215,7 @@ export const AdminUserScreen = () => {
             >
               <TouchableOpacity style={styles.cardHeader} onPress={() => toggleUser(user.id)}>
                 <View style={styles.userInfo}>
-                  <Image source={user.avatar} style={styles.avatar} />
+                  <UserAvatar user={user} theme={theme} />
                   <View>
                     <Text style={[styles.userName, { color: theme.textPrimary }]}>
                       {user.name}
@@ -229,7 +240,7 @@ export const AdminUserScreen = () => {
                       가입일
                     </Text>
                     <Text style={[styles.detailValue, { color: theme.textPrimary }]}>
-                      {user.joinDate}
+                      {formatDateTime(user.joinDate)}
                     </Text>
                   </View>
 
@@ -238,7 +249,7 @@ export const AdminUserScreen = () => {
                       마지막 활동일
                     </Text>
                     <Text style={[styles.detailValue, { color: theme.textPrimary }]}>
-                      {user.lastActive}
+                      {formatDateTime(user.lastActive)}
                     </Text>
                   </View>
 
@@ -445,6 +456,41 @@ export const AdminUserScreen = () => {
         />
       </View>
     </View>
+  );
+};
+
+const UserAvatar = ({ user, theme }: { user: any; theme: any }) => {
+  const [failed, setFailed] = useState(false);
+
+  const raw =
+    user?.avatar ??
+    user?.avatarUrl ??
+    user?.profileImage ??
+    user?.profileImageUrl ??
+    user?.image ??
+    user?.imageUrl;
+
+  if (!raw || failed) {
+    return (
+      <View
+        style={[
+          styles.avatarFallback,
+          { backgroundColor: theme.icon + "22", borderColor: theme.border },
+        ]}
+      >
+        <Ionicons name="person" size={28} color={theme.textSecondary} />
+      </View>
+    );
+  }
+
+  const source = typeof raw === "string" ? { uri: raw } : raw;
+
+  return (
+    <Image
+      source={source}
+      style={styles.avatar}
+      onError={() => setFailed(true)}
+    />
   );
 };
 
@@ -1027,5 +1073,13 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontWeight: "bold",
     fontSize: 16,
+  },
+  avatarFallback: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#E5E5E5',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

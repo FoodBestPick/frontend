@@ -1,8 +1,11 @@
 import { Platform } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import CookieManager from '@react-native-cookies/cookies'; // ✨ 쿠키 매니저 추가
+import axios from 'axios'; // ✨ axios 임포트 추가
 import { UserAuthRepository } from "../../domain/repositories/UserAuthRepository";
 import { authApi } from "../api/UserAuthApi";
 import { API_BASE_URL } from "@env";
+import messaging from '@react-native-firebase/messaging'; // FCM 토큰 가져오기 위해 추가
 
 export const UserAuthRepositoryImpl: UserAuthRepository = {
     async checkNickname(nickname: string): Promise<boolean> {
@@ -10,18 +13,11 @@ export const UserAuthRepositoryImpl: UserAuthRepository = {
             const response = await authApi.post("/auth/check-nickname", { nickname });
             const { code, data } = response.data;
 
-            // Handle mixed return types from server (boolean, string, null)
             if (code === 200) {
                 const validPositiveResponses = [true, "true", "사용가능"];
                 const validNegativeResponses = [false, "false", null];
                 
                 if (validPositiveResponses.includes(data) || validNegativeResponses.includes(data)) {
-                    // Interpreting specific "available" signals as true, everything else as potentially false?
-                    // Original logic was: if (data === null || data === false ... ) return true;
-                    // Wait, the original logic returned TRUE for null/false/"false"/"true"/"사용가능".
-                    // This implies ANY successful 200 response with these values meant "Nickname is usable" (i.e. not taken).
-                    // If it was taken, maybe it returns 409 or a different code?
-                    // I will preserve the original logic's intent:
                     return true;
                 }
             }
@@ -53,38 +49,77 @@ export const UserAuthRepositoryImpl: UserAuthRepository = {
         const response = await authApi.post("/auth/signin", payload);
         const rawData = response.data;
 
-        // Normalize data structure (handle { data: ... } vs flat response)
         let tokenData = rawData.data || rawData;
         
-        // Handle nested 'token' object if present
         if (tokenData && typeof tokenData === 'object' && 'token' in tokenData) {
             tokenData = tokenData.token;
         }
 
-        // 🚨 [수정] userData가 'data' 객체 안에도 있는지 확인
         const userData = rawData.user || (rawData.data && rawData.data.user) || {};
         const userId = userData.id;
 
-        // Determine admin privileges
+        const userRole = (tokenData.role || userData.role || "").toString().toUpperCase();
+        const authorities = tokenData.authorities || userData.authorities || [];
+        
+        console.log("🔍 [UserAuthRepository] Checking Role:", userRole);
+        console.log("🔍 [UserAuthRepository] Checking Authorities:", JSON.stringify(authorities));
+
         const isAdmin =
             tokenData.isAdmin === true ||
             userData.admin === true ||
-            tokenData.role === "ADMIN" ||
-            tokenData.role === "ROLE_ADMIN" ||
-            userData.role === "ADMIN" ||      // userData 안의 role도 확인
-            userData.role === "ROLE_ADMIN";   // userData 안의 role도 확인
+            userRole === "ADMIN" ||
+            userRole === "ROLE_ADMIN" ||
+            (Array.isArray(authorities) && authorities.some((auth: any) => {
+                const authRole = (auth.authority || auth.role || auth).toString().toUpperCase();
+                return authRole === "ADMIN" || authRole === "ROLE_ADMIN";
+            }));
+        
+        console.log("✅ [UserAuthRepository] Calculated isAdmin:", isAdmin);
 
-        // Extract accessToken only (refreshToken is HttpOnly cookie)
+        // ✅ accessToken 변수를 여기서 선언합니다.
         const accessToken = tokenData.accessToken || tokenData.access_token;
+        
+        // ✨ accessToken을 쿠키로 강제 설정 (서버가 Set-Cookie를 안 줄 경우 대비)
+        if (accessToken) {
+            try {
+                console.log(`🍪 [UserAuthRepository] accessToken 수동 설정. URL: ${API_BASE_URL}, Token: ${accessToken.substring(0, 10)}...`);
+                
+                const expires = new Date();
+                expires.setDate(expires.getDate() + 14); // 14일 후 만료
 
-        if (!accessToken) {
-            console.warn("[UserAuthRepository] AccessToken missing in signin response");
+                await CookieManager.set(API_BASE_URL, {
+                    name: 'accessToken',
+                    value: accessToken,
+                    path: '/',
+                    version: '1',
+                    expires: expires.toISOString()
+                });
+                // ✨ Refresh Token도 쿠키로 저장합니다.
+                if (rawData.refreshToken) {
+                    const refreshExpires = new Date();
+                    refreshExpires.setDate(refreshExpires.getDate() + 14);
+
+                    await CookieManager.set(API_BASE_URL, {
+                        name: 'refreshToken', // refreshToken 이름으로 저장
+                        value: rawData.refreshToken,
+                        path: '/',
+                        version: '1',
+                        expires: refreshExpires.toISOString() // ✨ 14일 후 만료
+                    });
+                    console.log("✅ [UserAuthRepository] refreshToken 수동 설정 완료.");
+                }
+
+                console.log("✅ [UserAuthRepository] 쿠키 설정 완료.");
+            } catch (cookieError) {
+                console.error("❌ [UserAuthRepository] 쿠키 설정 실패:", cookieError);
+            }
         }
-
+        
         return {
-            accessToken,
             isAdmin,
-            userId, // ✨ Add userId to the return object
+            userId, // ✨ userId는 필요하므로 반환
+            accessToken: accessToken || "",
+            refreshToken: rawData.refreshToken || "",
         };
     },
 
@@ -94,7 +129,17 @@ export const UserAuthRepositoryImpl: UserAuthRepository = {
         } catch (error) {
             console.warn("[UserAuthRepository] Logout API call failed, proceeding to clear local storage.");
         } finally {
-            await AsyncStorage.multiRemove(["accessToken", "refreshToken", "isAutoLogin", "isAdmin"]);
+            try {
+                await CookieManager.clearAll();
+                console.log("🧹 [UserAuthRepository] 쿠키 삭제 완료");
+            } catch (e) {
+                console.error("❌ 쿠키 삭제 실패:", e);
+            }
+            // AccessToken, RefreshToken은 쿠키로 관리되므로 AsyncStorage에서 제거할 필요 없음.
+            // isAutoLogin, isAdmin, userId는 AsyncStorage에 남아있을 수 있지만,
+            // 실제 로그아웃 시 isLoggedIn 상태가 false로 바뀌면 사용되지 않음.
+            // 여기서는 AuthContext에서 개별적으로 처리하도록 맡깁니다.
+            await AsyncStorage.multiRemove([]); // 빈 배열로 변경하여 아무것도 지우지 않음.
         }
     },
 
@@ -104,7 +149,13 @@ export const UserAuthRepositoryImpl: UserAuthRepository = {
         });
     },
 
-    async getMyProfile() {
+    // 1. 내 프로필 조회
+    async getMyProfile(): Promise<{
+        email: string;
+        nickname: string;
+        profileImage: string | null;
+        stateMessage: string | null;
+    }> {
         const response = await authApi.get("/user/profile");
         const data = response.data.data || response.data;
         return {
@@ -115,10 +166,8 @@ export const UserAuthRepositoryImpl: UserAuthRepository = {
         };
     },
 
+    // 2. 내 프로필 수정
     async updateProfile(data: { nickname: string; stateMessage: string; file?: any }): Promise<void> {
-        const token = await AsyncStorage.getItem("accessToken");
-        if (!token) throw new Error("Authentication required for updateProfile");
-
         const formData = new FormData();
         formData.append("nickname", data.nickname);
         formData.append("stateMessage", data.stateMessage);
@@ -139,23 +188,20 @@ export const UserAuthRepositoryImpl: UserAuthRepository = {
             const response = await fetch(`${API_BASE_URL}/user/profile`, {
                 method: "PUT",
                 headers: {
-                    "Authorization": `Bearer ${token}`,
                     "Accept": "application/json",
-                    // Content-Type: multipart/form-data is set automatically with boundary
                 },
                 body: formData,
+                credentials: 'include', // ✨ credentials: 'include' 추가
             });
 
             if (!response.ok) {
                 const text = await response.text();
-                // Try to parse JSON error if possible
                 try {
                     const json = JSON.parse(text);
                     if (json.message) {
                          throw new Error(json.message);
                     }
                 } catch (e) {
-                    // Ignore parse error, use text
                 }
                 throw new Error(`프로필 수정 실패 (${response.status}): ${text}`);
             }
@@ -165,10 +211,8 @@ export const UserAuthRepositoryImpl: UserAuthRepository = {
         }
     },
 
+    // ⭐ 프로필 이미지 업로드
     async uploadProfileImage(imageUri: string): Promise<void> {
-        const token = await AsyncStorage.getItem("accessToken");
-        if (!token) throw new Error("Authentication required for upload");
-
         const formData = new FormData();
         const filename = imageUri.split('/').pop() || 'profile.jpg';
         const type = filename.toLowerCase().endsWith('.png') ? 'image/png' : 'image/jpeg';
@@ -183,11 +227,11 @@ export const UserAuthRepositoryImpl: UserAuthRepository = {
             const response = await fetch(`${API_BASE_URL}/user/profile`, {
                 method: "PUT",
                 headers: {
-                    "Authorization": `Bearer ${token}`,
                     "Content-Type": "multipart/form-data",
                     "Accept": "application/json",
                 },
                 body: formData,
+                credentials: 'include', // ✨ credentials: 'include' 추가
             });
 
             if (!response.ok) {
@@ -200,11 +244,23 @@ export const UserAuthRepositoryImpl: UserAuthRepository = {
         }
     },
 
-    async registerFcmToken(token: string): Promise<void> {
-        await authApi.post("/user/fcm-token", { fcmToken: token });
+    // 3. FCM 토큰 등록
+    async registerFcmToken(): Promise<void> {
+        const fcmToken = await messaging().getToken(); // ✨ messaging().getToken() 직접 호출
+        if (!fcmToken) {
+            console.warn("[UserAuthRepository] FCM Token을 가져올 수 없습니다.");
+            return;
+        }
+        await authApi.post("/user/fcm-token", { fcmToken: fcmToken });
     },
 
-    async getUserProfile(userId: number) {
+    // 5. 타인 프로필 조회
+    async getUserProfile(userId: number): Promise<{
+        email: string;
+        nickname: string;
+        profileImage: string | null;
+        stateMessage: string | null;
+    }> {
         const response = await authApi.get(`/user/${userId}/profile`);
         const data = response.data.data || response.data;
         return {
@@ -219,8 +275,6 @@ export const UserAuthRepositoryImpl: UserAuthRepository = {
         newPassword: string;
         confirmNewPassword: string;
     }): Promise<void> {
-        // 백엔드 MyPagePasswordRequest DTO: { password, passwordConfirm }
-        // 현재 비밀번호 검증 없이 새 비밀번호로 바로 리셋하는 구조로 추정됨
         await authApi.post("/user/password/reset", {
             password: payload.newPassword,
             passwordConfirm: payload.confirmNewPassword
@@ -234,5 +288,53 @@ export const UserAuthRepositoryImpl: UserAuthRepository = {
         code: string;
     }): Promise<void> {
         await authApi.post("/auth/password/reset", payload);
+    },
+
+    // ✨ Access Token을 갱신하는 함수
+    async refreshAccessToken(): Promise<void> { // ✨ Promise<string> -> Promise<void> 로 변경
+        console.log("🔄 [UserAuthRepository] Access Token 갱신 시도 중...");
+        try {
+            const res = await axios.post(`${API_BASE_URL}/auth/refresh`, {}, {
+                withCredentials: true,
+                headers: {
+                    'Content-Type': "application/json",
+                }
+            });
+
+            console.log("🔍 [UserAuthRepository] refreshAccessToken 서버 응답:", res.data); // 서버 응답 전체 로그
+
+            // 서버 응답 본문에서 새로운 토큰 추출 (예시: res.data.accessToken)
+            const newAccessToken = res.data.data?.accessToken; // ApiResponse<TokenResponse> 구조에 맞춰 추출
+            console.log("🔍 [UserAuthRepository] 추출된 newAccessToken:", newAccessToken ? newAccessToken.substring(0, 10) + '...' : '없음');
+
+            if (newAccessToken) {
+                const expires = new Date();
+                expires.setDate(expires.getDate() + 14);
+
+                await CookieManager.set(API_BASE_URL, {
+                    name: 'accessToken',
+                    value: newAccessToken,
+                    path: '/',
+                    version: '1',
+                    expires: expires.toISOString()
+                });
+                console.log("✅ [UserAuthRepository] Access Token 갱신 성공 및 쿠키 업데이트.");
+
+                // ✨ 방금 저장한 쿠키가 제대로 읽히는지 즉시 확인
+                const storedCookies = await CookieManager.get(API_BASE_URL);
+                const verifiedToken = storedCookies.accessToken?.value;
+                console.log("🔍 [UserAuthRepository] CookieManager에서 방금 확인된 토큰:", verifiedToken ? verifiedToken.substring(0, 10) + '...' : '없음');
+
+            } else {
+                console.warn("⚠️ [UserAuthRepository] Access Token 갱신 성공, 하지만 응답에서 새 토큰을 찾을 수 없음.");
+                // 서버 응답에서 토큰을 못 찾으면 여기서 에러를 던져서 로그아웃 처리하도록 유도
+                throw new Error("AuthError: NEW_ACCESS_TOKEN_NOT_FOUND");
+            }
+
+            return;
+        } catch (error: any) {
+            console.error("❌ [UserAuthRepository] Access Token 갱신 실패:", error.message, error.response?.status, error.response?.data);
+            throw error;
+        }
     },
 };

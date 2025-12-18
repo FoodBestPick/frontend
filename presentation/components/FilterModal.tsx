@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   View,
   Text,
@@ -7,14 +7,14 @@ import {
   ScrollView,
   Modal,
   TextInput,
-} from 'react-native';
-import Icon from 'react-native-vector-icons/Ionicons';
+} from "react-native";
+import Icon from "react-native-vector-icons/Ionicons";
 
 interface FilterState {
   location: string;
   radius: number;
   category: string;
-  tags: string[]; // Added tags
+  tags: string[];
   priceMin: number;
   priceMax: number;
   rating: number;
@@ -55,35 +55,52 @@ export const FilterModal = ({
   facilityTags = [],
   atmosphereTags = [],
 }: FilterModalProps) => {
-  const [filters, setFilters] = useState<FilterState>({
-    location: selectedFilters.location || '현재 위치',
+  const scrollRef = useRef<ScrollView | null>(null);
+
+  const makeInitial = () => ({
+    location: selectedFilters.location || "현재 위치",
     radius: selectedFilters.radius || 2,
-    category: selectedFilters.category || '',
+    category: selectedFilters.category || "",
     tags: selectedFilters.tags || [],
-    priceMin: selectedFilters.priceMin || 5000,
-    priceMax: selectedFilters.priceMax || 50000,
+    priceMin: selectedFilters.priceMin ?? 5000,
+    priceMax: selectedFilters.priceMax ?? 50000,
     rating: selectedFilters.rating || 0,
     openNow: selectedFilters.openNow || false,
     parking: selectedFilters.parking || false,
     delivery: selectedFilters.delivery || false,
   });
 
+  const [filters, setFilters] = useState<FilterState>(makeInitial());
   const [minPrice, setMinPrice] = useState(
-    selectedFilters.priceMin?.toString() || ''
+    selectedFilters.priceMin != null ? String(selectedFilters.priceMin) : ""
   );
   const [maxPrice, setMaxPrice] = useState(
-    selectedFilters.priceMax?.toString() || ''
+    selectedFilters.priceMax != null ? String(selectedFilters.priceMax) : ""
   );
 
+  // ✅ 모달을 "열 때마다" selectedFilters 기준으로 상태를 다시 맞춘다
+  useEffect(() => {
+    if (!visible) return;
 
-  const radiusOptions = [0.5, 1, 2, 3, 5, 10];
+    const next = makeInitial();
+    setFilters(next);
+    setMinPrice(selectedFilters.priceMin != null ? String(selectedFilters.priceMin) : "");
+    setMaxPrice(selectedFilters.priceMax != null ? String(selectedFilters.priceMax) : "");
 
+    // ✅ 다시 열 때 스크롤 위치를 맨 위로 (footer 사라짐 체감 방지)
+    requestAnimationFrame(() => {
+      scrollRef.current?.scrollTo({ y: 0, animated: false });
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visible]);
+
+  const radiusOptions = useMemo(() => [0.5, 1, 2, 3, 5, 10], []);
 
   const handleReset = () => {
     setFilters({
-      location: '현재 위치',
+      location: "현재 위치",
       radius: 2,
-      category: '',
+      category: "",
       tags: [],
       priceMin: 5000,
       priceMax: 50000,
@@ -92,13 +109,19 @@ export const FilterModal = ({
       parking: false,
       delivery: false,
     });
+    setMinPrice("");
+    setMaxPrice("");
+
+    requestAnimationFrame(() => {
+      scrollRef.current?.scrollTo({ y: 0, animated: true });
+    });
   };
 
   const toggleTag = (tagName: string) => {
-    setFilters(prev => ({
+    setFilters((prev) => ({
       ...prev,
       tags: prev.tags.includes(tagName)
-        ? prev.tags.filter(t => t !== tagName)
+        ? prev.tags.filter((t) => t !== tagName)
         : [...prev.tags, tagName],
     }));
   };
@@ -107,7 +130,7 @@ export const FilterModal = ({
     <View style={styles.section}>
       <Text style={styles.sectionTitle}>{title}</Text>
       <View style={styles.categoryGrid}>
-        {tags.map(tag => (
+        {tags.map((tag) => (
           <TouchableOpacity
             key={tag.id}
             style={[
@@ -115,6 +138,7 @@ export const FilterModal = ({
               filters.tags.includes(tag.name) && styles.categoryChipActive,
             ]}
             onPress={() => toggleTag(tag.name)}
+            activeOpacity={0.8}
           >
             <Text
               style={[
@@ -132,18 +156,18 @@ export const FilterModal = ({
 
   const handleApply = () => {
     onApply({
-      ...selectedFilters,
-      priceMin: minPrice ? parseInt(minPrice) : 0,
-      priceMax: maxPrice ? parseInt(maxPrice) : 0,
+      ...filters,
+      priceMin: minPrice ? parseInt(minPrice, 10) : 0,
+      priceMax: maxPrice ? parseInt(maxPrice, 10) : 0,
     });
   };
 
   return (
-    <Modal visible={visible} animationType="slide" transparent={false}>
+    <Modal visible={visible} animationType="slide" transparent={false} onRequestClose={onClose}>
       <View style={styles.container}>
         {/* 헤더 */}
         <View style={styles.header}>
-          <TouchableOpacity onPress={onClose}>
+          <TouchableOpacity onPress={onClose} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
             <Icon name="close" size={24} color="#000" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>맛집 필터</Text>
@@ -152,11 +176,18 @@ export const FilterModal = ({
           </TouchableOpacity>
         </View>
 
-        <ScrollView showsVerticalScrollIndicator={false}>
+        {/* ✅ ScrollView는 flex:1로 잡아서 footer가 밀려나지 않게 */}
+        <ScrollView
+          ref={(r) => (scrollRef.current = r)}
+          style={styles.scroll}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
           {/* 위치 */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>위치 선택</Text>
-            <TouchableOpacity style={styles.locationButton}>
+            <TouchableOpacity style={styles.locationButton} activeOpacity={0.8}>
               <Icon name="location-outline" size={18} color="#FFA847" />
               <Text style={styles.locationText}>{filters.location}</Text>
               <Icon name="chevron-forward" size={18} color="#999" />
@@ -164,7 +195,7 @@ export const FilterModal = ({
 
             <Text style={styles.label}>반경 선택</Text>
             <View style={styles.radiusGrid}>
-              {radiusOptions.map(radius => (
+              {radiusOptions.map((radius) => (
                 <TouchableOpacity
                   key={radius}
                   style={[
@@ -172,6 +203,7 @@ export const FilterModal = ({
                     filters.radius === radius && styles.radiusChipActive,
                   ]}
                   onPress={() => setFilters({ ...filters, radius })}
+                  activeOpacity={0.8}
                 >
                   <Text
                     style={[
@@ -191,7 +223,7 @@ export const FilterModal = ({
             <Text style={styles.sectionTitle}>음식 종류</Text>
             <View style={styles.categoryGrid}>
               {categoriesData.length > 0 ? (
-                categoriesData.map(cat => (
+                categoriesData.map((cat) => (
                   <TouchableOpacity
                     key={cat.id}
                     style={[
@@ -201,9 +233,10 @@ export const FilterModal = ({
                     onPress={() =>
                       setFilters({
                         ...filters,
-                        category: filters.category === cat.name ? '' : cat.name,
+                        category: filters.category === cat.name ? "" : cat.name,
                       })
                     }
+                    activeOpacity={0.8}
                   >
                     <Text
                       style={[
@@ -216,29 +249,28 @@ export const FilterModal = ({
                   </TouchableOpacity>
                 ))
               ) : (
-                <Text style={{ color: '#999' }}>카테고리 로딩 중...</Text>
+                <Text style={{ color: "#999" }}>카테고리 로딩 중...</Text>
               )}
             </View>
           </View>
 
           {/* 태그 섹션들 */}
-          {purposeTags.length > 0 && renderTagSection('방문 목적', purposeTags)}
-          {facilityTags.length > 0 && renderTagSection('편의 시설', facilityTags)}
-          {atmosphereTags.length > 0 && renderTagSection('분위기', atmosphereTags)}
+          {purposeTags.length > 0 && renderTagSection("방문 목적", purposeTags)}
+          {facilityTags.length > 0 && renderTagSection("편의 시설", facilityTags)}
+          {atmosphereTags.length > 0 && renderTagSection("분위기", atmosphereTags)}
 
           {/* 영업 상태 */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>영업 상태</Text>
             <TouchableOpacity
               style={styles.checkboxRow}
-              onPress={() =>
-                setFilters({ ...filters, openNow: !filters.openNow })
-              }
+              onPress={() => setFilters({ ...filters, openNow: !filters.openNow })}
+              activeOpacity={0.8}
             >
               <Icon
-                name={filters.openNow ? 'checkbox' : 'square-outline'}
+                name={filters.openNow ? "checkbox" : "square-outline"}
                 size={22}
-                color={filters.openNow ? '#FFA847' : '#999'}
+                color={filters.openNow ? "#FFA847" : "#999"}
               />
               <Text style={styles.checkboxText}>영업 중</Text>
             </TouchableOpacity>
@@ -270,14 +302,15 @@ export const FilterModal = ({
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>평점</Text>
             <View style={styles.ratingRow}>
-              {[1, 2, 3, 4, 5].map(star => (
+              {[1, 2, 3, 4, 5].map((star) => (
                 <TouchableOpacity
                   key={star}
                   style={styles.starButton}
                   onPress={() => setFilters({ ...filters, rating: star })}
+                  activeOpacity={0.8}
                 >
                   <Icon
-                    name={filters.rating >= star ? 'star' : 'star-outline'}
+                    name={filters.rating >= star ? "star" : "star-outline"}
                     size={32}
                     color="#FFA847"
                   />
@@ -285,16 +318,11 @@ export const FilterModal = ({
               ))}
             </View>
           </View>
-
-          {/* 편의 시설 - 삭제됨 */}
         </ScrollView>
 
-        {/* 하단 버튼 */}
+        {/* ✅ footer는 항상 보이게 고정 */}
         <View style={styles.footer}>
-          <TouchableOpacity
-            style={styles.applyBtn}
-            onPress={handleApply}
-          >
+          <TouchableOpacity style={styles.applyBtn} onPress={handleApply} activeOpacity={0.9}>
             <Text style={styles.applyText}>적용하기</Text>
           </TouchableOpacity>
         </View>
@@ -304,204 +332,99 @@ export const FilterModal = ({
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-  },
+  container: { flex: 1, backgroundColor: "#fff" },
+
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingHorizontal: 16,
     paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
+    borderBottomColor: "#F0F0F0",
     marginTop: 40,
   },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#000',
-  },
-  resetText: {
-    fontSize: 14,
-    color: '#FFA847',
-    fontWeight: '600',
-  },
+  headerTitle: { fontSize: 18, fontWeight: "700", color: "#000" },
+  resetText: { fontSize: 14, color: "#FFA847", fontWeight: "600" },
+
+  // ✅ 핵심: scroll이 화면을 안정적으로 차지
+  scroll: { flex: 1 },
+  // ✅ footer가 가리지 않게 paddingBottom 넉넉히
+  scrollContent: { paddingBottom: 24 },
+
   section: {
     paddingHorizontal: 16,
     paddingVertical: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
+    borderBottomColor: "#F0F0F0",
   },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#000',
-    marginBottom: 12,
-  },
+  sectionTitle: { fontSize: 16, fontWeight: "700", color: "#000", marginBottom: 12 },
+
   locationButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F5F5F5',
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#F5F5F5",
     padding: 12,
     borderRadius: 8,
     marginBottom: 16,
   },
-  locationText: {
-    flex: 1,
-    marginLeft: 8,
-    fontSize: 15,
-    color: '#000',
-  },
-  label: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 8,
-  },
-  radiusGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
+  locationText: { flex: 1, marginLeft: 8, fontSize: 15, color: "#000" },
+
+  label: { fontSize: 14, color: "#666", marginBottom: 8 },
+
+  radiusGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   radiusChip: {
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: '#E0E0E0',
-    backgroundColor: '#fff',
+    borderColor: "#E0E0E0",
+    backgroundColor: "#fff",
   },
-  radiusChipActive: {
-    backgroundColor: '#FFA847',
-    borderColor: '#FFA847',
-  },
-  radiusText: {
-    fontSize: 14,
-    color: '#666',
-  },
-  radiusTextActive: {
-    color: '#fff',
-    fontWeight: '600',
-  },
-  categoryGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
+  radiusChipActive: { backgroundColor: "#FFA847", borderColor: "#FFA847" },
+  radiusText: { fontSize: 14, color: "#666" },
+  radiusTextActive: { color: "#fff", fontWeight: "600" },
+
+  categoryGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   categoryChip: {
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: '#E0E0E0',
-    backgroundColor: '#fff',
+    borderColor: "#E0E0E0",
+    backgroundColor: "#fff",
   },
-  categoryChipActive: {
-    backgroundColor: '#FFA847',
-    borderColor: '#FFA847',
-  },
-  categoryText: {
-    fontSize: 14,
-    color: '#666',
-  },
-  categoryTextActive: {
-    color: '#fff',
-    fontWeight: '600',
-  },
-  priceRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 12,
-  },
-  priceBox: {
-    flex: 1,
-    backgroundColor: '#F5F5F5',
-    padding: 12,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  priceLabel: {
-    fontSize: 12,
-    color: '#999',
-    marginBottom: 4,
-  },
-  priceValue: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#000',
-  },
-  priceSeparator: {
-    fontSize: 16,
-    color: '#999',
-    marginHorizontal: 12,
-  },
-  priceButtons: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  priceButton: {
-    flex: 1,
-    paddingVertical: 8,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
-    alignItems: 'center',
-    backgroundColor: '#fff',
-  },
-  priceButtonActive: {
-    backgroundColor: '#FFF4E6',
-    borderColor: '#FFA847',
-  },
-  priceButtonText: {
-    fontSize: 13,
-    color: '#666',
-  },
-  priceButtonTextActive: {
-    color: '#FFA847',
-    fontWeight: '600',
-  },
-  ratingRow: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: 8,
-  },
-  starButton: {
-    padding: 4,
-  },
-  checkboxRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 10,
-  },
-  checkboxText: {
-    fontSize: 15,
-    color: '#333',
-    marginLeft: 12,
-  },
+  categoryChipActive: { backgroundColor: "#FFA847", borderColor: "#FFA847" },
+  categoryText: { fontSize: 14, color: "#666" },
+  categoryTextActive: { color: "#fff", fontWeight: "600" },
+
+  ratingRow: { flexDirection: "row", justifyContent: "center", gap: 8 },
+  starButton: { padding: 4 },
+
+  checkboxRow: { flexDirection: "row", alignItems: "center", paddingVertical: 10 },
+  checkboxText: { fontSize: 15, color: "#333", marginLeft: 12 },
+
   footer: {
     padding: 16,
     borderTopWidth: 1,
-    borderTopColor: '#F0F0F0',
+    borderTopColor: "#F0F0F0",
+    backgroundColor: "#fff",
   },
   applyBtn: {
-    backgroundColor: '#FFA847',
+    backgroundColor: "#FFA847",
     padding: 16,
     borderRadius: 12,
-    alignItems: 'center',
+    alignItems: "center",
   },
-  applyText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '700',
-  },
-  row: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  applyText: { color: "#fff", fontSize: 16, fontWeight: "700" },
+
+  row: { flexDirection: "row", alignItems: "center", gap: 10 },
   input: {
     flex: 1,
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: "#ddd",
     borderRadius: 8,
     padding: 10,
   },
 });
+export default FilterModal;

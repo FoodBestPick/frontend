@@ -58,7 +58,7 @@ class WebSocketClient {
         });
       },
 
-      onStompError: (frame) => console.error("❌ GLOBAL STOMP ERROR:", frame.headers["message"], frame.body),
+      onStompError: (frame) => console.error("❌ GLOBAL STOMP ERROR:", frame.headers.message, frame.body),
       onWebSocketError: (error) => console.error("❌ GLOBAL WEBSOCKET ERROR:", error),
       onDisconnect: () => console.log("🔌 GLOBAL STOMP Disconnected"),
     });
@@ -101,7 +101,7 @@ class WebSocketClient {
           }
         });
       },
-      onStompError: (frame) => console.error("❌ CHAT STOMP ERROR:", frame.headers["message"], frame.body),
+      onStompError: (frame) => console.error("❌ CHAT STOMP ERROR:", frame.headers.message, frame.body),
       onWebSocketError: (error) => console.error("❌ CHAT WEBSOCKET ERROR:", error),
       onDisconnect: () => console.log("🔌 CHAT STOMP Disconnected"),
     });

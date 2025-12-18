@@ -1,55 +1,53 @@
+// useNotificationSettingViewModel.tsx
 import { useState, useCallback, useEffect } from "react";
-import { Alert } from "react-native";
-import { NotificationSettingRepositoryImpl, NotificationSettings } from "../../data/repositoriesImpl/NotificationSettingRepositoryImpl";
+import {
+  NotificationSettingRepositoryImpl,
+  AlarmType,
+  AlarmSettingsMap,
+} from "../../data/repositoriesImpl/NotificationSettingRepositoryImpl";
+import { useAlert } from "../../context/AlertContext";
+
+const DEFAULTS: AlarmSettingsMap = {
+  REVIEW_LIKE: true,
+  MATCH_SUCCESS: true,
+  WARNING_ADDED: true,
+};
 
 export const useNotificationSettingViewModel = () => {
-    const [loading, setLoading] = useState(false);
-    const [settings, setSettings] = useState<NotificationSettings>({
-        notice: true,
-        reviewLike: true,
-        reviewReply: true,
-    });
+  const [loading, setLoading] = useState(false);
+  const [settings, setSettings] = useState<AlarmSettingsMap>(DEFAULTS);
+  const { showAlert } = useAlert();
 
-    // 설정 불러오기
-    const fetchSettings = useCallback(async () => {
-        setLoading(true);
-        try {
-            const data = await NotificationSettingRepositoryImpl.getSettings();
-            if (data) setSettings(data);
-        } catch (e) {
-            console.error("설정 로드 실패:", e);
-        } finally {
-            setLoading(false);
-        }
-    }, []);
+  const fetchSettings = useCallback(async () => {
+    setLoading(true);
+    try {
+      const server = await NotificationSettingRepositoryImpl.getSettings();
+      setSettings({ ...DEFAULTS, ...server });
+    } catch (e) {
+      console.error("설정 로드 실패:", e);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
-    // 초기 실행
-    useEffect(() => {
-        fetchSettings();
-    }, [fetchSettings]);
+  useEffect(() => {
+    fetchSettings();
+  }, [fetchSettings]);
 
-    // 설정 토글 (낙관적 업데이트)
-    const toggleSetting = async (key: keyof NotificationSettings) => {
-        const previousValue = settings[key];
-        const newValue = !previousValue;
+  const toggleSetting = async (alarmType: AlarmType) => {
+    const prev = settings[alarmType] ?? true;
+    const next = !prev;
 
-        // 1. UI 먼저 변경
-        setSettings(prev => ({ ...prev, [key]: newValue }));
+    setSettings((p) => ({ ...p, [alarmType]: next }));
 
-        try {
-            // 2. 서버 요청
-            await NotificationSettingRepositoryImpl.updateSetting(key, newValue);
-        } catch (e) {
-            // 3. 실패 시 롤백
-            console.error(e);
-            setSettings(prev => ({ ...prev, [key]: previousValue }));
-            Alert.alert("저장 실패", "설정을 변경하지 못했습니다.");
-        }
-    };
+    try {
+      await NotificationSettingRepositoryImpl.updateSetting(alarmType, next);
+    } catch (e) {
+      console.error(e);
+      setSettings((p) => ({ ...p, [alarmType]: prev }));
+      showAlert({ title: "저장 실패", message: "설정을 변경하지 못했습니다." });
+    }
+  };
 
-    return {
-        settings,
-        loading,
-        toggleSetting
-    };
+  return { settings, loading, toggleSetting };
 };

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { API_BASE_URL } from '@env';
 import { useAuth } from '../../context/AuthContext';
-import axios from 'axios';
+import { authApi } from '../../data/api/UserAuthApi';
 
 interface TagItem {
   id: number;
@@ -26,21 +26,20 @@ interface TimeData {
   restTime: string;
 }
 
-// [수정 1] 필수 항목 외에는 ?(Optional) 처리하여 선택 사항으로 변경
 interface RestaurantCreateData {
-  restaurant_name: string;       // 필수
-  restaurant_address: string;    // 필수
-  restaurant_latitude?: string;   // 필수
-  restaurant_longitude?: string;  // 필수
-  restaurant_introduce?: string; // 선택
-  restaurant_category?: string;  // 선택
-  menus?: MenuData[];            // 선택
-  times?: TimeData[];            // 선택
-  tags?: string[];               // 선택
+  restaurant_name: string;       
+  restaurant_address: string;    
+  restaurant_latitude?: string;   
+  restaurant_longitude?: string;  
+  restaurant_introduce?: string; 
+  restaurant_category?: string;  
+  menus?: MenuData[];            
+  times?: TimeData[];            
+  tags?: string[];               
 }
 
 export const useAdminRestaurantAddViewModel = () => {
-  const { token } = useAuth();
+  const { isLoggedIn } = useAuth();
   const [purposeTags, setPurposeTags] = useState<TagItem[]>([]);
   const [atmosphereTags, setAtmosphereTags] = useState<TagItem[]>([]);
   const [facilityTags, setFacilityTags] = useState<TagItem[]>([]);
@@ -57,10 +56,9 @@ export const useAdminRestaurantAddViewModel = () => {
       setLoading(true);
       setError(null);
 
-      // 1. 태그 조회 (카테고리별)
-      const purposeResponse = await axios.get(`${API_BASE_URL}/tag/category/PURPOSE`, { timeout: 10000 });
-      const facilityResponse = await axios.get(`${API_BASE_URL}/tag/category/FACILITY`, { timeout: 10000 });
-      const atmosphereResponse = await axios.get(`${API_BASE_URL}/tag/category/ATMOSPHERE`, { timeout: 10000 });
+      const purposeResponse = await authApi.get(`${API_BASE_URL}/tag/category/PURPOSE`, { timeout: 10000 });
+      const facilityResponse = await authApi.get(`${API_BASE_URL}/tag/category/FACILITY`, { timeout: 10000 });
+      const atmosphereResponse = await authApi.get(`${API_BASE_URL}/tag/category/ATMOSPHERE`, { timeout: 10000 });
 
       const purposeResult = purposeResponse.data;
       const facilityResult = facilityResponse.data;
@@ -70,8 +68,7 @@ export const useAdminRestaurantAddViewModel = () => {
       if (facilityResult.code === 200) setFacilityTags(facilityResult.data);
       if (atmosphereResult.code === 200) setAtmosphereTags(atmosphereResult.data);
 
-      // 2. 카테고리 조회
-      const foodResponse = await axios.get(`${API_BASE_URL}/food`, { timeout: 10000 });
+      const foodResponse = await authApi.get(`${API_BASE_URL}/food`, { timeout: 10000 });
       const foodResult = foodResponse.data;
 
       if (foodResult.code === 200) setCategories(foodResult.data);
@@ -88,13 +85,12 @@ export const useAdminRestaurantAddViewModel = () => {
     imageFiles: any[],
   ): Promise<{ success: boolean; message: string; restaurantId?: number }> => {
     try {
-      if (!token) {
+      if (!isLoggedIn) {
         return { success: false, message: '로그인이 필요합니다.' };
       }
 
       let uploadedUrls: string[] = [];
 
-      // 1단계: 이미지 업로드 (S3)
       if (imageFiles && imageFiles.length > 0) {
         console.log('Step 1: Uploading images to S3 via Axios...');
         const imageFormData = new FormData();
@@ -107,12 +103,11 @@ export const useAdminRestaurantAddViewModel = () => {
         });
 
         try {
-          const s3Response = await axios.post(`${API_BASE_URL}/upload/s3`, imageFormData, {
+          const s3Response = await authApi.post(`${API_BASE_URL}/upload/s3`, imageFormData, {
             headers: {
               'Content-Type': 'multipart/form-data',
-              Authorization: `Bearer ${token}`,
             },
-            transformRequest: (data) => data, // FormData 변형 방지
+            transformRequest: (data) => data, 
           });
 
           const s3Result = s3Response.data;
@@ -125,7 +120,6 @@ export const useAdminRestaurantAddViewModel = () => {
         }
       }
 
-      // 2단계: FormData 생성
       console.log('Step 2: Creating FormData for Restaurant...');
       const formData = new FormData();
       
@@ -168,39 +162,34 @@ export const useAdminRestaurantAddViewModel = () => {
         });
       }
 
-      // 3단계: 레스토랑 등록 (Axios)
       console.log('Step 3: Sending restaurant data via Axios...');
       
-      const response = await axios.post(`${API_BASE_URL}/restaurant`, formData, {
+      const response = await authApi.post(`${API_BASE_URL}/restaurant`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
-          Authorization: `Bearer ${token}`,
         },
-        transformRequest: (data) => data, // FormData 변형 방지
+        transformRequest: (data) => data, 
       });
 
       const result = response.data;
       console.log('Step 3: Restaurant creation success', result);
 
       if (result.code === 200) {
-        // 4단계: 이미지 URL DB 저장
         if (uploadedUrls.length > 0 && result.data?.id) {
           console.log('Step 4: Saving image URLs...', uploadedUrls);
           try {
-            const pictureResponse = await axios.post(
+            const pictureResponse = await authApi.post(
               `${API_BASE_URL}/restaurant/${result.data.id}/pictures`, 
               uploadedUrls, 
               {
                 headers: {
                   'Content-Type': 'application/json',
-                  Authorization: `Bearer ${token}`,
                 },
               }
             );
             console.log('Step 4: Picture save response', pictureResponse.data);
           } catch (picError: any) {
             console.error('Step 4: Picture save failed', picError);
-            // 이미지 저장 실패는 전체 실패로 간주하지 않음 (선택 사항)
           }
         }
 
@@ -229,13 +218,12 @@ export const useAdminRestaurantAddViewModel = () => {
 
   const getRestaurantDetail = async (id: number) => {
     try {
-      const response = await axios.get(`${API_BASE_URL}/restaurant/${id}`, {
+      const response = await authApi.get(`${API_BASE_URL}/restaurant/${id}`, {
         timeout: 10000,
       });
       const result = response.data;
       if (result.code === 200) {
         const data = result.data;
-        // [수정] 태그 데이터 형식 변환 (TagResponse[] -> string[])
         if (data.tags && Array.isArray(data.tags)) {
           console.log('Original Tags:', data.tags);
           if (data.tags.length > 0 && data.tags[0].name) {
@@ -260,7 +248,6 @@ export const useAdminRestaurantAddViewModel = () => {
     try {
       let uploadedUrls: string[] = [];
 
-      // 1. 새 이미지 업로드
       if (imageFiles && imageFiles.length > 0) {
         const newFiles = imageFiles.filter(f => !f.uri.startsWith('http'));
         
@@ -275,10 +262,9 @@ export const useAdminRestaurantAddViewModel = () => {
             } as any);
           });
 
-          const s3Response = await axios.post(`${API_BASE_URL}/upload/s3`, imageFormData, {
+          const s3Response = await authApi.post(`${API_BASE_URL}/upload/s3`, imageFormData, {
             headers: {
               'Content-Type': 'multipart/form-data',
-              Authorization: `Bearer ${token}`,
             },
             transformRequest: (data) => data,
           });
@@ -290,7 +276,6 @@ export const useAdminRestaurantAddViewModel = () => {
         }
       }
 
-      // 2. 기본 정보 업데이트 (PUT)
       console.log('Update Step 2: Creating FormData...');
       const formData = new FormData();
       formData.append('restaurant_name', data.restaurant_name);
@@ -327,10 +312,9 @@ export const useAdminRestaurantAddViewModel = () => {
       }
 
       console.log('Update Step 3: Sending PUT request via Axios...');
-      const response = await axios.put(`${API_BASE_URL}/restaurant/${id}`, formData, {
+      const response = await authApi.put(`${API_BASE_URL}/restaurant/${id}`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
-          Authorization: `Bearer ${token}`,
         },
         transformRequest: (data) => data,
       });
@@ -339,17 +323,15 @@ export const useAdminRestaurantAddViewModel = () => {
       console.log('Update Step 3: Success', result);
 
       if (result.code === 200) {
-        // 3. 새 이미지 URL DB 저장
         if (uploadedUrls.length > 0) {
           console.log('Update Step 4: Saving new image URLs...', uploadedUrls);
           try {
-            const pictureResponse = await axios.post(
+            const pictureResponse = await authApi.post(
               `${API_BASE_URL}/restaurant/${id}/pictures`, 
               uploadedUrls, 
               {
                 headers: {
                   'Content-Type': 'application/json',
-                  Authorization: `Bearer ${token}`,
                 },
               }
             );

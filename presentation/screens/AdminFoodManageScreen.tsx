@@ -10,6 +10,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { Header } from '../components/Header';
+import { useNavigation } from '@react-navigation/native';
 import { ThemeContext } from '../../context/ThemeContext';
 import { useAdminFoodViewModel } from '../viewmodels/AdminFoodViewModel';
 import Ionicons from 'react-native-vector-icons/Ionicons';
@@ -17,6 +18,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export const AdminFoodManageScreen = () => {
   const { theme } = useContext(ThemeContext);
+  const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const { foods, loading, error, createFood, updateFood, deleteFood, refresh } =
     useAdminFoodViewModel();
@@ -80,7 +82,7 @@ export const AdminFoodManageScreen = () => {
   if (loading && foods.length === 0) {
     return (
       <View style={[styles.container, { backgroundColor: theme.background }]}>
-        <Header title="대표메뉴 관리" showBackButton />
+        <Header title="대표메뉴 관리" showBackButton onBackPress={() => navigation.goBack()} />
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={theme.icon} />
         </View>
@@ -91,7 +93,7 @@ export const AdminFoodManageScreen = () => {
   if (error) {
     return (
       <View style={[styles.container, { backgroundColor: theme.background }]}>
-        <Header title="대표메뉴 관리" showBackButton />
+        <Header title="대표메뉴 관리" showBackButton onBackPress={() => navigation.goBack()} />
         <View style={styles.errorContainer}>
           <Text style={{ color: theme.textPrimary }}>{error}</Text>
           <TouchableOpacity
@@ -107,7 +109,7 @@ export const AdminFoodManageScreen = () => {
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
-      <Header title="대표메뉴 관리" showBackButton />
+      <Header title="대표메뉴 관리" showBackButton onBackPress={() => navigation.goBack()} />
 
       {/* 추가 입력란 */}
       <View style={[styles.addSection, { backgroundColor: theme.card }]}>

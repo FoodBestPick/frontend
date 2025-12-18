@@ -8,7 +8,6 @@ import {
   PermissionsAndroid,
   Platform,
   TouchableOpacity,
-  Alert
 } from 'react-native';
 import Geolocation from '@react-native-community/geolocation';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -16,6 +15,7 @@ import Icon from 'react-native-vector-icons/Ionicons';
 import { useNavigation, useRoute, CommonActions } from '@react-navigation/native';
 import { useMatchingViewModel } from "../viewmodels/MatchingViewModel";
 import { useAuth } from "../../context/AuthContext";
+import { useAlert } from "../../context/AlertContext";
 
 const MAIN_COLOR = '#FFA847';
 
@@ -47,7 +47,8 @@ const MatchingFindingScreen = () => {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
   const { food, size } = route.params;
-  const { checkActiveRoom } = useAuth(); 
+  const { checkActiveRoom } = useAuth();
+  const { showAlert } = useAlert();
 
   const {
     isMatched,
@@ -61,6 +62,8 @@ const MatchingFindingScreen = () => {
   const navigatedRef = useRef(false);
 
   const startedRef = useRef(false);
+
+  const cancelledRef = useRef(false);
 
   useEffect(() => {
     matchedRef.current = isMatched;
@@ -88,32 +91,42 @@ const MatchingFindingScreen = () => {
     (async () => {
       const hasPermission = await requestLocationPermission();
 
+      if (cancelledRef.current) return;
+
       if (!hasPermission) {
-        Alert.alert("위치 권한 필요", "위치 권한이 없으면 매칭이 불가능합니다.");
+        showAlert({ title: "위치 권한 필요", message: "위치 권한이 없으면 매칭이 불가능합니다." });
         navigation.goBack();
         return;
       }
 
       try {
         const { lat, lng } = await safeGetLocation();
+
+        if (cancelledRef.current) return;
+
         console.log("현재 위치:", lat, lng);
+        if (cancelledRef.current) return;
+
         await requestMatch(food, size, lat, lng);
       } catch (e) {
+        if (cancelledRef.current) return;
+
         console.log("위치 가져오기 실패:", e);
-        Alert.alert("위치 오류", "현재 위치를 가져올 수 없습니다.\n잠시 후 다시 시도해주세요.");
+        showAlert({ title: "위치 오류", message: "현재 위치를 가져올 수 없습니다.\n잠시 후 다시 시도해주세요." });
         navigation.goBack();
       }
     })();
-  }, [food, size, navigation]); 
+  }, [food, size, navigation, requestMatch]);
 
   useEffect(() => {
     return () => {
+      cancelledRef.current = true;
+
       if (!matchedRef.current) {
         cancelMatch();
       }
     };
   }, [cancelMatch]);
-
 
   useEffect(() => {
     if (navigatedRef.current) return;
@@ -121,7 +134,6 @@ const MatchingFindingScreen = () => {
     if (isMatched && roomId != null) {
       navigatedRef.current = true;
 
-      // ✨ 매칭 성공 시 전역 상태 업데이트 (API 호출하여 확실하게 동기화)
       checkActiveRoom();
 
       navigation.dispatch(
@@ -133,7 +145,7 @@ const MatchingFindingScreen = () => {
               name: 'ChatRoomScreen',
               params: {
                 roomId,
-                roomTitle: `${food} 함께 먹어요!`, 
+                roomTitle: `${food} 함께 먹어요!`,
                 peopleCount: size === 0 ? 4 : size,
               },
             },
@@ -141,7 +153,7 @@ const MatchingFindingScreen = () => {
         })
       );
     }
-  }, [isMatched, roomId, navigation, food, size, checkActiveRoom]); 
+  }, [isMatched, roomId, navigation, food, size, checkActiveRoom]);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -169,9 +181,11 @@ const MatchingFindingScreen = () => {
         disabled={isMatched}
         onPress={async () => {
           if (isMatched) {
-            Alert.alert("알림", "매칭이 완료되어 채팅방으로 이동합니다.");
+            showAlert({ title: "알림", message: "매칭이 완료되어 채팅방으로 이동합니다." });
             return;
           }
+
+          cancelledRef.current = true;
 
           await cancelMatch();
           navigation.goBack();

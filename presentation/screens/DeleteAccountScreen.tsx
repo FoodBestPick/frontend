@@ -1,14 +1,16 @@
 import React, { useState, useLayoutEffect } from 'react';
 import {
     View, Text, TextInput, TouchableOpacity, StyleSheet,
-    ActivityIndicator, SafeAreaView, KeyboardAvoidingView, Platform, ScrollView, Alert
+    ActivityIndicator, SafeAreaView, KeyboardAvoidingView, Platform, ScrollView
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useDeleteAccountViewModel } from '../viewmodels/useDeleteAccountViewModel';
+import { useAlert } from '../../context/AlertContext';
 
 const DeleteAccountScreen = () => {
     const navigation = useNavigation();
     const { deleteAccount, isLoading } = useDeleteAccountViewModel();
+    const { showAlert } = useAlert();
 
     const [password, setPassword] = useState('');
     const [passwordConfirm, setPasswordConfirm] = useState('');
@@ -27,18 +29,14 @@ const DeleteAccountScreen = () => {
 
     const handleSubmit = () => {
         // 최종 확인 얼럿
-        Alert.alert(
-            "정말 탈퇴하시겠습니까?",
-            "탈퇴 시 모든 데이터가 삭제되며 복구할 수 없습니다.",
-            [
-                { text: "취소", style: "cancel" },
-                {
-                    text: "탈퇴하기",
-                    style: "destructive",
-                    onPress: () => deleteAccount(password, passwordConfirm)
-                }
-            ]
-        );
+        showAlert({
+            title: "정말 탈퇴하시겠습니까?",
+            message: "탈퇴 시 모든 데이터가 삭제되며 복구할 수 없습니다.",
+            confirmText: "탈퇴하기",
+            cancelText: "취소",
+            showCancel: true,
+            onConfirm: () => deleteAccount(password, passwordConfirm)
+        });
     };
 
     return (

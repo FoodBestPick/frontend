@@ -17,6 +17,9 @@ import MyReviewsScreen from '../screens/MyReviewsScreen';
 import MatchingSetupScreen from '../screens/MatchingSetupScreen';
 import MatchingFindingScreen from '../screens/MatchingFindingScreen';
 import ChatRoomScreen from '../screens/ChatRoomScreen';
+import CustomerServiceScreen from '../screens/CustomerServiceScreen'; 
+import MyReportListScreen from '../screens/MyReportListScreen'; // ✨ 추가
+import PrivacyPolicyScreen from '../screens/PrivacyPolicyScreen';
 
 const Tab = createBottomTabNavigator();
 const HomeStack = createStackNavigator();
@@ -71,6 +74,9 @@ const MyPageStackNavigator = () => (
     <MyPageStack.Screen name="MyLikesScreen" component={MyLikesScreen} />
     <MyPageStack.Screen name="MyReviewsScreen" component={MyReviewsScreen} />
     <MyPageStack.Screen name="RestaurantDetail" component={RestaurantDetailScreen} />
+    <MyPageStack.Screen name="CustomerService" component={CustomerServiceScreen} /> 
+    <MyPageStack.Screen name="MyReportListScreen" component={MyReportListScreen} /> 
+    <MyPageStack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} />
   </MyPageStack.Navigator>
 );
 

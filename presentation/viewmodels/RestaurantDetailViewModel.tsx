@@ -2,8 +2,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { API_BASE_URL } from '@env';
 import { useAuth } from '../../context/AuthContext';
 import { ReportApi } from '../../data/api/ReportApi';
-import { Alert } from 'react-native';
-import axios from 'axios';
+import { authApi } from '../../data/api/UserAuthApi';
+import { useAlert } from '../../context/AlertContext';
 
 interface Menu {
   id: number;
@@ -52,10 +52,11 @@ interface RestaurantDetail {
 }
 
 export const useRestaurantDetailViewModel = (restaurantId: number) => {
-  const { token } = useAuth();
+  const { isLoggedIn } = useAuth(); // token 대신 isLoggedIn 사용 권장
   const [restaurant, setRestaurant] = useState<RestaurantDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { showAlert } = useAlert();
 
   const fetchRestaurantDetail = useCallback(async () => {
     try {
@@ -63,13 +64,10 @@ export const useRestaurantDetailViewModel = (restaurantId: number) => {
       setError(null);
 
       // 0. 조회수 증가 (비동기 처리, 결과 기다리지 않음)
-      axios.post(`${API_BASE_URL}/restaurant/${restaurantId}/view`, {}, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      }).catch(err => console.log('View count increment failed', err));
+      authApi.post(`${API_BASE_URL}/restaurant/${restaurantId}/view`, {}).catch(err => console.log('View count increment failed', err));
 
-      // 1. 식당 상세 정보 조회 (axios 사용, 타임아웃 10초)
-      const response = await axios.get(`${API_BASE_URL}/restaurant/${restaurantId}`, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      // 1. 식당 상세 정보 조회
+      const response = await authApi.get(`${API_BASE_URL}/restaurant/${restaurantId}`, {
         timeout: 10000,
       });
       const result = response.data;
@@ -79,18 +77,15 @@ export const useRestaurantDetailViewModel = (restaurantId: number) => {
 
         // 2. 리뷰 조회
         let reviews: Review[] = [];
-        // 백엔드에서 제공하는 값 우선 사용, 없으면 0
         let reviewCount = data.reviewCount || 0;
         let averageRating = data.averageRating || 0.0;
 
         try {
-          const reviewRes = await axios.get(`${API_BASE_URL}/api/review/restaurant/${restaurantId}`, {
-             headers: token ? { Authorization: `Bearer ${token}` } : {},
+          const reviewRes = await authApi.get(`${API_BASE_URL}/api/review/restaurant/${restaurantId}`, {
              timeout: 10000,
           });
           const reviewResult = reviewRes.data;
           if (reviewResult.code === 200) {
-            // 백엔드에서 isMine이 mine으로 올 수도 있으므로 매핑 처리
             reviews = reviewResult.data.content.map((r: any) => ({
               ...r,
               isMine: r.isMine !== undefined ? r.isMine : (r.mine !== undefined ? r.mine : false),
@@ -98,7 +93,6 @@ export const useRestaurantDetailViewModel = (restaurantId: number) => {
               likeCount: r.likeCount || 0
             }));
             
-            // 만약 백엔드 RestaurantResponse에 값이 없다면 리뷰 목록에서 계산 (fallback)
             if (reviewCount === 0 && reviewResult.data.totalElements > 0) {
                 reviewCount = reviewResult.data.totalElements;
             }
@@ -111,8 +105,6 @@ export const useRestaurantDetailViewModel = (restaurantId: number) => {
           console.error('리뷰 조회 실패', e);
         }
 
-        // 3. 좋아요/즐겨찾기 상태 조회 (로그인 시)
-        // 백엔드에서 isLiked 필드를 내려주므로 그것을 사용
         let isLiked = data.isLiked || false;
         let isFavorite = isLiked;
 
@@ -152,7 +144,7 @@ export const useRestaurantDetailViewModel = (restaurantId: number) => {
     } finally {
       setLoading(false);
     }
-  }, [restaurantId, token]);
+  }, [restaurantId]);
 
   useEffect(() => {
     fetchRestaurantDetail();
@@ -163,21 +155,17 @@ export const useRestaurantDetailViewModel = (restaurantId: number) => {
     message: string;
   }> => {
     try {
-      if (!token) {
+      if (!isLoggedIn) {
         return { success: false, message: '로그인이 필요합니다.' };
       }
 
-      const response = await axios.post(`${API_BASE_URL}/api/favorite/${restaurantId}`, {}, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+      const response = await authApi.post(`${API_BASE_URL}/api/favorite/${restaurantId}`, {}, {
         timeout: 10000,
       });
 
       const result = response.data;
 
       if (result.code === 200) {
-        // 상태 반전
         setRestaurant(prev => prev ? { ...prev, isFavorite: !prev.isFavorite } : null);
         return {
           success: true,
@@ -197,14 +185,11 @@ export const useRestaurantDetailViewModel = (restaurantId: number) => {
     message: string;
   }> => {
     try {
-      if (!token) {
+      if (!isLoggedIn) {
         return { success: false, message: '로그인이 필요합니다.' };
       }
 
-      const response = await axios.post(`${API_BASE_URL}/api/like/${restaurantId}`, {}, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+      const response = await authApi.post(`${API_BASE_URL}/api/like/${restaurantId}`, {}, {
         timeout: 10000,
       });
 
@@ -227,18 +212,15 @@ export const useRestaurantDetailViewModel = (restaurantId: number) => {
 
   const deleteReview = async (reviewId: number): Promise<boolean> => {
     try {
-      if (!token) return false;
+      if (!isLoggedIn) return false;
 
-      const response = await axios.delete(`${API_BASE_URL}/api/review/${reviewId}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+      const response = await authApi.delete(`${API_BASE_URL}/api/review/${reviewId}`, {
         timeout: 10000,
       });
 
       const result = response.data;
       if (result.code === 200) {
-        await fetchRestaurantDetail(); // 목록 갱신
+        await fetchRestaurantDetail(); 
         return true;
       }
       return false;
@@ -250,18 +232,14 @@ export const useRestaurantDetailViewModel = (restaurantId: number) => {
 
   const toggleReviewLike = async (reviewId: number): Promise<boolean> => {
     try {
-      if (!token) return false;
+      if (!isLoggedIn) return false;
 
-      const response = await axios.post(`${API_BASE_URL}/api/review/${reviewId}/like`, {}, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+      const response = await authApi.post(`${API_BASE_URL}/api/review/${reviewId}/like`, {}, {
         timeout: 10000,
       });
 
       const result = response.data;
       if (result.code === 200) {
-        // 로컬 상태 업데이트 (낙관적 업데이트)
         setRestaurant(prev => {
           if (!prev) return null;
           const updatedReviews = prev.reviews.map(r => {
@@ -286,42 +264,42 @@ export const useRestaurantDetailViewModel = (restaurantId: number) => {
   };
 
   const reportRestaurant = async (reason: string, reasonDetail: string) => {
-    if (!token || !restaurant) return;
+    if (!isLoggedIn || !restaurant) return;
     try {
-      const result = await ReportApi.sendReport(token, {
+      const result = await ReportApi.sendReport({
         targetType: 'RESTAURANT',
         targetId: restaurant.id,
         reason,
         reasonDetail,
       });
       if (result.code === 200) {
-        Alert.alert('알림', '신고가 접수되었습니다.');
+        showAlert({ title: "알림", message: "신고가 접수되었습니다." });
       } else {
-        Alert.alert('오류', result.message || '신고 접수에 실패했습니다.');
+        showAlert({ title: "오류", message: result.message || '신고 접수에 실패했습니다.' });
       }
     } catch (error) {
       console.error('신고 오류:', error);
-      Alert.alert('오류', '신고 중 문제가 발생했습니다.');
+      showAlert({ title: "오류", message: "신고 중 문제가 발생했습니다." });
     }
   };
 
   const reportReview = async (reviewId: number, reason: string, reasonDetail: string) => {
-    if (!token) return;
+    if (!isLoggedIn) return;
     try {
-      const result = await ReportApi.sendReport(token, {
+      const result = await ReportApi.sendReport({
         targetType: 'REVIEW',
         targetId: reviewId,
         reason,
         reasonDetail,
       });
       if (result.code === 200) {
-        Alert.alert('알림', '리뷰 신고가 접수되었습니다.');
+        showAlert({ title: "알림", message: "리뷰 신고가 접수되었습니다." });
       } else {
-        Alert.alert('오류', result.message || '신고 접수에 실패했습니다.');
+        showAlert({ title: "오류", message: result.message || '신고 접수에 실패했습니다.' });
       }
     } catch (err) {
       console.error('리뷰 신고 오류:', err);
-      Alert.alert('오류', '신고 중 문제가 발생했습니다.');
+      showAlert({ title: "오류", message: "신고 중 문제가 발생했습니다." });
     }
   };
 

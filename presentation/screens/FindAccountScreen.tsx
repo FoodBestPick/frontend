@@ -7,16 +7,22 @@ import {
     StyleSheet,
     Dimensions,
     Image,
-    Alert,
+    ScrollView,
+    KeyboardAvoidingView,
+    Platform,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { useFindAccountViewModel } from "../viewmodels/useFindAccountViewModel";
+import { Header } from "../components/Header";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
+import { useAlert } from "../../context/AlertContext";
 
 const { width, height } = Dimensions.get("window");
 const ORANGE = "#FFA847";
 
 export default function FindAccountScreen() {
     const navigation = useNavigation();
+    const { showAlert } = useAlert();
 
     const [email, setEmail] = useState<string>("");
     const [code, setCode] = useState<string>("");
@@ -36,43 +42,43 @@ export default function FindAccountScreen() {
     // 1) 인증번호 전송 / 확인 버튼
     const handleEmailButtonPress = async () => {
         if (!email) {
-            Alert.alert("알림", "이메일을 입력해주세요.");
+            showAlert({ title: "알림", message: "이메일을 입력해주세요." });
             return;
         }
 
         if (!emailSent) {
             // 아직 안 보냈으면 → 인증번호 전송
             const ok = await sendCode(email);
-            if (ok) Alert.alert("전송 완료", "인증번호가 전송되었습니다.");
-            else Alert.alert("실패", error || "전송 실패");
+            if (ok) showAlert({ title: "전송 완료", message: "인증번호가 전송되었습니다." });
+            else showAlert({ title: "실패", message: error || "전송 실패" });
         } else {
             // 이미 전송된 상태 → 인증번호 확인
             if (emailVerified) {
-                Alert.alert("알림", "이미 인증되었습니다.");
+                showAlert({ title: "알림", message: "이미 인증되었습니다." });
                 return;
             }
             if (!code) {
-                Alert.alert("알림", "인증번호를 입력해주세요.");
+                showAlert({ title: "알림", message: "인증번호를 입력해주세요." });
                 return;
             }
             const ok = await verifyCode(email, code);
-            if (ok) Alert.alert("인증 완료", "이메일 인증이 완료되었습니다.");
-            else Alert.alert("실패", error || "인증번호가 틀렸습니다.");
+            if (ok) showAlert({ title: "인증 완료", message: "이메일 인증이 완료되었습니다." });
+            else showAlert({ title: "실패", message: error || "인증번호가 틀렸습니다." });
         }
     };
 
     // 2) 비밀번호 초기화 버튼
     const handleResetPassword = async () => {
         if (!emailVerified) {
-            Alert.alert("알림", "이메일 인증을 먼저 완료해주세요.");
+            showAlert({ title: "알림", message: "이메일 인증을 먼저 완료해주세요." });
             return;
         }
         if (!password || !passwordConfirm) {
-            Alert.alert("알림", "새 비밀번호를 입력해주세요.");
+            showAlert({ title: "알림", message: "새 비밀번호를 입력해주세요." });
             return;
         }
         if (password !== passwordConfirm) {
-            Alert.alert("알림", "비밀번호가 일치하지 않습니다.");
+            showAlert({ title: "알림", message: "비밀번호가 일치하지 않습니다." });
             return;
         }
 
@@ -80,130 +86,152 @@ export default function FindAccountScreen() {
         const ok = await resetPassword(email, code, password, passwordConfirm);
 
         if (ok) {
-            Alert.alert("완료", "비밀번호가 변경되었습니다.", [
-                { text: "로그인하러 가기", onPress: () => navigation.goBack() }
-            ]);
+            showAlert({
+                title: "완료",
+                message: "비밀번호가 변경되었습니다.",
+                onConfirm: () => navigation.goBack()
+            });
         } else {
-            Alert.alert("실패", error || "비밀번호 변경 실패");
+            showAlert({ title: "실패", message: error || "비밀번호 변경 실패" });
         }
     };
 
+    const insets = useSafeAreaInsets();
+
     return (
-        <View style={styles.container}>
-            <Text style={styles.title}>계정 찾기</Text>
-
-            <Image
-                source={require("../../assets/logo.png")}
-                style={styles.logo}
+        <SafeAreaView style={{ flex: 1, backgroundColor: "#fff" }} edges={['bottom', 'left', 'right']}>
+            <Header 
+                title="계정 찾기" 
+                showBackButton={true} 
+                onBackPress={() => navigation.goBack()} 
             />
-
-            {/* 이메일 */}
-            <TextInput
-                placeholder="이메일"
-                placeholderTextColor="#999"
-                style={styles.input}
-                value={email}
-                onChangeText={setEmail}
-                autoCapitalize="none"
-                keyboardType="email-address"
-                editable={!emailSent} // 전송 후엔 수정 막기
-            />
-
-            {/* 인증번호 + 버튼 */}
-            <View style={styles.row}>
-                <TextInput
-                    placeholder="인증번호"
-                    placeholderTextColor="#999"
-                    style={[styles.input, { flex: 1, marginBottom: 0 }]}
-                    value={code}
-                    onChangeText={setCode}
-                    keyboardType="number-pad"
-                    editable={emailSent && !emailVerified}
-                />
-                <TouchableOpacity
-                    style={[styles.verifyButton, emailVerified && { backgroundColor: "#ccc" }]}
-                    onPress={handleEmailButtonPress}
-                    disabled={loading || emailVerified}
-                >
-                    <Text style={styles.verifyText}>
-                        {!emailSent ? "인증번호 전송" : emailVerified ? "인증 완료" : "확인"}
-                    </Text>
-                </TouchableOpacity>
-            </View>
-
-            {/* 비밀번호 */}
-            <TextInput
-                placeholder="새 비밀번호"
-                placeholderTextColor="#999"
-                secureTextEntry
-                style={styles.input}
-                value={password}
-                onChangeText={setPassword}
-            />
-
-            {/* 비밀번호 확인 */}
-            <TextInput
-                placeholder="새 비밀번호 확인"
-                placeholderTextColor="#999"
-                secureTextEntry
-                style={styles.input}
-                value={passwordConfirm}
-                onChangeText={setPasswordConfirm}
-            />
-
-            {/* 비밀번호 초기화 버튼 */}
-            <TouchableOpacity
-                style={[styles.submitButton, (!emailVerified || loading) && { opacity: 0.6 }]}
-                onPress={handleResetPassword}
-                disabled={loading || !emailVerified}
+            <KeyboardAvoidingView 
+                style={{ flex: 1 }} 
+                behavior={Platform.OS === 'ios' ? 'padding' : undefined}
             >
-                <Text style={styles.submitText}>
-                    {loading ? "처리 중..." : "비밀번호 초기화"}
-                </Text>
-            </TouchableOpacity>
-        </View>
+                <ScrollView 
+                    contentContainerStyle={styles.scrollContent}
+                    keyboardShouldPersistTaps="handled"
+                >
+                    <View style={styles.container}>
+                        <Image
+                            source={require("../../assets/logo.png")}
+                            style={styles.logo}
+                        />
+
+                        {/* 이메일 */}
+                        <TextInput
+                            placeholder="이메일"
+                            placeholderTextColor="#999"
+                            style={styles.input}
+                            value={email}
+                            onChangeText={setEmail}
+                            autoCapitalize="none"
+                            keyboardType="email-address"
+                            editable={!emailSent} 
+                        />
+
+                        {/* 인증번호 + 버튼 */}
+                        <View style={styles.row}>
+                            <TextInput
+                                placeholder="인증번호"
+                                placeholderTextColor="#999"
+                                style={[styles.input, { flex: 1, marginBottom: 0 }]}
+                                value={code}
+                                onChangeText={setCode}
+                                keyboardType="number-pad"
+                                editable={emailSent && !emailVerified}
+                            />
+                            <TouchableOpacity
+                                style={[styles.verifyButton, emailVerified && { backgroundColor: "#ccc" }]}
+                                onPress={handleEmailButtonPress}
+                                disabled={loading || emailVerified}
+                            >
+                                <Text style={styles.verifyText}>
+                                    {!emailSent ? "인증번호 전송" : emailVerified ? "인증 완료" : "확인"}
+                                </Text>
+                            </TouchableOpacity>
+                        </View>
+
+                        {/* 비밀번호 */}
+                        <TextInput
+                            placeholder="새 비밀번호"
+                            placeholderTextColor="#999"
+                            secureTextEntry
+                            style={styles.input}
+                            value={password}
+                            onChangeText={setPassword}
+                        />
+
+                        {/* 비밀번호 확인 */}
+                        <TextInput
+                            placeholder="새 비밀번호 확인"
+                            placeholderTextColor="#999"
+                            secureTextEntry
+                            style={styles.input}
+                            value={passwordConfirm}
+                            onChangeText={setPasswordConfirm}
+                        />
+
+                        {/* 비밀번호 초기화 버튼 */}
+                        <TouchableOpacity
+                            style={[styles.submitButton, (!emailVerified || loading) && { opacity: 0.6 }]}
+                            onPress={handleResetPassword}
+                            disabled={loading || !emailVerified}
+                        >
+                            <Text style={styles.submitText}>
+                                {loading ? "처리 중..." : "비밀번호 초기화"}
+                            </Text>
+                        </TouchableOpacity>
+                    </View>
+                </ScrollView>
+            </KeyboardAvoidingView>
+        </SafeAreaView>
     );
 }
 
 const styles = StyleSheet.create({
+    scrollContent: {
+        flexGrow: 1,
+    },
     container: {
-        flex: 1,
-        backgroundColor: "#fff",
         alignItems: "center",
-        paddingTop: height * 0.08,
+        paddingHorizontal: 40, // 36에서 40으로 확대
+        paddingBottom: 40,
+        paddingTop: 30, // LoginScreen과 통일
     },
     title: {
         fontSize: 22,
         fontWeight: "700",
         color: "#000",
-        marginBottom: 16,
+        marginBottom: 12,
     },
     logo: {
-        width: 200,
-        height: 200,
+        width: 140,
+        height: 140,
         resizeMode: "contain",
-        marginBottom: 22,
+        marginBottom: 40,
     },
     row: {
         flexDirection: "row",
         alignItems: "center",
-        width: width * 0.85,
-        marginBottom: 14,
+        width: "100%", // width * 0.85 대신 100% 사용 (paddingHorizontal로 제어)
+        marginBottom: 18, // LoginScreen과 통일
     },
     input: {
         backgroundColor: "#f5f5f5",
-        width: width * 0.85,
+        width: "100%", // width * 0.85 대신 100%
         height: 50,
-        borderRadius: 8,
-        paddingHorizontal: 14,
-        fontSize: 14,
+        borderRadius: 12,
+        paddingHorizontal: 16,
+        fontSize: 15,
         color: "#000",
-        marginBottom: 14,
+        marginBottom: 18,
     },
     verifyButton: {
         backgroundColor: ORANGE,
         height: 50,
-        borderRadius: 8,
+        borderRadius: 12,
         justifyContent: "center",
         alignItems: "center",
         paddingHorizontal: 14,
@@ -216,9 +244,9 @@ const styles = StyleSheet.create({
     },
     submitButton: {
         backgroundColor: ORANGE,
-        width: width * 0.85,
+        width: "100%",
         height: 50,
-        borderRadius: 8,
+        borderRadius: 12,
         justifyContent: "center",
         alignItems: "center",
         marginTop: 18,

@@ -14,6 +14,10 @@ export const ChatRepositoryImpl = {
     return ChatApi.loadMessages(token, roomId);
   },
 
+  async leaveRoom(token: string, roomId: number) {
+    return ChatApi.leaveRoom(token, roomId);
+  },
+
   connect(roomId: number, token: string, onMessage: (msg: any) => void) {
     webSocketClient.connect(roomId, token, onMessage);
   },

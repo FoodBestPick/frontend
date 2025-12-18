@@ -8,13 +8,20 @@ import {
     Image,
     StatusBar,
     ActivityIndicator,
-    Alert
+    KeyboardAvoidingView,
+    ScrollView,
+    Platform,
+    Dimensions
 } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import CheckBox from "@react-native-community/checkbox";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../navigation/types/RootStackParamList";
+import { useAlert } from "../../context/AlertContext";
+
+// Components
+import { Header } from "../components/Header";
 
 // ViewModel들
 import { LoginKakaoViewModels } from "../viewmodels/LoginKakaoViewModels";
@@ -40,6 +47,7 @@ const ORANGE = "#FFA847";
 export default function LoginScreen() {
     const navigation = useNavigation<Navigation>();
     const insets = useSafeAreaInsets();
+    const { showAlert } = useAlert();
 
     // ViewModel 연결
     const { signin, loading: emailLoginLoading } = useSigninViewModel();
@@ -85,7 +93,7 @@ export default function LoginScreen() {
     /* 일반 이메일 로그인 핸들러 */
     const handleLogin = async () => {
         if (!email || !password) {
-            Alert.alert("알림", "이메일과 비밀번호를 입력해주세요.");
+            showAlert({ title: "알림", message: "이메일과 비밀번호를 입력해주세요." });
             return;
         }
 
@@ -111,7 +119,7 @@ export default function LoginScreen() {
             const idToken = result.data?.idToken;
             if (idToken) await loginGoogle(idToken);
         } catch (error) {
-            Alert.alert("구글 로그인 실패");
+            showAlert({ title: "오류", message: "구글 로그인 실패" });
         }
     };
 
@@ -119,7 +127,7 @@ export default function LoginScreen() {
         try {
             await loginNaver();
         } catch {
-            Alert.alert("네이버 로그인 실패");
+            showAlert({ title: "오류", message: "네이버 로그인 실패" });
         }
     };
 
@@ -127,139 +135,160 @@ export default function LoginScreen() {
         try {
             await kakaoViewModel.loginWithKakao();
         } catch {
-            Alert.alert("카카오 로그인 실패");
+            showAlert({ title: "오류", message: "카카오 로그인 실패" });
         }
     };
 
     return (
-        <SafeAreaView style={[styles.safeArea, { paddingTop: insets.top + 10 }]}>
+        <SafeAreaView style={styles.safeArea} edges={['bottom', 'left', 'right']}>
             <StatusBar barStyle="dark-content" backgroundColor="#fff" />
 
-            <View style={styles.container}>
-                <Text style={styles.title}>로그인</Text>
+            <Header 
+                title="로그인" 
+                showBackButton={true} 
+                onBackPress={() => navigation.goBack()} 
+            />
 
-                <Image
-                    source={require("../../assets/logo.png")}
-                    style={styles.logo}
-                />
-
-                <TextInput
-                    style={styles.input}
-                    placeholder="이메일 입력"
-                    placeholderTextColor="#999"
-                    keyboardType="email-address"
-                    value={email}
-                    onChangeText={setEmail}
-                    autoCapitalize="none"
-                />
-                <TextInput
-                    style={styles.input}
-                    placeholder="비밀번호 입력"
-                    placeholderTextColor="#999"
-                    secureTextEntry
-                    value={password}
-                    onChangeText={setPassword}
-                />
-
-                <View style={styles.checkboxRow}>
-                    <View style={styles.checkboxContainer}>
-                        <CheckBox
-                            value={saveEmail}
-                            onValueChange={setSaveEmail}
-                            tintColors={{ true: ORANGE, false: "#999" }}
-                        />
-                        <Text style={styles.checkboxLabel}>이메일 저장</Text>
-                    </View>
-
-                    <View style={styles.checkboxContainer}>
-                        <CheckBox
-                            value={autoLogin}
-                            onValueChange={setAutoLogin}
-                            tintColors={{ true: ORANGE, false: "#999" }}
-                        />
-                        <Text style={styles.checkboxLabel}>자동 로그인</Text>
-                    </View>
-                </View>
-
-                <TouchableOpacity
-                    style={[styles.loginButton, emailLoginLoading && { opacity: 0.7 }]}
-                    onPress={handleLogin}
-                    disabled={emailLoginLoading}
+            <KeyboardAvoidingView 
+                style={{ flex: 1 }} 
+                behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            >
+                <ScrollView 
+                    contentContainerStyle={styles.scrollContent}
+                    keyboardShouldPersistTaps="handled"
                 >
-                    {emailLoginLoading ? (
-                        <ActivityIndicator color="#fff" />
-                    ) : (
-                        <Text style={styles.loginText}>로그인</Text>
-                    )}
-                </TouchableOpacity>
+                    <View style={styles.container}>
+                        <Image
+                            source={require("../../assets/logo.png")}
+                            style={styles.logo}
+                        />
 
-                <TouchableOpacity
-                    onPress={() => navigation.navigate("FindAccount")}
-                    style={styles.findContainer}
-                >
-                    <Text style={styles.findText}>계정 찾기</Text>
-                </TouchableOpacity>
+                        <TextInput
+                            style={styles.input}
+                            placeholder="이메일 입력"
+                            placeholderTextColor="#999"
+                            keyboardType="email-address"
+                            value={email}
+                            onChangeText={setEmail}
+                            autoCapitalize="none"
+                        />
+                        <TextInput
+                            style={styles.input}
+                            placeholder="비밀번호 입력"
+                            placeholderTextColor="#999"
+                            secureTextEntry
+                            value={password}
+                            onChangeText={setPassword}
+                        />
 
-                {/* 소셜 로그인 아이콘들 */}
-                <View style={styles.socialIcons}>
-                    <TouchableOpacity
-                        style={[styles.socialCircle, { backgroundColor: "#FEE500" }]}
-                        onPress={handleKakaoLogin}
-                    >
-                        <Image source={require("../../assets/kakao.png")} style={styles.socialIcon} />
-                    </TouchableOpacity>
+                        <View style={styles.checkboxRow}>
+                            <View style={styles.checkboxContainer}>
+                                <CheckBox
+                                    value={saveEmail}
+                                    onValueChange={setSaveEmail}
+                                    tintColors={{ true: ORANGE, false: "#999" }}
+                                />
+                                <Text style={styles.checkboxLabel}>이메일 저장</Text>
+                            </View>
 
-                    <TouchableOpacity
-                        style={[styles.socialCircle, { backgroundColor: "#fff" }]}
-                        onPress={handleGoogleLogin}
-                    >
-                        <Image source={require("../../assets/google.png")} style={styles.socialIcon} />
-                    </TouchableOpacity>
+                            <View style={styles.checkboxContainer}>
+                                <CheckBox
+                                    value={autoLogin}
+                                    onValueChange={setAutoLogin}
+                                    tintColors={{ true: ORANGE, false: "#999" }}
+                                />
+                                <Text style={styles.checkboxLabel}>자동 로그인</Text>
+                            </View>
+                        </View>
 
-                    <TouchableOpacity
-                        style={[styles.socialCircle, { backgroundColor: "#03C75A" }]}
-                        onPress={handleNaverLogin}
-                    >
-                        <Image source={require("../../assets/naver.png")} style={styles.socialIcon} />
-                    </TouchableOpacity>
+                        <TouchableOpacity
+                            style={[styles.loginButton, emailLoginLoading && { opacity: 0.7 }]}
+                            onPress={handleLogin}
+                            disabled={emailLoginLoading}
+                        >
+                            {emailLoginLoading ? (
+                                <ActivityIndicator color="#fff" />
+                            ) : (
+                                <Text style={styles.loginText}>로그인</Text>
+                            )}
+                        </TouchableOpacity>
 
-                    {/* 🗑️ 삭제됨: 빈 View (애플 로그인 자리) */}
-                </View>
+                        <TouchableOpacity
+                            onPress={() => navigation.navigate("FindAccount")}
+                            style={styles.findContainer}
+                        >
+                            <Text style={styles.findText}>계정 찾기</Text>
+                        </TouchableOpacity>
 
-                <Text style={styles.bottomText}>
-                    아직 회원이 아니신가요?{" "}
-                    <Text
-                        style={styles.link}
-                        onPress={() => navigation.navigate("SignUp")}
-                    >
-                        회원가입하기
-                    </Text>
-                </Text>
-            </View>
+                        {/* 소셜 로그인 아이콘들 */}
+                        <View style={styles.socialIcons}>
+                            <TouchableOpacity
+                                style={[styles.socialCircle, { backgroundColor: "#FEE500" }]}
+                                onPress={handleKakaoLogin}
+                            >
+                                <Image source={require("../../assets/kakao.png")} style={styles.socialIcon} />
+                            </TouchableOpacity>
+
+                            <TouchableOpacity
+                                style={[styles.socialCircle, { backgroundColor: "#fff" }]}
+                                onPress={handleGoogleLogin}
+                            >
+                                <Image source={require("../../assets/google.png")} style={styles.socialIcon} />
+                            </TouchableOpacity>
+
+                            <TouchableOpacity
+                                style={[styles.socialCircle, { backgroundColor: "#03C75A" }]}
+                                onPress={handleNaverLogin}
+                            >
+                                <Image source={require("../../assets/naver.png")} style={styles.socialIcon} />
+                            </TouchableOpacity>
+                        </View>
+
+                        <Text style={styles.bottomText}>
+                            아직 회원이 아니신가요?{" "}
+                            <Text
+                                style={styles.link}
+                                onPress={() => navigation.navigate("SignUp")}
+                            >
+                                회원가입하기
+                            </Text>
+                        </Text>
+                    </View>
+                </ScrollView>
+            </KeyboardAvoidingView>
         </SafeAreaView>
     );
 }
 
 const styles = StyleSheet.create({
     safeArea: { flex: 1, backgroundColor: "#fff" },
-    container: { flex: 1, alignItems: "center", paddingHorizontal: 28 },
+    scrollContent: {
+        flexGrow: 1,
+        // justifyContent: 'center' 제거 -> 상단부터 배치
+    },
+    container: { 
+        alignItems: "center", 
+        paddingHorizontal: 40, // 24에서 40으로 확대
+        paddingBottom: 40,
+        paddingTop: 30, 
+    },
     title: { fontSize: 22, fontWeight: "700", color: "#000", marginBottom: 12 },
-    logo: { width: 100, height: 100, resizeMode: "contain", marginBottom: 24 },
+    logo: { width: 140, height: 140, resizeMode: "contain", marginBottom: 40 }, // ✨ 간격 소폭 축소
     input: {
         width: "100%",
-        height: 46,
+        height: 50,
         backgroundColor: "#F6F6F6",
-        borderRadius: 10,
-        paddingHorizontal: 14,
-        fontSize: 14,
-        marginBottom: 14,
-        color: '#000', // 입력 텍스트 색상을 검은색으로 지정
+        borderRadius: 12,
+        paddingHorizontal: 16,
+        fontSize: 15,
+        marginBottom: 18, // ✨ 간격 소폭 축소
+        color: '#000', 
     },
     checkboxRow: {
         width: "100%",
         flexDirection: "row",
         justifyContent: "space-between",
-        marginBottom: 16,
+        marginBottom: 24, // ✨ 간격 소폭 축소
     },
     checkboxContainer: { flexDirection: "row", alignItems: "center" },
     checkboxLabel: { fontSize: 13, color: "#333" },

@@ -4,6 +4,18 @@ import { StatusBar } from 'react-native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { useContext, useState, useRef } from 'react';
 
+import { LogBox } from 'react-native';
+
+LogBox.ignoreLogs([
+  'This method is deprecated (as well as all React Native Firebase namespaced API)',
+  'Method called was `requestPermission`. Please use `requestPermission()` instead.',
+  'Method called was `onMessage`. Please use `onMessage()` instead.',
+  'Method called was `onTokenRefresh`. Please use `onTokenRefresh()` instead.',
+  'Method called was `AuthorizationStatus`. Please use `AuthorizationStatus` instead.',
+  'Method called was `hasPermission`. Please use `hasPermission()` instead.',
+  'Method called was `getToken`. Please use `getToken()` instead.',
+]);
+
 // Navigations
 import { AdminMainStack } from '../frontend/presentation/navigation/AdminNavigation';
 import { UserNavigation } from '../frontend/presentation/navigation/UserNavigation';
@@ -18,6 +30,7 @@ import FindAccountScreen from '../frontend/presentation/screens/FindAccountScree
 // ⭐ [추가됨] 비밀번호 변경 스크린 import
 import ChangePasswordScreen from './presentation/screens/ChangePasswordScreen';
 import DeleteAccountScreen from './presentation/screens/DeleteAccountScreen'; 
+import PrivacyPolicyScreen from './presentation/screens/PrivacyPolicyScreen';
 // Screens - User & Common
 import SearchScreen from '../frontend/presentation/screens/SearchScreen';
 import SearchResultScreen from '../frontend/presentation/screens/SearchResultScreen';
@@ -38,10 +51,12 @@ import NotificationSettingScreen from "./presentation/screens/NotificationSettin
 import { AdminRestaurantAddScreen } from './presentation/screens/AdminRestaurantAddScreen';
 import { AdminNotificationScreen } from './presentation/screens/AdminNotificationScreen';
 import AdminReportScreen from './presentation/screens/AdminReportScreen';
+import { AdminInquiryScreen } from './presentation/screens/AdminInquiryScreen';
 
 // Contexts
 import { ThemeProvider, ThemeContext } from "./context/ThemeContext";
 import { AuthProvider, useAuth } from "./context/AuthContext";
+import { AlertProvider } from "./context/AlertContext";
 
 // Components
 import { FloatingChatButton } from './presentation/components/FloatingChatButton';
@@ -86,14 +101,17 @@ function AppInner() {
             }}
           >
             {isAdmin ? (
-              <Stack.Screen name="AdminMain" component={AdminMainStack} />
+              // 관리자인 경우 AdminMain만 등록 (필요시 UserMain으로 이동 가능하게 추가할 수도 있음)
+              <>
+                <Stack.Screen name="AdminMain" component={AdminMainStack} />
+                <Stack.Screen name="UserMain" component={UserNavigation} />
+              </>
             ) : (
+              // 일반 유저인 경우 UserMain만 등록
               <Stack.Screen name="UserMain" component={UserNavigation} />
             )}
 
-            {isAdmin && <Stack.Screen name="UserMain" component={UserNavigation} />}
-            {!isAdmin && <Stack.Screen name="AdminMain" component={AdminMainStack} />}
-
+            {/* 공통 스크린들 */}
             <Stack.Screen name="SearchScreen" component={SearchScreen} />
             <Stack.Screen name="SearchResult" component={SearchResultScreen} />
             <Stack.Screen name="RestaurantDetail" component={RestaurantDetailScreen} />
@@ -111,9 +129,11 @@ function AppInner() {
             />
             <Stack.Screen name="ChangePassword" component={ChangePasswordScreen} />
             <Stack.Screen name="DeleteAccount" component={DeleteAccountScreen} />
+            <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} />
             <Stack.Screen name="AdminRestaurantAdd" component={AdminRestaurantAddScreen} />
             <Stack.Screen name="NotificationScreen" component={AdminNotificationScreen} />
             <Stack.Screen name="AdminReportScreen" component={AdminReportScreen} />
+            <Stack.Screen name="AdminInquiryScreen" component={AdminInquiryScreen} />
             <Stack.Screen name="AdminManageSelect" component={AdminManageSelectScreen} />
             <Stack.Screen name="AdminFoodManage" component={AdminFoodManageScreen} />
             <Stack.Screen name="AdminTagManage" component={AdminTagManageScreen} />
@@ -151,7 +171,9 @@ export default function App() {
   return (
     <AuthProvider>
       <ThemeProvider>
-        <AppInner />
+        <AlertProvider>
+          <AppInner />
+        </AlertProvider>
       </ThemeProvider>
     </AuthProvider>
   );

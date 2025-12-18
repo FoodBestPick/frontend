@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { Header } from '../components/Header';
 import { DashboardCard } from '../components/DashBoardCard';
-import { COLORS } from '../../core/constants/colors';
+import { COLORS } from '../../core/constants/Colors';
 import { AdminDashBoardViewModel } from '../viewmodels/AdminDashBoardViewModels';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -451,9 +451,7 @@ export const AdminDashBoardScreen = () => {
               textColor={isDarkMode ? theme.textPrimary : COLORS.text}
               cardColor={isDarkMode ? theme.card : COLORS.card}
               borderColor={theme.border}
-              onPress={() => {
-                /* TODO */
-              }}
+              onPress={() => navigation.navigate('AdminInquiryScreen')}
             />
           </View>
         </View>

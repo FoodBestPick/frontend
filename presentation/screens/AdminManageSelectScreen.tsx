@@ -42,7 +42,7 @@ export const AdminManageSelectScreen = () => {
     <SafeAreaView
       style={[styles.container, { backgroundColor: theme.background }]}
     >
-      <Header title="관리 메뉴 선택" showBackButton />
+      <Header title="관리 메뉴 선택" showBackButton onBackPress={() => navigation.goBack()} />
 
       <View style={styles.content}>
         <Text style={[styles.subtitle, { color: theme.textSecondary }]}>

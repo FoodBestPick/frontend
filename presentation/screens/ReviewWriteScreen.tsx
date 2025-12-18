@@ -7,7 +7,6 @@ import {
   StyleSheet,
   Image,
   ScrollView,
-  Alert,
   ActivityIndicator,
   Platform,
   ToastAndroid,
@@ -19,7 +18,8 @@ import { launchImageLibrary } from 'react-native-image-picker';
 import { API_BASE_URL } from '@env';
 import { RootStackParamList } from '../navigation/types/RootStackParamList';
 import { useAuth } from '../../context/AuthContext';
-import axios from 'axios';
+import { authApi } from '../../data/api/UserAuthApi';
+import { useAlert } from '../../context/AlertContext';
 
 type RouteParams = RouteProp<RootStackParamList, 'ReviewWrite'>;
 
@@ -27,7 +27,8 @@ const ReviewWriteScreen = () => {
   const navigation = useNavigation();
   const route = useRoute<RouteParams>();
   const { restaurantId, restaurantName, review } = route.params;
-  const { token } = useAuth();
+  const { isLoggedIn } = useAuth();
+  const { showAlert } = useAlert();
 
   const [rating, setRating] = useState(review ? review.rating : 5);
   const [content, setContent] = useState(review ? review.content : '');
@@ -52,7 +53,7 @@ const ReviewWriteScreen = () => {
       }
 
       if (result.errorCode) {
-        Alert.alert('오류', result.errorMessage || '이미지를 불러오는데 실패했습니다.');
+        showAlert({ title: "오류", message: result.errorMessage || "이미지를 불러오는데 실패했습니다." });
         return;
       }
 
@@ -61,7 +62,7 @@ const ReviewWriteScreen = () => {
       }
     } catch (error) {
       console.error('ImagePicker Error:', error);
-      Alert.alert('오류', '이미지 선택 중 오류가 발생했습니다.');
+      showAlert({ title: "오류", message: "이미지 선택 중 오류가 발생했습니다." });
     }
   };
 
@@ -71,30 +72,28 @@ const ReviewWriteScreen = () => {
 
   const handleSubmit = async () => {
     if (content.trim().length < 5) {
-      Alert.alert('알림', '리뷰 내용을 5자 이상 입력해주세요.');
+      showAlert({ title: "알림", message: "리뷰 내용을 5자 이상 입력해주세요." });
       return;
     }
 
     try {
       setLoading(true);
-      if (!token) {
-        Alert.alert('오류', '로그인이 필요합니다.');
+      if (!isLoggedIn) {
+        showAlert({ title: "오류", message: "로그인이 필요합니다." });
         return;
       }
 
       const formData = new FormData();
       
-      // JSON 데이터
       const reviewData = {
         restaurantId: restaurantId,
         content: content,
         rating: rating,
-        images: images.filter(img => img.isExisting).map(img => img.uri), // 기존 이미지 URL
+        images: images.filter(img => img.isExisting).map(img => img.uri), 
       };
 
       formData.append('data', JSON.stringify(reviewData));
 
-      // 새 이미지 파일만 전송
       images.forEach((image) => {
         if (!image.isExisting) {
           const file = {
@@ -109,14 +108,12 @@ const ReviewWriteScreen = () => {
       const url = review ? `${API_BASE_URL}/api/review/${review.id}` : `${API_BASE_URL}/api/review`;
       const method = review ? 'PUT' : 'POST';
 
-      // Axios 사용 (transformRequest로 Android FormData 이슈 해결)
-      const response = await axios.request({
+      const response = await authApi.request({
         method: method,
         url: url,
         data: formData,
         headers: {
           'Content-Type': 'multipart/form-data',
-          Authorization: `Bearer ${token}`,
         },
         transformRequest: (data) => data,
       });
@@ -130,23 +127,20 @@ const ReviewWriteScreen = () => {
           ToastAndroid.show(review ? '리뷰가 수정되었습니다.' : '리뷰가 등록되었습니다.', ToastAndroid.SHORT);
           navigation.goBack();
         } else {
-          Alert.alert(
-            '성공', 
-            review ? '리뷰가 수정되었습니다.' : '리뷰가 등록되었습니다.', 
-            [{ 
-              text: '확인', 
-              onPress: () => {
-                navigation.goBack();
-              } 
-            }]
-          );
+          showAlert({
+            title: "성공",
+            message: review ? '리뷰가 수정되었습니다.' : '리뷰가 등록되었습니다.',
+            onConfirm: () => {
+              navigation.goBack();
+            }
+          });
         }
       } else {
-        Alert.alert('실패', result.message || (review ? '리뷰 수정에 실패했습니다.' : '리뷰 등록에 실패했습니다.'));
+        showAlert({ title: "실패", message: result.message || (review ? '리뷰 수정에 실패했습니다.' : '리뷰 등록에 실패했습니다.') });
       }
     } catch (error) {
       console.error('리뷰 등록 오류:', error);
-      Alert.alert('오류', '네트워크 오류가 발생했습니다.');
+      showAlert({ title: "오류", message: "네트워크 오류가 발생했습니다." });
     } finally {
       setLoading(false);
     }

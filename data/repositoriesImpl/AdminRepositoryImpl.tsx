@@ -2,12 +2,12 @@ import { AdminRepository } from "../../domain/repositories/AdminRepository";
 import { AdminApi } from "../api/AdminApi";
 
 export const AdminRepositoryImpl: AdminRepository = {
-  async getStats(token : string) {
-    return await AdminApi.getStats(token);
+  async getStats() {
+    return await AdminApi.getStats();
   },
 
-  async getDetailStats(token: string, startDate?: string, endDate?: string) {
-    return await AdminApi.getDetailStats(token, startDate, endDate);
+  async getDetailStats(startDate?: string, endDate?: string) {
+    return await AdminApi.getDetailStats(startDate, endDate);
   },
 
   async getRestaurantList(page: number, size: number, status?: string, keyword?: string) {

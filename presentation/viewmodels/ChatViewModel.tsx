@@ -3,94 +3,123 @@ import { ChatUseCase } from "../../domain/usecases/ChatUseCase";
 import { useAuth } from "../../context/AuthContext";
 import type { ChatMessage } from "../../domain/entities/ChatMessage";
 
-function normalizeMessage(roomId: number, m: any): ChatMessage {
-    // 실시간 채팅이므로 서버 시간 대신 '현재 시간(수신 시점)'을 사용
-    // 과거 메시지 로딩 시에는 로딩 시점의 시간이 찍히는 한계가 있지만, 시간 오차 문제는 확실히 해결됨.
-    const now = new Date();
-    const timeString = new Intl.DateTimeFormat('ko-KR', {
-        hour: 'numeric',
-        minute: 'numeric',
-        hour12: true,
-        timeZone: 'Asia/Seoul',
-    }).format(now);
+function formatNowKoreanTime() {
+  const now = new Date();
+  return new Intl.DateTimeFormat("ko-KR", {
+    hour: "numeric",
+    minute: "numeric",
+    hour12: true,
+    timeZone: "Asia/Seoul",
+  }).format(now);
+}
 
-    return {
-        roomId: m?.roomId ?? roomId,
-        senderId: m?.senderId,
-        senderName: m?.senderName ?? m?.sender_name ?? m?.nickname ?? undefined,
-        senderAvatar:
-            m?.senderAvatar ??
-            m?.senderAvatarUrl ??
-            m?.avatarUrl ??
-            m?.avatar_url ??
-            m?.senderImageUrl ??
-            m?.imageUrl ??
-            null,
-        content: m?.content ?? m?.message ?? "",
-        formattedTime: timeString, // 항상 현재 시간 사용
-    };
+function normalizeMessage(roomId: number, m: any): ChatMessage {
+  const content = String(m?.content ?? m?.message ?? "");
+
+  const formattedTime =
+    (typeof m?.formattedTime === "string" && m.formattedTime.trim())
+      ? m.formattedTime
+      : formatNowKoreanTime();
+
+
+  return {
+    roomId: m?.roomId ?? roomId,
+    senderId: m?.senderId,
+    senderName: m?.senderName ?? m?.sender_name ?? m?.nickname ?? undefined,
+    senderAvatar:
+      m?.senderAvatar ??
+      m?.senderAvatarUrl ??
+      m?.avatarUrl ??
+      m?.avatar_url ??
+      m?.senderImageUrl ??
+      m?.imageUrl ??
+      null,
+    content,
+    formattedTime,
+    isSystem: !!(m?.isSystem ?? m?.system),
+  };
+}
+
+function uniqKey(x: ChatMessage) {
+  return `${x.senderId}|${x.content}|${x.formattedTime}|${x.isSystem ? 1 : 0}`;
 }
 
 export function useChatViewModel(roomId: number) {
-    const { token, currentUserId } = useAuth();
+  const { token, currentUserId } = useAuth();
 
-    const [messages, setMessages] = useState<ChatMessage[]>([]);
-    const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isLeaving, setIsLeaving] = useState(false);
 
-    useEffect(() => {
-        if (!token) return;
+  useEffect(() => {
+    if (!token) return;
 
-        let alive = true;
+    let alive = true;
 
-        // 1) 먼저 연결부터
-        ChatUseCase.connect(roomId, token, (msg) => {
-            const normalized = normalizeMessage(roomId, msg);
-            setMessages(prev => {
-                const last = prev[prev.length - 1];
-                if (last &&
-                    last.senderId === normalized.senderId &&
-                    last.content === normalized.content &&
-                    last.formattedTime === normalized.formattedTime) {
-                    return prev;
-                }
-                return [...prev, normalized];
-            });
+    ChatUseCase.connect(roomId, token, (msg) => {
+      const normalized = normalizeMessage(roomId, msg);
+      setMessages((prev) => {
+        const set = new Set(prev.map(uniqKey));
+        if (set.has(uniqKey(normalized))) return prev;
+        return [...prev, normalized];
+      });
+    });
+
+    (async () => {
+      setIsLoading(true);
+      try {
+        const history = await ChatUseCase.getMessages(token, roomId);
+        const normalizedHistory = Array.isArray(history)
+          ? history.map((m: any) => normalizeMessage(roomId, m))
+          : [];
+
+        if (!alive) return;
+
+        setMessages((prev) => {
+          const map = new Map<string, ChatMessage>();
+          for (const h of normalizedHistory) map.set(uniqKey(h), h);
+          for (const p of prev) map.set(uniqKey(p), p);
+
+          return Array.from(map.values());
         });
+      } finally {
+        if (alive) setIsLoading(false);
+      }
+    })();
 
+    return () => {
+      alive = false;
+      ChatUseCase.disconnect();
+    };
+  }, [roomId, token]);
 
-        (async () => {
-            setIsLoading(true);
-            try {
-                const history = await ChatUseCase.getMessages(token, roomId);
-                const normalized = Array.isArray(history)
-                    ? history.map((m: any) => normalizeMessage(roomId, m))
-                    : [];
-                if (alive) setMessages(normalized);
-            } finally {
-                if (alive) setIsLoading(false);
-            }
-        })();
+  const sendMessage = useCallback(
+    (text: string) => {
+      const t = text.trim();
+      if (!t) return;
 
-        return () => {
-            alive = false;
-            ChatUseCase.disconnect();
-        };
-    }, [roomId, token]);
+      if (currentUserId == null) {
+        console.log("currentUserId is null, cannot send message");
+        return;
+      }
 
-    const sendMessage = useCallback(
-        (text: string) => {
-            const t = text.trim();
-            if (!t) return;
+      ChatUseCase.send(roomId, currentUserId, t);
+    },
+    [roomId, currentUserId]
+  );
 
-            if (currentUserId == null) {
-                console.log("currentUserId is null, cannot send message");
-                return;
-            }
+  const leaveRoom = useCallback(async () => {
+    if (!token) throw new Error("token is null");
+    if (isLeaving) return;
 
-            ChatUseCase.send(roomId, currentUserId, t);
-        },
-        [roomId, currentUserId]
-    );
+    setIsLeaving(true);
+    try {
+      await ChatUseCase.leaveRoom(token, roomId);
+      ChatUseCase.disconnect();
+    } finally {
+      setIsLeaving(false);
+    }
+  }, [token, roomId, isLeaving]);
 
-    return { messages, sendMessage, isLoading };
+  return { messages, sendMessage, isLoading, leaveRoom, isLeaving };
 }

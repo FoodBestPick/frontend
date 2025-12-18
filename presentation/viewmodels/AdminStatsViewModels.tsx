@@ -5,18 +5,18 @@ import { AdminDetailStats } from "../../domain/entities/AdminDetailStats";
 import { useAuth } from "../../context/AuthContext";
 
 export const AdminStatsViewModels = () => {
-  const { token } = useAuth();
+  const { isLoggedIn } = useAuth();
   const [statsDetail, setStatsDetail] = useState<AdminDetailStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const fetchDetailStats = async (startDate?: string, endDate?: string) => {
-    if (!token) return;
+    if (!isLoggedIn) return;
     setLoading(true);
     setError(null);
     try {
       const usecase = new GetAdminStats(AdminRepositoryImpl);
-      const data = await usecase.executeDetail(token, startDate, endDate);
+      const data = await usecase.executeDetail(startDate, endDate);
       setStatsDetail(data);
     } catch (err) {
       setError("데이터를 불러오는 중 오류가 발생했습니다.");
@@ -27,7 +27,7 @@ export const AdminStatsViewModels = () => {
 
   useEffect(() => {
     fetchDetailStats();
-  }, [token]);
+  }, [isLoggedIn]);
 
    return {
     statsDetail,

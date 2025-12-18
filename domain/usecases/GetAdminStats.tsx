@@ -3,12 +3,12 @@ import { AdminRepository } from "../repositories/AdminRepository";
 export class GetAdminStats {
   constructor(private repository: AdminRepository) {}
 
-  async execute(token: string) {
-    return await this.repository.getStats(token);
+  async execute() {
+    return await this.repository.getStats();
   }
 
-  async executeDetail(token: string, startDate?: string, endDate?: string) {
-    return await this.repository.getDetailStats(token, startDate, endDate);
+  async executeDetail(startDate?: string, endDate?: string) {
+    return await this.repository.getDetailStats(startDate, endDate);
   }
 
   async executeRestaurantList(page: number, size: number, status?: string, keyword? : string) {

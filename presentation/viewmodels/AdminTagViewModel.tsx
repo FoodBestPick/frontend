@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { API_BASE_URL } from '@env';
 import { useAuth } from '../../context/AuthContext';
-import axios from 'axios';
+import { authApi } from '../../data/api/UserAuthApi';
 
 interface Tag {
   id: number;
@@ -17,7 +17,7 @@ export const TAG_PREFIXES = {
 } as const;
 
 export const useAdminTagViewModel = () => {
-  const { token } = useAuth();
+  const { isLoggedIn } = useAuth();
   const [tags, setTags] = useState<Tag[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -31,7 +31,7 @@ export const useAdminTagViewModel = () => {
       setLoading(true);
       setError(null);
 
-      const response = await axios.get(`${API_BASE_URL}/tag`, {
+      const response = await authApi.get(`${API_BASE_URL}/tag`, {
         timeout: 10000,
       });
       const result = response.data;
@@ -51,14 +51,13 @@ export const useAdminTagViewModel = () => {
 
   const createTag = async (name: string, category: string) => {
     try {
-      if (!token) {
+      if (!isLoggedIn) {
         return { success: false, message: '로그인이 필요합니다.' };
       }
 
-      const response = await axios.post(`${API_BASE_URL}/tag`, { name, category }, {
+      const response = await authApi.post(`${API_BASE_URL}/tag`, { name, category }, {
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
         },
         timeout: 10000,
       });
@@ -66,7 +65,7 @@ export const useAdminTagViewModel = () => {
       const result = response.data;
 
       if (result.code === 200) {
-        await fetchTags(); // ✅ 생성 후 목록 새로고침
+        await fetchTags(); 
         return { success: true, message: '태그가 추가되었습니다.' };
       } else {
         return { success: false, message: result.message };
@@ -79,14 +78,13 @@ export const useAdminTagViewModel = () => {
 
   const updateTag = async (id: number, name: string, category: string) => {
     try {
-      if (!token) {
+      if (!isLoggedIn) {
         return { success: false, message: '로그인이 필요합니다.' };
       }
 
-      const response = await axios.put(`${API_BASE_URL}/tag/${id}`, { name, category }, {
+      const response = await authApi.put(`${API_BASE_URL}/tag/${id}`, { name, category }, {
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
         },
         timeout: 10000,
       });
@@ -94,7 +92,7 @@ export const useAdminTagViewModel = () => {
       const result = response.data;
 
       if (result.code === 200) {
-        await fetchTags(); // ✅ 수정 후 목록 새로고침
+        await fetchTags(); 
         return { success: true, message: '태그가 수정되었습니다.' };
       } else {
         return { success: false, message: result.message };
@@ -107,21 +105,18 @@ export const useAdminTagViewModel = () => {
 
   const deleteTag = async (id: number) => {
     try {
-      if (!token) {
+      if (!isLoggedIn) {
         return { success: false, message: '로그인이 필요합니다.' };
       }
 
-      const response = await axios.delete(`${API_BASE_URL}/tag/${id}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+      const response = await authApi.delete(`${API_BASE_URL}/tag/${id}`, {
         timeout: 10000,
       });
 
       const result = response.data;
 
       if (result.code === 200) {
-        await fetchTags(); // ✅ 삭제 후 목록 새로고침
+        await fetchTags(); 
         return { success: true, message: '태그가 삭제되었습니다.' };
       } else {
         return { success: false, message: result.message };

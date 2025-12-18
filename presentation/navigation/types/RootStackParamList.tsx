@@ -22,6 +22,7 @@ export type RootStackParamList = {
   AdminFoodManage: undefined;
   AdminTagManage: undefined;
   AdminReportScreen: undefined;
+  AdminInquiryScreen: undefined;
 
   UserMain: undefined;
   RouletteScreen: undefined;
@@ -50,6 +51,7 @@ export type RootStackParamList = {
   };
   ChangePassword: undefined;
   DeleteAccount: undefined;
+  PrivacyPolicy: undefined;
   NotificationSetting: undefined;
   ReviewWrite: {
     restaurantId: number;

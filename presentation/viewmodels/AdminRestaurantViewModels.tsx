@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { API_BASE_URL } from '@env';
 import { useAuth } from '../../context/AuthContext';
-import axios from 'axios';
+import { authApi } from '../../data/api/UserAuthApi';
 
 interface Restaurant {
   id: number;
@@ -12,7 +12,7 @@ interface Restaurant {
 }
 
 export const useAdminRestaurantViewModel = () => {
-  const { token } = useAuth();
+  const { isLoggedIn } = useAuth();
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -27,42 +27,34 @@ export const useAdminRestaurantViewModel = () => {
     try {
       setLoading(true);
       setError(null);
-      // 검색 시 선택 초기화
+      
       if (searchKeyword !== undefined) {
         setSelectedIds([]);
       }
 
-      if (!token) {
+      if (!isLoggedIn) {
         setError('로그인이 필요합니다.');
         return;
       }
-
-      console.log(token);
 
       let url = `${API_BASE_URL}/restaurant`;
       if (searchKeyword) {
         url = `${API_BASE_URL}/restaurant/search?keyword=${encodeURIComponent(searchKeyword)}`;
       }
 
-      const response = await axios.get(url, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+      const response = await authApi.get(url, {
         timeout: 10000,
       });
 
       const result = response.data;
 
       if (result.code === 200) {
-        // ✅ [수정] 목록 데이터 매핑 (Page 객체 처리)
-        const content = result.data.content || result.data; // Page 객체면 content, 아니면 data 그대로
+        const content = result.data.content || result.data; 
         const mappedData = Array.isArray(content) ? content.map((item: any) => ({
           id: item.id,
           name: item.name,
           address: item.address,
           category: item.category || '미지정',
-
-          // pictures 배열에서 url만 뽑아서 images로 변환
           images: item.images || (item.pictures ? item.pictures.map((p: any) => p.url) : []),
         })) : [];
 
@@ -101,21 +93,18 @@ export const useAdminRestaurantViewModel = () => {
     id: number,
   ): Promise<{ success: boolean; message: string }> => {
     try {
-      if (!token) {
+      if (!isLoggedIn) {
         return { success: false, message: '로그인이 필요합니다.' };
       }
 
-      const response = await axios.delete(`${API_BASE_URL}/restaurant/${id}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+      const response = await authApi.delete(`${API_BASE_URL}/restaurant/${id}`, {
         timeout: 10000,
       });
 
       const result = response.data;
 
       if (result.code === 200) {
-        await fetchRestaurants(); // 삭제 후 목록 새로고침
+        await fetchRestaurants(); 
         return { success: true, message: '맛집이 삭제되었습니다.' };
       } else {
         return {

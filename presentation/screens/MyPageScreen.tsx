@@ -7,19 +7,22 @@ import {
   TouchableOpacity,
   ScrollView,
   StatusBar,
-  Alert,
   TextInput,
   ActivityIndicator,
+  Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { launchImageLibrary } from 'react-native-image-picker';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { Header } from '../components/Header';
 
 // ViewModel & Context
 import { useMyPageViewModel } from '../viewmodels/useMyPageViewModel';
 import { useAuth } from '../../context/AuthContext';
+import { useAlert } from '../../context/AlertContext';
 
+const { width } = Dimensions.get('window');
 const MAIN_COLOR = '#FFA847';
 const DESTRUCTIVE_COLOR = '#E53935';
 
@@ -33,18 +36,7 @@ interface MenuItemProps {
 const MenuItem = ({ text, onPress, isLogout = false }: MenuItemProps) => {
   return (
     <TouchableOpacity
-      style={[
-        styles.menuItem,
-        {
-          backgroundColor: '#fff', // 카드 배경색
-          shadowColor: "#000",
-          shadowOpacity: 0.05,
-          shadowRadius: 3,
-          elevation: 2,
-          borderColor: '#eee', // 테두리 색상
-          borderWidth: 1, // 테두리 두께
-        },
-      ]}
+      style={styles.menuItem}
       activeOpacity={0.7}
       onPress={onPress}
     >
@@ -54,7 +46,7 @@ const MenuItem = ({ text, onPress, isLogout = false }: MenuItemProps) => {
       <Icon
         name={isLogout ? 'alert-circle-outline' : 'chevron-forward'}
         size={20}
-        color={isLogout ? DESTRUCTIVE_COLOR : MAIN_COLOR} // 아이콘 색상을 MAIN_COLOR로 변경
+        color={isLogout ? DESTRUCTIVE_COLOR : '#CCC'}
       />
     </TouchableOpacity>
   );
@@ -72,6 +64,7 @@ const MenuSection = ({ title, children }: { title: string; children: React.React
 const MyPageScreen = () => {
   const navigation = useNavigation<any>();
   const { logout } = useAuth();
+  const { showAlert } = useAlert();
 
   // ViewModel
   const {
@@ -83,60 +76,57 @@ const MyPageScreen = () => {
 
   // 로컬 상태
   const [tempNickname, setTempNickname] = useState('');
-  const [tempStateMessage, setTempStateMessage] = useState(''); // ✨ 상태 메시지 상태 추가
+  const [tempStateMessage, setTempStateMessage] = useState('');
   const [selectedImage, setSelectedImage] = useState<any>(null);
+  const [isNicknameEditable, setIsNicknameEditable] = useState(false);
 
   const inputRef = useRef<TextInput>(null);
 
-  // 1. 화면 포커스 시 데이터 리로드 & 이미지 선택 초기화
+  // 1. 화면 포커스 시 데이터 리로드
   useFocusEffect(
     React.useCallback(() => {
       loadProfile();
       setSelectedImage(null);
+      setIsNicknameEditable(false);
     }, [])
   );
 
-  // 2. 프로필 로드되면 닉네임/상태메시지 세팅
+  // 2. 프로필 로드 시 상태 반영
   useEffect(() => {
     if (profile) {
       setTempNickname(profile.nickname);
-      setTempStateMessage(profile.stateMessage || ""); // ✨ 상태 메시지 초기화
+      setTempStateMessage(profile.stateMessage || "");
     }
   }, [profile]);
 
-  // 변경 사항이 있는지 감지
+  // 변경 사항 감지 변수
   const hasChanges = (selectedImage !== null) || 
                      (profile && tempNickname !== profile.nickname) ||
-                     (profile && tempStateMessage !== (profile.stateMessage || "")); // ✨ 상태 메시지 변경 감지
+                     (profile && tempStateMessage !== (profile.stateMessage || ""));
 
   /* 저장 버튼 클릭 시 실행 */
   const handleSave = async () => {
     if (!hasChanges) return;
 
     if (tempNickname.trim().length < 2) {
-      Alert.alert("알림", "닉네임은 2글자 이상이어야 합니다.");
+      showAlert({ title: "알림", message: "닉네임은 2글자 이상이어야 합니다." });
       return;
     }
 
     const success = await saveProfile(
       tempNickname,
-      tempStateMessage, // ✨ 수정된 상태 메시지 전달
+      tempStateMessage,
       selectedImage
     );
-
-    if (success) {
-      setSelectedImage(null);
-    }
   };
 
   /* 앨범 열기 */
   const handleImageEdit = () => {
     const options = { mediaType: 'photo' as const, selectionLimit: 1 };
-
     launchImageLibrary(options, (res) => {
       if (res.didCancel) return;
       if (res.errorCode) {
-        Alert.alert("에러", res.errorMessage);
+        showAlert({ title: "에러", message: res.errorMessage || "이미지를 불러오는데 실패했습니다." });
         return;
       }
       if (res.assets && res.assets.length > 0) {
@@ -145,20 +135,16 @@ const MyPageScreen = () => {
     });
   };
 
-  /* 탈퇴 버튼 로직 (화면 이동) */
-  const handleDeleteAccount = () => {
-    navigation.navigate('DeleteAccount');
-  };
-
-  /* 로그아웃 로직 */
+  /* 로그아웃 처리 */
   const handleLogout = () => {
-    Alert.alert("로그아웃", "로그아웃 하시겠습니까?", [
-      { text: "취소", style: "cancel" },
-      { text: "확인", onPress: () => logout() }
-    ]);
+    showAlert({
+      title: "로그아웃",
+      message: "정말 로그아웃 하시겠습니까?",
+      showCancel: true,
+      onConfirm: logout
+    });
   };
 
-  // 로딩 중
   if (loading && !profile) {
     return (
       <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
@@ -167,30 +153,25 @@ const MyPageScreen = () => {
     );
   }
 
-  // 화면에 보여줄 이미지 처리
   const displayImage = selectedImage
     ? { uri: selectedImage.uri }
     : (profile?.image ? { uri: profile.image } : { uri: 'https://via.placeholder.com/150/FFF4E6/FFA847?text=No+Image' });
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['bottom', 'left', 'right']}>
       <StatusBar barStyle="dark-content" backgroundColor="#fff" />
+      <Header title="마이 페이지" />
 
-      {/* 헤더 */}
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>마이 페이지</Text>
-      </View>
-
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-
-        {/* 상태 메시지 말풍선 (프로필 이미지 위) */}
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 20 }}>
+        
+        {/* 상태 메시지 */}
         <View style={styles.speechBubbleContainer}>
           <View style={styles.speechBubble}>
             <TextInput
               style={styles.speechBubbleInput}
               value={tempStateMessage}
               onChangeText={setTempStateMessage}
-              placeholder="상태 메시지를 입력하세요 (최대 30자)"
+              placeholder="상태 메시지를 입력하세요"
               placeholderTextColor="#999"
               maxLength={30}
               multiline={true}
@@ -200,7 +181,7 @@ const MyPageScreen = () => {
           <View style={styles.speechBubbleTail} />
         </View>
 
-        {/* 프로필 이미지 영역 */}
+        {/* 프로필 이미지 */}
         <View style={styles.profileImageContainer}>
           <TouchableOpacity
             style={styles.imageWrapper}
@@ -208,38 +189,40 @@ const MyPageScreen = () => {
             activeOpacity={0.8}
           >
             <Image source={displayImage} style={styles.profileImage} />
-            {/* 카메라 뱃지 */}
             <View style={styles.cameraBadge}>
               <Icon name="camera" size={16} color="#FFF" />
             </View>
           </TouchableOpacity>
         </View>
 
-        {/* 정보 입력 영역 */}
+        {/* 닉네임 / 이메일 */}
         <View style={styles.infoSection}>
           <View style={styles.nameRow}>
             <TextInput
               ref={inputRef}
-              style={styles.nameInput}
+              style={[styles.nameInput, !isNicknameEditable && { color: '#333' }]}
               value={tempNickname}
               onChangeText={setTempNickname}
               placeholder="닉네임"
               placeholderTextColor="#CCC"
+              editable={isNicknameEditable}
             />
             <TouchableOpacity
               style={styles.editIconContainer}
-              onPress={() => inputRef.current?.focus()}
+              onPress={() => {
+                setIsNicknameEditable(true);
+                setTimeout(() => inputRef.current?.focus(), 100);
+              }}
             >
-              <Icon name="pencil-outline" size={18} color="#444" />
+              <Icon name="pencil-outline" size={18} color={MAIN_COLOR} />
             </TouchableOpacity>
           </View>
-
           <View style={styles.emailRow}>
             <Text style={styles.userEmail}>{profile?.email || ''}</Text>
           </View>
         </View>
 
-        {/* 변경 사항 저장 버튼 */}
+        {/* 저장 버튼 - 여백을 대폭 늘림 (40px) */}
         {hasChanges && (
           <TouchableOpacity
             style={localStyles.saveButton}
@@ -254,136 +237,100 @@ const MyPageScreen = () => {
           </TouchableOpacity>
         )}
 
-        {/* 메뉴 리스트 - 섹션별 그룹화 */}
-        <View>
-          <MenuSection title="내 활동">
-            <MenuItem
-              text="본인 리뷰 작성 조회"
-              onPress={() => navigation.navigate('MyReviewsScreen')}
-            />
-            <MenuItem
-              text="맛집 즐겨찾기"
-              onPress={() => navigation.navigate('MyLikesScreen')}
-            />
-          </MenuSection>
+        {/* 메뉴 섹션 - 여백을 대폭 늘림 (40px) */}
+        <MenuSection title="내 활동">
+          <MenuItem text="본인 리뷰 작성 조회" onPress={() => navigation.navigate('MyReviewsScreen')} />
+          <MenuItem text="맛집 즐겨찾기" onPress={() => navigation.navigate('MyLikesScreen')} />
+        </MenuSection>
 
-          <MenuSection title="설정 및 지원">
-            <MenuItem
-              text="알림 설정"
-              onPress={() => navigation.navigate('NotificationSetting')}
-            />
-            <MenuItem text="고객센터" onPress={() => { }} />
-            <MenuItem text="개인정보 처리방침" onPress={() => { }} />
-          </MenuSection>
+        <MenuSection title="설정 및 지원">
+          <MenuItem text="알림 설정" onPress={() => navigation.navigate('NotificationSetting')} />
+          <MenuItem text="고객센터" onPress={() => navigation.navigate('CustomerService')} />
+          <MenuItem text="개인정보 처리방침" onPress={() => navigation.navigate('PrivacyPolicy')} />
+        </MenuSection>
 
-          <MenuSection title="계정 관리">
-            <MenuItem
-              text="비밀번호 변경"
-              onPress={() => navigation.navigate('ChangePassword')}
-            />
-            <MenuItem text="로그아웃" onPress={handleLogout} isLogout />
-          </MenuSection>
-        </View>
+        <MenuSection title="계정 관리">
+          <MenuItem text="비밀번호 변경" onPress={() => navigation.navigate('ChangePassword')} />
+          <MenuItem text="로그아웃" onPress={handleLogout} isLogout />
+        </MenuSection>
 
-        {/* 회원 탈퇴 버튼 (하단 분리) */}
         <TouchableOpacity 
           style={styles.deleteAccountButton} 
-          onPress={handleDeleteAccount}
+          onPress={() => navigation.navigate('DeleteAccount')}
         >
           <Text style={styles.deleteAccountText}>회원 탈퇴</Text>
         </TouchableOpacity>
-
       </ScrollView>
     </SafeAreaView>
   );
 };
 
-export default MyPageScreen;
-
-// 저장 버튼 스타일만 따로 추가 (제공된 스타일에 없어서 기능 유지를 위해 필요)
 const localStyles = StyleSheet.create({
   saveButton: {
     backgroundColor: MAIN_COLOR,
-    marginHorizontal: 20,
-    marginBottom: 30, // 간격 조정
-    height: 50,
-    borderRadius: 8,
+    marginHorizontal: 40, // 💡 테스트를 위해 40px로 대폭 확대
+    marginBottom: 35, 
+    height: 56,
+    borderRadius: 28, 
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: "#000",
+    shadowColor: MAIN_COLOR,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 5,
+    shadowOpacity: 0.3,
+    shadowRadius: 5,
+    elevation: 4,
   },
-  saveButtonText: { color: '#fff', fontSize: 16, fontWeight: '700' },
+  saveButtonText: { color: '#fff', fontSize: 17, fontWeight: 'bold' },
 });
 
-/* -------------------------------------------------------
- * 스타일 (요청하신 고정 스타일)
- * -----------------------------------------------------*/
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#fff' },
-  
-  /* ... 기존 스타일 ... */
-
-  /* 회원 탈퇴 버튼 스타일 추가 */
   deleteAccountButton: {
     alignSelf: 'center',
     marginTop: 20,
-    marginBottom: 0, // ✨ marginBottom 0으로 변경
+    marginBottom: 40,
     padding: 10,
   },
   deleteAccountText: {
     fontSize: 13,
-    color: '#999',
+    color: '#BBB',
     textDecorationLine: 'underline',
   },
-
-  header: { height: 50, justifyContent: 'center', alignItems: 'center', marginTop: 10 },
-  headerTitle: { fontSize: 18, fontWeight: '700', color: '#000' },
-
-  scrollContent: { paddingHorizontal: 16, paddingBottom: 5 }, // 하단 여백 5 유지
-
-  // 말풍선 스타일
-  speechBubbleContainer: { alignItems: 'center', marginTop: 20, marginBottom: 5 },
+  speechBubbleContainer: { 
+    alignItems: 'center', 
+    marginTop: 15, 
+    marginBottom: 10,
+    marginHorizontal: 40, // 💡 40px 적용
+  },
   speechBubble: {
-    backgroundColor: '#FFF4E6', // 연한 MAIN_COLOR 배경
+    backgroundColor: '#FFF4E6', 
     borderRadius: 16,
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    maxWidth: '80%', // 최대 너비 제한
-    minWidth: 100,
+    paddingVertical: 12,
+    paddingHorizontal: 20, 
+    maxWidth: '90%', 
+    minWidth: 140,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
   },
   speechBubbleInput: {
-    fontSize: 14,
+    fontSize: 16,
     color: '#555',
     textAlign: 'center',
     padding: 0,
     margin: 0,
   },
   speechBubbleTail: {
-    width: 0,
-    height: 0,
-    backgroundColor: 'transparent',
-    borderStyle: 'solid',
-    borderLeftWidth: 8,
-    borderRightWidth: 8,
-    borderTopWidth: 10,
-    borderLeftColor: 'transparent',
-    borderRightColor: 'transparent',
-    borderTopColor: '#FFF4E6', // 말풍선 배경색과 동일
-    marginTop: -1, // 말풍선과 꼬리 연결
+    width: 0, height: 0, backgroundColor: 'transparent', borderStyle: 'solid',
+    borderLeftWidth: 8, borderRightWidth: 8, borderTopWidth: 10,
+    borderLeftColor: 'transparent', borderRightColor: 'transparent',
+    borderTopColor: '#FFF4E6', marginTop: -1, 
   },
-
-  profileImageContainer: { alignItems: 'center', marginTop: 5, marginBottom: 30 }, // marginTop 조정
+  profileImageContainer: { 
+    alignItems: 'center', 
+    marginTop: 10, 
+    marginBottom: 25,
+    marginHorizontal: 40, // 💡 40px 적용
+  },
   imageWrapper: {
     width: 110, height: 110, borderRadius: 55, borderWidth: 2, borderColor: MAIN_COLOR, padding: 4,
     justifyContent: 'center', alignItems: 'center', position: 'relative',
@@ -394,46 +341,46 @@ const styles = StyleSheet.create({
     width: 30, height: 30, borderRadius: 15, justifyContent: 'center', alignItems: 'center',
     borderWidth: 2, borderColor: '#fff',
   },
-
-  infoSection: { paddingHorizontal: 0, marginBottom: 30 },
-  nameRow: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: MAIN_COLOR,
+  infoSection: { 
+    marginBottom: 30, 
+    alignItems: 'center',
+    marginHorizontal: 40, // 💡 40px 적용
   },
-
-  userName: { fontSize: 17, fontWeight: '700', color: '#000' },
-
+  nameRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 4,
+    borderBottomWidth: 1,
+    borderBottomColor: '#EEE',
+    alignSelf: 'center',
+  },
   nameInput: {
-    flex: 1,
-    height: 30, // 높이 약간 조정
-    borderBottomWidth: 0,
+    textAlign: 'center',
+    height: 40,
     paddingVertical: 0,
-    paddingHorizontal: 0,
-    marginRight: 10,
-    fontSize: 17,
-    fontWeight: '700',
+    paddingHorizontal: 8,
+    fontSize: 22,
+    fontWeight: '800',
     color: '#000',
   },
-
-  editIconContainer: { width: 24, justifyContent: 'center', alignItems: 'flex-end' },
-
-  emailRow: { paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: MAIN_COLOR },
-  userEmail: { fontSize: 14, color: '#999' },
-
-  menuSection: { paddingHorizontal: 0, marginTop: 20 },
-  menuItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 12, // 버튼 높이 줄임
-    paddingHorizontal: 20, // MenuItem 자체에 가로 패딩 추가
-    marginBottom: 10, // 카드 간 간격
-    // borderBottomWidth: 1, // 기존 라인 삭제
-    // borderBottomColor: MAIN_COLOR, // 기존 라인 삭제
+  editIconContainer: { marginLeft: 6, justifyContent: 'center', alignItems: 'center' },
+  emailRow: { paddingVertical: 10, alignItems: 'center', width: '100%' },
+  userEmail: { fontSize: 15, color: '#999' },
+  sectionContainer: { 
+    marginBottom: 25,
+    marginHorizontal: 40, // 💡 테스트를 위해 40px로 대폭 확대
   },
-  menuText: { fontSize: 15, color: '#000', fontWeight: '500' },
-
-  /* 섹션 스타일 추가 */
-  sectionContainer: { marginBottom: 20 }, // ✨ 섹션 간 간격 추가
-  sectionTitle: { fontSize: 16, fontWeight: 'bold', color: '#333', marginBottom: 10, marginLeft: 4 },
+  sectionTitle: { fontSize: 19, fontWeight: '800', color: '#000', marginBottom: 12 },
+  menuItem: {
+    flexDirection: 'row', 
+    justifyContent: 'space-between', 
+    alignItems: 'center',
+    paddingVertical: 20,
+    borderBottomWidth: 1, 
+    borderBottomColor: '#F8F8F8',
+  },
+  menuText: { fontSize: 17, color: '#333', fontWeight: '500' },
 });
+
+export default MyPageScreen;

@@ -1,10 +1,11 @@
 import { useState, useCallback } from "react";
-import { Alert } from "react-native";
 import { AlarmRepositoryImpl, Alarm } from "../../data/repositoriesImpl/AlarmRepositoryImpl";
+import { useAlert } from "../../context/AlertContext";
 
 export const useNotificationViewModel = () => {
     const [notifications, setNotifications] = useState<Alarm[]>([]);
     const [loading, setLoading] = useState(false);
+    const { showAlert } = useAlert();
 
     // 🔄 목록 불러오기
     const fetchAlarms = useCallback(async () => {
@@ -33,24 +34,49 @@ export const useNotificationViewModel = () => {
         try {
             await AlarmRepositoryImpl.readAllAlarms();
             await fetchAlarms(); // 목록 새로고침
-        } catch (e) { Alert.alert("오류", "전체 읽음 처리 실패"); }
+        } catch (e) { 
+            showAlert({ title: "오류", message: "전체 읽음 처리 실패" }); 
+        }
     };
 
     // 🗑️ 개별 삭제
     const deleteAlarm = async (id: number) => {
-        Alert.alert("알림 삭제", "삭제하시겠습니까?", [
-            { text: "취소", style: "cancel" },
-            {
-                text: "삭제",
-                style: "destructive",
-                onPress: async () => {
-                    try {
-                        await AlarmRepositoryImpl.deleteAlarm(id);
-                        setNotifications(prev => prev.filter(n => n.id !== id));
-                    } catch (e) { Alert.alert("오류", "삭제 실패"); }
+        showAlert({
+            title: "알림 삭제",
+            message: "삭제하시겠습니까?",
+            confirmText: "삭제",
+            cancelText: "취소",
+            showCancel: true,
+            onConfirm: async () => {
+                try {
+                    await AlarmRepositoryImpl.deleteAlarm(id);
+                    setNotifications(prev => prev.filter(n => n.id !== id));
+                } catch (e) { 
+                    showAlert({ title: "오류", message: "삭제 실패" }); 
                 }
             }
-        ]);
+        });
+    };
+
+    // 🧹 전체 삭제
+    const deleteAllAlarms = async () => {
+        if (notifications.length === 0) return;
+
+        showAlert({
+            title: "전체 삭제",
+            message: "모든 알림을 삭제하시겠습니까?",
+            confirmText: "전체 삭제",
+            cancelText: "취소",
+            showCancel: true,
+            onConfirm: async () => {
+                try {
+                    await AlarmRepositoryImpl.deleteAllAlarms();
+                    setNotifications([]); // 즉시 비우기
+                } catch (e) {
+                    showAlert({ title: "오류", message: "전체 삭제 실패" });
+                }
+            }
+        });
     };
 
     return {
@@ -60,5 +86,6 @@ export const useNotificationViewModel = () => {
         markAsRead,
         markAllAsRead,
         deleteAlarm,
+        deleteAllAlarms,
     };
 };

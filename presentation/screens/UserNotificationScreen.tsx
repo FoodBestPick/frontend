@@ -69,7 +69,8 @@ function UserNotificationScreen() {
     fetchAlarms,
     markAsRead,
     markAllAsRead,
-    deleteAlarm
+    deleteAlarm,
+    deleteAllAlarms
   } = useNotificationViewModel();
 
   const [isFilterModalVisible, setIsFilterModalVisible] = useState(false);
@@ -132,11 +133,21 @@ function UserNotificationScreen() {
       </View>
 
       <View style={styles.listHeader}>
-        {unreadCount > 0 && (
-          <TouchableOpacity onPress={markAllAsRead}>
-            <Text style={styles.markAllReadText}>모두 읽음으로 표시 ({unreadCount}개)</Text>
-          </TouchableOpacity>
-        )}
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+          {unreadCount > 0 ? (
+            <TouchableOpacity onPress={markAllAsRead}>
+              <Text style={styles.markAllReadText}>모두 읽음 표시 ({unreadCount}개)</Text>
+            </TouchableOpacity>
+          ) : (
+            <View /> 
+          )}
+
+          {notifications.length > 0 && (
+            <TouchableOpacity onPress={deleteAllAlarms}>
+              <Text style={styles.deleteAllText}>전체 삭제</Text>
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
 
       <ScrollView
@@ -171,37 +182,7 @@ const styles = StyleSheet.create({
   headerButton: { width: 44, height: 44, justifyContent: 'center', alignItems: 'center' },
   headerTitle: { fontSize: 18, fontWeight: '700', color: '#000', flex: 1, textAlign: 'center', marginLeft: 44, marginRight: 44 },
   markAllReadText: { color: MAIN_COLOR, fontWeight: "600", fontSize: 14 },
-  listHeader: { paddingHorizontal: 16, paddingTop: 10, marginBottom: 15 },
-  listContainer: { flex: 1, paddingTop: 5 },
-  emptyContainer: { alignItems: 'center', marginTop: 50, paddingHorizontal: 16 },
-  emptyText: { color: '#AAA', marginTop: 10, fontSize: 16 },
-  card: { flexDirection: "row", padding: 16, borderRadius: 12, borderWidth: 1, borderColor: '#EEE', marginBottom: 16, marginHorizontal: 16, alignItems: 'center', backgroundColor: '#fff', elevation: 2 },
-  unreadCardHighlight: { borderColor: MAIN_COLOR, borderWidth: 1.5 },
-  unreadDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: MAIN_COLOR, position: 'absolute', left: 8, top: 8 },
-  iconCircle: { width: 48, height: 48, borderRadius: 999, justifyContent: "center", alignItems: "center", marginRight: 16 },
-  textContainer: { flex: 1, justifyContent: 'center', marginRight: 10 },
-  title: { fontSize: 15, fontWeight: "500", color: '#333' },
-  unreadTitle: { fontWeight: '700' },
-  time: { fontSize: 12, color: '#999' },
-  modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.45)", justifyContent: "flex-end" },
-  modalBox: { backgroundColor: "#FFFFFF", padding: 20, borderTopLeftRadius: 20, borderTopRightRadius: 20, width: '100%' },
-  modalHeader: { flexDirection: "row", justifyContent: "space-between", marginBottom: 25 },
-  modalTitle: { fontSize: 18, fontWeight: "700", color: '#000' },
-  sectionLabel: { fontSize: 15, fontWeight: "600", marginBottom: 12, color: '#333' },
-  footerButtons: { flexDirection: "row", justifyContent: "space-between", marginTop: 30 },
-  resetButton: { paddingVertical: 12, paddingHorizontal: 30, borderRadius: 10, borderWidth: 1, borderColor: "#bbb", width: '48%', alignItems: 'center' },
-  resetButtonText: { color: '#999', fontWeight: '600' },
-  applyButton: { backgroundColor: MAIN_COLOR, paddingVertical: 12, paddingHorizontal: 30, borderRadius: 10, width: '48%', alignItems: 'center' },
-  applyButtonText: { color: "#fff", fontWeight: "700" },
-  radioRow: { flexDirection: "row", alignItems: "center", borderWidth: 1, paddingVertical: 12, paddingHorizontal: 16, borderRadius: 12, marginBottom: 10 },
-  radioCircle: { width: 20, height: 20, borderRadius: 999, borderWidth: 2, justifyContent: "center", alignItems: "center", marginRight: 12 },
-  radioInner: { width: 10, height: 10, borderRadius: 999, backgroundColor: MAIN_COLOR },
-  radioText: { fontWeight: "500" },
-  container: { flex: 1, backgroundColor: "#fff" },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 2, borderBottomWidth: 1, borderBottomColor: '#F0F0F0' },
-  headerButton: { width: 44, height: 44, justifyContent: 'center', alignItems: 'center' },
-  headerTitle: { fontSize: 18, fontWeight: '700', color: '#000', flex: 1, textAlign: 'center', marginLeft: 44, marginRight: 44 },
-  markAllReadText: { color: MAIN_COLOR, fontWeight: "600", fontSize: 14 },
+  deleteAllText: { color: '#E53935', fontWeight: "600", fontSize: 14 },
   listHeader: { paddingHorizontal: 16, paddingTop: 10, marginBottom: 15 },
   listContainer: { flex: 1, paddingTop: 5 },
   emptyContainer: { alignItems: 'center', marginTop: 50, paddingHorizontal: 16 },

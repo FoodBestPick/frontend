@@ -12,33 +12,30 @@ import {
   LayoutAnimation,
   Platform,
   UIManager,
-  Alert
+  Alert,
+  PermissionsAndroid,
+  AppState,
+  AppStateStatus
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import messaging from '@react-native-firebase/messaging';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
-// import { foodRes, CategoryKey, Store } from '../../data/mock/foodRes'; // Mock data removed
+// import { foodRes, CategoryKey, Store } from '../../data/mock/foodRes'; 
 import { useUserMainViewModel, Store } from '../viewmodels/UserMainViewModel';
-import { UserAuthRepositoryImpl } from '../../data/repositoriesImpl/UserAuthRepositoryImpl'; // ✨ Import 추가
-import { useAuth } from '../../context/AuthContext'; // ✨ useAuth 임포트 추가
-
-if (
-  Platform.OS === 'android' &&
-  UIManager.setLayoutAnimationEnabledExperimental
-) {
-  UIManager.setLayoutAnimationEnabledExperimental(true);
-}
+import { UserAuthRepositoryImpl } from '../../data/repositoriesImpl/UserAuthRepositoryImpl';
+import { useAuth } from '../../context/AuthContext';
 
 const { width } = Dimensions.get('window');
 const MAIN_COLOR = '#FFA847';
 
 const SCROLL_THRESHOLD = 220;
-
-// 스크롤바 트랙의 길이 (화면 너비의 75%)
 const TRACK_WIDTH = width * 0.75;
 
-type CategoryKey = string; // Define CategoryKey locally or import if needed
+// [수정 포인트] 화면 좌우 여백을 24으로 설정하여 안쪽으로 확 밀어넣음
+const SCREEN_PADDING = 24; 
+
+type CategoryKey = string; 
 
 const UserMain = () => {
   const [selectedCategory, setSelectedCategory] = useState<CategoryKey>('전체');
@@ -55,45 +52,93 @@ const UserMain = () => {
   const scrollY = useRef(new Animated.Value(0)).current;
   const [isStickyActive, setIsStickyActive] = useState(false);
 
+
   useEffect(() => {
-    // 🔥 FCM 권한 요청 및 리스너 등록
+    const lastRegisteredTokenRef = { current: null as string | null };
+
+    const isSystemAllowed = async (): Promise<boolean> => {
+      if (Platform.OS === "android" && Number(Platform.Version) >= 33) {
+        return PermissionsAndroid.check(PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS);
+      }
+
+      const authStatus = await messaging().hasPermission();
+      return (
+        authStatus === messaging.AuthorizationStatus.AUTHORIZED ||
+        authStatus === messaging.AuthorizationStatus.PROVISIONAL
+      );
+    };
+
+    const registerTokenIfPossible = async (force: boolean = false) => {
+      try {
+        const ok = await isSystemAllowed();
+        if (!ok) return;
+
+        const token = await messaging().getToken();
+        if (!token) return;
+
+        if (!force && lastRegisteredTokenRef.current === token) return;
+
+        await UserAuthRepositoryImpl.registerFcmToken(token);
+        lastRegisteredTokenRef.current = token;
+        console.log("✅ FCM 토큰 서버 등록 성공(자동):", token);
+      } catch (e) {
+        console.error("❌ FCM 토큰 서버 등록 실패(자동):", e);
+      }
+    };
+
     const setupFCM = async () => {
       try {
+        if (Platform.OS === "android" && Number(Platform.Version) >= 33) {
+          const result = await PermissionsAndroid.request(
+            PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS
+          );
+          console.log("POST_NOTIFICATIONS:", result);
+        }
+
         const authStatus = await messaging().requestPermission();
         const enabled =
           authStatus === messaging.AuthorizationStatus.AUTHORIZED ||
           authStatus === messaging.AuthorizationStatus.PROVISIONAL;
 
         if (enabled) {
-          console.log('FCM 권한 승인됨:', authStatus);
-          const token = await messaging().getToken();
-          console.log('FCM Token:', token);
-          
-          // ✨ 서버에 FCM 토큰 등록 (중요!)
-          try {
-            await UserAuthRepositoryImpl.registerFcmToken(token);
-            console.log("✅ FCM 토큰 서버 등록 성공");
-          } catch (e) {
-            console.error("❌ FCM 토큰 서버 등록 실패:", e);
-          }
+          console.log("FCM 권한 승인됨:", authStatus);
+          await registerTokenIfPossible(true);
         }
       } catch (error) {
-        console.error('FCM 권한 요청 실패:', error);
+        console.error("FCM 권한 요청 실패:", error);
       }
     };
 
     setupFCM();
 
-    // 포그라운드 알림 리스너
-    const unsubscribe = messaging().onMessage(async remoteMessage => {
-      console.log('포그라운드 알림 수신:', remoteMessage);
+    const unsubscribeOnMessage = messaging().onMessage(async (remoteMessage) => {
+      console.log("포그라운드 알림 수신:", remoteMessage);
       Alert.alert(
-        remoteMessage.notification?.title || '알림',
-        remoteMessage.notification?.body || '새로운 알림이 도착했습니다.'
+        remoteMessage.notification?.title || "알림",
+        remoteMessage.notification?.body || "새로운 알림이 도착했습니다."
       );
     });
 
-    return unsubscribe;
+    const unsubscribeTokenRefresh = messaging().onTokenRefresh(async (token) => {
+      try {
+        await UserAuthRepositoryImpl.registerFcmToken(token);
+        lastRegisteredTokenRef.current = token;
+        console.log("✅ FCM 토큰 갱신 등록:", token);
+      } catch (e) {
+        console.error("❌ FCM 토큰 갱신 등록 실패:", e);
+      }
+    });
+    const appStateSub = AppState.addEventListener("change", (state: AppStateStatus) => {
+      if (state === "active") {
+        registerTokenIfPossible(false);
+      }
+    });
+
+    return () => {
+      unsubscribeOnMessage();
+      unsubscribeTokenRefresh();
+      appStateSub.remove();
+    };
   }, []);
 
   useEffect(() => {
@@ -295,6 +340,7 @@ const UserMain = () => {
 
     return (
       <View key={category} style={styles.categorySection}>
+        {/* 타이틀 왼쪽 마진 30px 적용 */}
         <Text style={styles.subTitle}>{category}</Text>
         <Animated.FlatList
           horizontal
@@ -346,10 +392,11 @@ const UserMain = () => {
               </View>
             </TouchableOpacity>
           )}
+          // 리스트 좌우 여백 30px 적용
           contentContainerStyle={{
-            paddingRight: 20,
+            paddingRight: SCREEN_PADDING,
             paddingBottom: 10,
-            paddingLeft: 2,
+            paddingLeft: SCREEN_PADDING,
           }}
         />
 
@@ -515,9 +562,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderBottomColor: '#F5F5F5',
     zIndex: 100,
+    paddingBottom: 10,
   },
   headerTitleWrap: { alignItems: 'center', marginBottom: 12 },
   headerTitle: { fontSize: 18, fontWeight: '700', color: '#000' },
+  
+  // [수정] 검색창 너비: 전체 너비에서 60 (30*2) 제외
   searchBox: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -525,16 +575,18 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: MAIN_COLOR,
     borderRadius: 8,
-    width: width - 32,
+    width: width - (SCREEN_PADDING * 2), 
     height: 44,
     paddingHorizontal: 12,
     backgroundColor: '#fff',
   },
+  
+  // [수정] 상단 헤더 아이콘들 좌우 여백 30
   topHeaderRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 16,
+    paddingHorizontal: SCREEN_PADDING,
     paddingTop: 10,
     marginBottom: 12,
   },
@@ -553,12 +605,14 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#F5F5F5',
   },
-  stickyTitleWrap: { marginTop: 4, marginBottom: 10, paddingLeft: 16 },
+  // [수정] 스티키 헤더 타이틀 여백 30
+  stickyTitleWrap: { marginTop: 4, marginBottom: 10, paddingLeft: SCREEN_PADDING },
 
+  // [수정] 카테고리 그리드 좌우 여백 30
   gridWrapper: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    paddingHorizontal: 16,
+    paddingHorizontal: SCREEN_PADDING,
     justifyContent: 'space-between',
     marginTop: 6,
   },
@@ -586,13 +640,15 @@ const styles = StyleSheet.create({
   },
   gridTextSelected: { color: '#FFA847', fontWeight: '700' },
 
-  recommendHeader: { marginLeft: 16, marginBottom: 20 },
+  // [수정] 추천 섹션 제목 여백 30
+  recommendHeader: { marginLeft: SCREEN_PADDING, marginBottom: 20 },
   recommendTitle: { fontSize: 18, fontWeight: '800', color: '#000' },
   subTitle: {
     fontSize: 16,
     fontWeight: '700',
     marginBottom: 10,
     color: '#333',
+    marginLeft: SCREEN_PADDING, // [수정] 좌측 마진 30
   },
   subTitleSmall: {
     fontSize: 14,
@@ -602,7 +658,8 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
 
-  categorySection: { marginBottom: 24, paddingLeft: 16 },
+  categorySection: { marginBottom: 24, paddingLeft: 0 },
+  
   cardContainer: {
     width: 150,
     marginRight: 12,
@@ -651,8 +708,9 @@ const styles = StyleSheet.create({
   },
   reviewCountShort: { fontSize: 12, color: '#999' },
 
+  // [수정] 세로 리스트 아이템 좌우 여백 30
   storeContainer: {
-    paddingHorizontal: 16,
+    paddingHorizontal: SCREEN_PADDING,
     paddingVertical: 16,
     backgroundColor: '#fff',
   },

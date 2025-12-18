@@ -10,10 +10,10 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { Header } from '../components/Header';
+import { useNavigation } from '@react-navigation/native';
 import { ThemeContext } from '../../context/ThemeContext';
 import {
   useAdminTagViewModel,
-  TAG_PREFIXES,
 } from '../viewmodels/AdminTagViewModel';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -26,6 +26,7 @@ const TAG_CATEGORIES = [
 
 export const AdminTagManageScreen = () => {
   const { theme } = useContext(ThemeContext);
+  const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const { tags, loading, error, createTag, updateTag, deleteTag, refresh } =
     useAdminTagViewModel();
@@ -39,7 +40,6 @@ export const AdminTagManageScreen = () => {
     TAG_CATEGORIES.find(c => c.id === selectedCategory)?.prefix || '#';
   const filteredTags = tags.filter(t => t.category === selectedCategory);
 
-  // ✅ 접두사 제거 함수
   const removePrefix = (name: string, prefix: string) => {
     return name.startsWith(prefix) ? name.slice(prefix.length) : name;
   };
@@ -52,7 +52,6 @@ export const AdminTagManageScreen = () => {
       return;
     }
 
-    // ✅ 접두사가 이미 있으면 제거
     const nameWithoutPrefix = removePrefix(trimmedName, currentPrefix);
 
     const result = await createTag(nameWithoutPrefix, selectedCategory);
@@ -73,7 +72,6 @@ export const AdminTagManageScreen = () => {
       return;
     }
 
-    // ✅ 접두사가 이미 있으면 제거
     const nameWithoutPrefix = removePrefix(trimmedName, currentPrefix);
 
     const result = await updateTag(id, nameWithoutPrefix, selectedCategory);
@@ -108,14 +106,13 @@ export const AdminTagManageScreen = () => {
 
   const startEditing = (id: number, name: string) => {
     setEditingId(id);
-    // ✅ 수정 시 접두사 제거된 상태로 표시
     setEditingName(removePrefix(name, currentPrefix));
   };
 
   if (loading && tags.length === 0) {
     return (
       <View style={[styles.container, { backgroundColor: theme.background }]}>
-        <Header title="태그 관리" showBackButton />
+        <Header title="태그 관리" showBackButton onBackPress={() => navigation.goBack()} />
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={theme.icon} />
         </View>
@@ -123,12 +120,29 @@ export const AdminTagManageScreen = () => {
     );
   }
 
+  if (error) {
+    return (
+      <View style={[styles.container, { backgroundColor: theme.background }]}>
+        <Header title="태그 관리" showBackButton onBackPress={() => navigation.goBack()} />
+        <View style={styles.errorContainer}>
+          <Text style={{ color: theme.textPrimary }}>{error}</Text>
+          <TouchableOpacity
+            style={[styles.retryButton, { backgroundColor: theme.icon }]}
+            onPress={refresh}
+          >
+            <Text style={{ color: '#fff', fontWeight: '600' }}>다시 시도</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
+
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
-      <Header title="태그 관리" showBackButton />
+      <Header title="태그 관리" showBackButton onBackPress={() => navigation.goBack()} />
 
       {/* 카테고리 탭 */}
-      <View style={[styles.tabContainer, { backgroundColor: theme.card }]}>
+      <View style={[styles.tabContainer, { backgroundColor: theme.card, borderBottomColor: theme.border }]}>
         {TAG_CATEGORIES.map(cat => (
           <TouchableOpacity
             key={cat.id}
@@ -141,7 +155,7 @@ export const AdminTagManageScreen = () => {
             ]}
             onPress={() => {
               setSelectedCategory(cat.id);
-              setNewTagName(''); // ✅ 카테고리 변경 시 입력 초기화
+              setNewTagName('');
             }}
           >
             <Text
@@ -156,20 +170,19 @@ export const AdminTagManageScreen = () => {
         ))}
       </View>
 
-      {/* ✅ 접두사 설명 */}
-      <View style={[styles.prefixInfo, { backgroundColor: theme.card }]}>
+      {/* 접두사 설명 */}
+      <View style={[styles.prefixInfo, { backgroundColor: theme.card, borderBottomColor: theme.border }]}> 
         <Text style={{ color: theme.textSecondary, fontSize: 13 }}>
           💡 태그는 자동으로{' '}
           <Text style={{ fontWeight: '700', color: theme.textPrimary }}>
             {currentPrefix}
-          </Text>{' '}
-          기호가 앞에 붙습니다
+          </Text>
+          {' '}기호가 앞에 붙습니다
         </Text>
       </View>
 
       {/* 추가 입력란 */}
-      <View style={[styles.addSection, { backgroundColor: theme.card }]}>
-        {/* ✅ 접두사 표시 */}
+      <View style={[styles.addSection, { backgroundColor: theme.card, borderBottomColor: theme.border }]}>
         <View style={styles.inputWrapper}>
           <Text
             style={[
@@ -224,8 +237,16 @@ export const AdminTagManageScreen = () => {
         ]}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
-            <Text style={{ color: theme.textSecondary }}>
+            <Ionicons
+              name="pricetag-outline"
+              size={48}
+              color={theme.textSecondary}
+            />
+            <Text style={[styles.emptyText, { color: theme.textSecondary }]}>
               등록된 태그가 없습니다
+            </Text>
+            <Text style={[styles.emptySubText, { color: theme.textSecondary }]}>
+              새로운 태그를 추가해보세요!
             </Text>
           </View>
         }
@@ -237,7 +258,6 @@ export const AdminTagManageScreen = () => {
             ]}
           >
             {editingId === item.id ? (
-              // ✅ 수정 모드
               <>
                 <View style={styles.editInputWrapper}>
                   <Text
@@ -294,7 +314,6 @@ export const AdminTagManageScreen = () => {
                 </View>
               </>
             ) : (
-              // ✅ 일반 모드 (접두사 포함 표시)
               <>
                 <Text style={[styles.tagName, { color: theme.textPrimary }]}>
                   {item.name}
@@ -326,6 +345,18 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  retryButton: {
+    marginTop: 12,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 8,
   },
   tabContainer: {
     flexDirection: 'row',
@@ -379,6 +410,15 @@ const styles = StyleSheet.create({
   emptyContainer: {
     padding: 40,
     alignItems: 'center',
+  },
+  emptyText: {
+    marginTop: 12,
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  emptySubText: {
+    marginTop: 4,
+    fontSize: 13,
   },
   tagCard: {
     flexDirection: 'row',

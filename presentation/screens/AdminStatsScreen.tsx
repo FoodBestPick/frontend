@@ -58,6 +58,7 @@ export const AdminStatsScreen = () => {
 
   const ui = useMemo(() => {
     if (!current) return null;
+
     const {
       visitors = 0,
       joins = 0,
@@ -68,7 +69,7 @@ export const AdminStatsScreen = () => {
       restaurantRate = 0,
       reviewRate = 0,
       timeSeries = [],
-      categories = {},
+      categories,
       ratingDistribution = [],
       topSearches = [],
     } = current;
@@ -83,13 +84,11 @@ export const AdminStatsScreen = () => {
       barPercentage: 0.8,
     };
 
-    function getCustomLabels(startDate: string, endDate: string) {
-      const start = new Date(startDate);
-      const end = new Date(endDate);
+    function getCustomLabels(startDateStr: string, endDateStr: string) {
+      const start = new Date(startDateStr);
+      const end = new Date(endDateStr);
       const diffDays =
-        Math.floor(
-          (end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)
-        ) + 1;
+        Math.floor((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
 
       if (diffDays === 1) return ["오전", "정오", "오후", "저녁"];
 
@@ -113,6 +112,15 @@ export const AdminStatsScreen = () => {
       }
       return Array.from(months);
     }
+
+    // ✅ categories가 null/undefined로 올 수도 있으니 안전처리
+    const safeCategories =
+      categories && typeof categories === "object" ? categories : {};
+
+    const categoriesArr = Object.entries(safeCategories).map(([label, pct]) => ({
+      label,
+      pct,
+    }));
 
     return {
       cards: [
@@ -145,20 +153,22 @@ export const AdminStatsScreen = () => {
         title: "방문자 추이",
         kpi: {
           value: visitors.toLocaleString(),
-          sub: `${selectedTab} +${visitorRate}%`,
+          // ✅ 여기 수정: +를 무조건 붙이지 말고 양수일 때만
+          sub: `${selectedTab} ${visitorRate > 0 ? "+" : ""}${visitorRate}%`,
         },
         labels:
           selectedTab === "오늘"
             ? ["오전", "정오", "오후", "저녁"]
             : selectedTab === "주간"
-              ? ["월", "화", "수", "목", "금", "토", "일"]
-              : selectedTab === "월간"
-                ? ["1주", "2주", "3주", "4주"]
-                : startDate && endDate
-                  ? getCustomLabels(startDate, endDate)
-                  : [],
+            ? ["월", "화", "수", "목", "금", "토", "일"]
+            : selectedTab === "월간"
+            ? ["1주", "2주", "3주", "4주"]
+            : startDate && endDate
+            ? getCustomLabels(startDate, endDate)
+            : [],
         data: timeSeries,
       },
+
       pie:
         (current.pie ?? []).map((item: any, index: number) => ({
           ...item,
@@ -166,18 +176,23 @@ export const AdminStatsScreen = () => {
           legendFontColor: theme.textPrimary,
           legendFontSize: 13,
         })) ?? [],
+
       centerTop: joins.toLocaleString(),
       centerBottom: "신규 가입",
-      categories: Object.entries(categories).map(([label, pct]) => ({
-        label,
-        pct,
-      })),
-      bar: { labels: ["1점", "2점", "3점", "4점", "5점"], data: ratingDistribution },
-      ranks: topSearches.map((r, i) => ({
+
+      categories: categoriesArr,
+
+      bar: {
+        labels: ["1점", "2점", "3점", "4점", "5점"],
+        data: ratingDistribution,
+      },
+
+      ranks: (topSearches ?? []).map((r: any, i: number) => ({
         rank: i + 1,
         term: r.term,
         count: `${r.count.toLocaleString()}회`,
       })),
+
       chartConfig,
     };
   }, [current, selectedTab, startDate, endDate, theme]);
@@ -193,13 +208,7 @@ export const AdminStatsScreen = () => {
         }}
       >
         <ActivityIndicator size="large" color={theme.icon} />
-        <Text
-          style={{
-            marginTop: 10,
-            color: theme.textSecondary,
-            fontSize: 15,
-          }}
-        >
+        <Text style={{ marginTop: 10, color: theme.textSecondary, fontSize: 15 }}>
           통계 데이터를 불러오는 중...
         </Text>
       </View>
@@ -238,10 +247,7 @@ export const AdminStatsScreen = () => {
                 setSelectedTab(tab);
               }
             }}
-            style={[
-              styles.tab,
-              selectedTab === tab && { backgroundColor: theme.icon },
-            ]}
+            style={[styles.tab, selectedTab === tab && { backgroundColor: theme.icon }]}
           >
             <Text
               style={[
@@ -257,6 +263,7 @@ export const AdminStatsScreen = () => {
         ))}
       </View>
 
+      {/* 기간 선택 모달 */}
       <Modal
         isVisible={isCalendarVisible}
         onBackdropPress={() => setIsCalendarVisible(false)}
@@ -284,25 +291,25 @@ export const AdminStatsScreen = () => {
               }),
               ...(startDate &&
                 endDate && {
-                ...Object.fromEntries(
-                  Array.from(
-                    {
-                      length:
-                        (new Date(endDate).getTime() - new Date(startDate).getTime()) /
-                        (1000 * 60 * 60 * 24) -
-                        1,
-                    },
-                    (_, i) => {
-                      const d = new Date(
-                        new Date(startDate).getTime() + (i + 1) * 86400000
-                      )
-                        .toISOString()
-                        .split("T")[0];
-                      return [d, { color: "#B3D7FF", textColor: theme.textPrimary }];
-                    }
-                  )
-                ),
-              }),
+                  ...Object.fromEntries(
+                    Array.from(
+                      {
+                        length:
+                          (new Date(endDate).getTime() - new Date(startDate).getTime()) /
+                            (1000 * 60 * 60 * 24) -
+                          1,
+                      },
+                      (_, i) => {
+                        const d = new Date(
+                          new Date(startDate).getTime() + (i + 1) * 86400000
+                        )
+                          .toISOString()
+                          .split("T")[0];
+                        return [d, { color: "#B3D7FF", textColor: theme.textPrimary }];
+                      }
+                    )
+                  ),
+                }),
             }}
             onDayPress={(day) => {
               if (!startDate || (startDate && endDate)) {
@@ -354,7 +361,6 @@ export const AdminStatsScreen = () => {
         </View>
       </Modal>
 
-
       {/* 본문 */}
       <ScrollView
         contentContainerStyle={styles.scroll}
@@ -363,14 +369,18 @@ export const AdminStatsScreen = () => {
         {/* 요약 카드 */}
         <View style={styles.statsGrid}>
           {ui.cards.map((c) => (
-            <View key={c.label} style={[styles.statCard,
-            {
-              backgroundColor: theme.card,
-              borderColor: theme.border,
-              borderWidth: 1,
-              shadowColor: theme.background,
-            },
-            ]}>
+            <View
+              key={c.label}
+              style={[
+                styles.statCard,
+                {
+                  backgroundColor: theme.card,
+                  borderColor: theme.border,
+                  borderWidth: 1,
+                  shadowColor: theme.background,
+                },
+              ]}
+            >
               <Text style={[styles.statLabel, { color: theme.textSecondary }]}>{c.label}</Text>
               <Text style={[styles.statValue, { color: theme.icon }]}>{c.value}</Text>
               <Text style={{ color: c.up ? "#2EAD50" : "#E53935" }}>{c.rate}</Text>
@@ -379,21 +389,23 @@ export const AdminStatsScreen = () => {
         </View>
 
         {/* 방문자 추이 */}
-        <View style={[styles.section,
-        {
-          backgroundColor: theme.card,
-          borderColor: theme.border, 
-          borderWidth: 1,
-          shadowColor: theme.background,
-        },
-        ]}>
-          <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>
-            {ui.line.title}
-          </Text>
+        <View
+          style={[
+            styles.section,
+            {
+              backgroundColor: theme.card,
+              borderColor: theme.border,
+              borderWidth: 1,
+              shadowColor: theme.background,
+            },
+          ]}
+        >
+          <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>{ui.line.title}</Text>
           <View style={styles.kpiRow}>
             <Text style={[styles.kpiValue, { color: theme.textPrimary }]}>{ui.line.kpi.value}</Text>
             <Text style={[styles.kpiSub, { color: "#3CB371" }]}>{ui.line.kpi.sub}</Text>
           </View>
+
           {ui.line.data.length > 0 && ui.line.data.some((v: number) => v > 0) ? (
             <LineChart
               data={{ labels: ui.line.labels, datasets: [{ data: ui.line.data }] }}
@@ -405,7 +417,12 @@ export const AdminStatsScreen = () => {
               withInnerLines={false}
             />
           ) : (
-            <View style={[styles.chart, { height: 180, justifyContent: "center", alignItems: "center" }]}>
+            <View
+              style={[
+                styles.chart,
+                { height: 180, justifyContent: "center", alignItems: "center" },
+              ]}
+            >
               <Text style={{ color: theme.textSecondary }}>데이터가 없습니다.</Text>
             </View>
           )}
@@ -413,19 +430,21 @@ export const AdminStatsScreen = () => {
 
         {/* 신규 유입 경로 */}
         {ui.pie && ui.pie.length > 0 && (
-          <View style={[styles.section,
-          {
-            backgroundColor: theme.card,
-            borderColor: theme.border,
-            borderWidth: 1,
-            shadowColor: theme.background,
-          },
-          ]}>
-            <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>
-              신규 유입 경로
-            </Text>
+          <View
+            style={[
+              styles.section,
+              {
+                backgroundColor: theme.card,
+                borderColor: theme.border,
+                borderWidth: 1,
+                shadowColor: theme.background,
+              },
+            ]}
+          >
+            <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>신규 유입 경로</Text>
+
             <DonutChart
-              data={ui.pie.map((d) => ({
+              data={ui.pie.map((d: any) => ({
                 name: d.name,
                 value: d.population ?? d.value,
                 color: d.color,
@@ -433,8 +452,9 @@ export const AdminStatsScreen = () => {
               centerTop={ui.centerTop}
               centerBottom={ui.centerBottom}
             />
+
             <View style={styles.legend}>
-              {ui.pie.map((d) => (
+              {ui.pie.map((d: any) => (
                 <View key={d.name} style={styles.legendRow}>
                   <View style={[styles.legendDot, { backgroundColor: d.color }]} />
                   <Text style={[styles.legendText, { color: theme.textSecondary }]}>
@@ -447,53 +467,70 @@ export const AdminStatsScreen = () => {
         )}
 
         {/* 맛집 카테고리 */}
-        <View style={[styles.section,
-        {
-          backgroundColor: theme.card,
-          borderColor: theme.border,
-          borderWidth: 1,
-          shadowColor: theme.background,
-        },
-        ]}>
+        <View
+          style={[
+            styles.section,
+            {
+              backgroundColor: theme.card,
+              borderColor: theme.border,
+              borderWidth: 1,
+              shadowColor: theme.background,
+            },
+          ]}
+        >
           <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>
             맛집 카테고리 분포
           </Text>
-          {ui.categories.map((c, index) => {
-            const colors = ["#FF6B6B", "#FFD93D", "#6BCB77", "#4D96FF", "#B185DB"];
-            return (
-              <View key={c.label} style={{ marginTop: 10 }}>
-                <View style={styles.catRow}>
-                  <Text style={[styles.catLabel, { color: theme.textSecondary }]}>{c.label}</Text>
-                  <Text style={[styles.catPct, { color: theme.textSecondary }]}>{c.pct}%</Text>
+
+          {ui.categories && ui.categories.length > 0 ? (
+            ui.categories.map((c, index) => {
+              const colors = ["#FF6B6B", "#FFD93D", "#6BCB77", "#4D96FF", "#B185DB"];
+              return (
+                <View key={c.label} style={{ marginTop: 10 }}>
+                  <View style={styles.catRow}>
+                    <Text style={[styles.catLabel, { color: theme.textSecondary }]}>{c.label}</Text>
+                    <Text style={[styles.catPct, { color: theme.textSecondary }]}>{c.pct}%</Text>
+                  </View>
+                  <View style={[styles.catTrack, { backgroundColor: theme.background }]}>
+                    <View
+                      style={[
+                        styles.catFill,
+                        {
+                          width: `${c.pct}%`,
+                          backgroundColor: colors[index % colors.length],
+                        },
+                      ]}
+                    />
+                  </View>
                 </View>
-                <View style={[styles.catTrack, { backgroundColor: theme.background }]}>
-                  <View
-                    style={[
-                      styles.catFill,
-                      {
-                        width: `${c.pct}%`,
-                        backgroundColor: colors[index % colors.length],
-                      },
-                    ]}
-                  />
-                </View>
-              </View>
-            );
-          })}
+              );
+            })
+          ) : (
+            <View
+              style={[
+                styles.chart,
+                { height: 180, justifyContent: "center", alignItems: "center" },
+              ]}
+            >
+              <Text style={{ color: theme.textSecondary }}>데이터가 없습니다.</Text>
+            </View>
+          )}
         </View>
 
         {/* 리뷰 평점 */}
-        <View style={[styles.section,
-        {
-          backgroundColor: theme.card,
-          borderColor: theme.border,
-          borderWidth: 1,
-          shadowColor: theme.background,
-        },
-        ]}>
-          <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>
-            리뷰 평점 분포
-          </Text>
+        <View
+          style={[
+            styles.section,
+            {
+              backgroundColor: theme.card,
+              borderColor: theme.border,
+              borderWidth: 1,
+              shadowColor: theme.background,
+            },
+          ]}
+        >
+          <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>리뷰 평점 분포</Text>
+
           {ui.bar.data.length > 0 && ui.bar.data.some((v: number) => v > 0) ? (
             <BarChart
               data={{ labels: ui.bar.labels, datasets: [{ data: ui.bar.data }] }}
@@ -507,29 +544,49 @@ export const AdminStatsScreen = () => {
               yAxisSuffix=""
             />
           ) : (
-            <View style={[styles.chart, { height: 180, justifyContent: "center", alignItems: "center" }]}>
+            <View
+              style={[
+                styles.chart,
+                { height: 180, justifyContent: "center", alignItems: "center" },
+              ]}
+            >
               <Text style={{ color: theme.textSecondary }}>데이터가 없습니다.</Text>
             </View>
           )}
         </View>
 
         {/* 인기 검색어 */}
-        <View style={[styles.section,
-        {
-          backgroundColor: theme.card,
-          borderColor: theme.border,
-          borderWidth: 1,
-          shadowColor: theme.background,
-        },
-        ]}>
+        <View
+          style={[
+            styles.section,
+            {
+              backgroundColor: theme.card,
+              borderColor: theme.border,
+              borderWidth: 1,
+              shadowColor: theme.background,
+            },
+          ]}
+        >
           <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>인기 검색어</Text>
-          {ui.ranks.map((r) => (
-            <View key={r.rank} style={styles.rankRow}>
-              <Text style={[styles.rankIndex, { color: theme.icon }]}>{r.rank}</Text>
-              <Text style={[styles.rankTerm, { color: theme.textPrimary }]}>{r.term}</Text>
-              <Text style={[styles.rankCount, { color: theme.textSecondary }]}>{r.count}</Text>
+
+          {ui.ranks && ui.ranks.length > 0 ? (
+            ui.ranks.map((r) => (
+              <View key={r.rank} style={styles.rankRow}>
+                <Text style={[styles.rankIndex, { color: theme.icon }]}>{r.rank}</Text>
+                <Text style={[styles.rankTerm, { color: theme.textPrimary }]}>{r.term}</Text>
+                <Text style={[styles.rankCount, { color: theme.textSecondary }]}>{r.count}</Text>
+              </View>
+            ))
+          ) : (
+            <View
+              style={[
+                styles.chart,
+                { height: 180, justifyContent: "center", alignItems: "center" },
+              ]}
+            >
+              <Text style={{ color: theme.textSecondary }}>데이터가 없습니다.</Text>
             </View>
-          ))}
+          )}
         </View>
       </ScrollView>
     </View>
@@ -539,6 +596,7 @@ export const AdminStatsScreen = () => {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   scroll: { padding: 16, paddingBottom: 40 },
+
   tabContainer: {
     flexDirection: "row",
     justifyContent: "space-around",
@@ -546,6 +604,7 @@ const styles = StyleSheet.create({
   },
   tab: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 12 },
   tabText: { fontWeight: "600" },
+
   statsGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -564,25 +623,32 @@ const styles = StyleSheet.create({
   },
   statLabel: { fontSize: 13 },
   statValue: { fontSize: 22, fontWeight: "bold", marginVertical: 4 },
+
   section: { borderRadius: 12, padding: 16, marginTop: 16 },
   sectionTitle: { fontWeight: "bold", fontSize: 16, marginBottom: 10 },
-  chart: { borderRadius: 12, marginLeft : -16},
+
+  chart: { borderRadius: 12, marginLeft: -16 },
+
   kpiRow: { flexDirection: "row", alignItems: "flex-end", marginBottom: 6 },
   kpiValue: { fontSize: 28, fontWeight: "800", marginRight: 6 },
   kpiSub: { fontSize: 13, fontWeight: "700" },
+
   catRow: { flexDirection: "row", justifyContent: "space-between", marginBottom: 6 },
   catLabel: { fontSize: 13 },
   catPct: { fontSize: 13 },
   catTrack: { height: 6, borderRadius: 999 },
   catFill: { height: 6, borderRadius: 999 },
+
   rankRow: { flexDirection: "row", justifyContent: "space-between", paddingVertical: 8 },
   rankIndex: { width: 20, fontWeight: "bold", textAlign: "center" },
   rankTerm: { flex: 1, paddingLeft: 6 },
   rankCount: {},
+
   legend: { marginTop: 16 },
   legendRow: { flexDirection: "row", alignItems: "center", marginBottom: 6 },
   legendDot: { width: 10, height: 10, borderRadius: 5, marginRight: 8 },
   legendText: { fontSize: 13 },
+
   modal: { justifyContent: "flex-end", margin: 0 },
   modalContainer: {
     borderTopLeftRadius: 20,
@@ -610,5 +676,4 @@ const styles = StyleSheet.create({
   },
   modalCancelText: { fontWeight: "600" },
   modalConfirmText: { color: "#fff", fontWeight: "700" },
-
 });

@@ -21,7 +21,7 @@ import Icon from 'react-native-vector-icons/Ionicons';
 import messaging from '@react-native-firebase/messaging';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
-// import { foodRes, CategoryKey, Store } from '../../data/mock/foodRes'; // Mock data removed
+// import { foodRes, CategoryKey, Store } from '../../data/mock/foodRes'; 
 import { useUserMainViewModel, Store } from '../viewmodels/UserMainViewModel';
 import { UserAuthRepositoryImpl } from '../../data/repositoriesImpl/UserAuthRepositoryImpl';
 import { useAuth } from '../../context/AuthContext';
@@ -30,8 +30,10 @@ const { width } = Dimensions.get('window');
 const MAIN_COLOR = '#FFA847';
 
 const SCROLL_THRESHOLD = 220;
-
 const TRACK_WIDTH = width * 0.75;
+
+// [수정 포인트] 화면 좌우 여백을 24으로 설정하여 안쪽으로 확 밀어넣음
+const SCREEN_PADDING = 24; 
 
 type CategoryKey = string; 
 
@@ -338,6 +340,7 @@ const UserMain = () => {
 
     return (
       <View key={category} style={styles.categorySection}>
+        {/* 타이틀 왼쪽 마진 30px 적용 */}
         <Text style={styles.subTitle}>{category}</Text>
         <Animated.FlatList
           horizontal
@@ -389,10 +392,11 @@ const UserMain = () => {
               </View>
             </TouchableOpacity>
           )}
+          // 리스트 좌우 여백 30px 적용
           contentContainerStyle={{
-            paddingRight: 20,
+            paddingRight: SCREEN_PADDING,
             paddingBottom: 10,
-            paddingLeft: 2,
+            paddingLeft: SCREEN_PADDING,
           }}
         />
 
@@ -558,9 +562,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderBottomColor: '#F5F5F5',
     zIndex: 100,
+    paddingBottom: 10,
   },
   headerTitleWrap: { alignItems: 'center', marginBottom: 12 },
   headerTitle: { fontSize: 18, fontWeight: '700', color: '#000' },
+  
+  // [수정] 검색창 너비: 전체 너비에서 60 (30*2) 제외
   searchBox: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -568,16 +575,18 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: MAIN_COLOR,
     borderRadius: 8,
-    width: width - 32,
+    width: width - (SCREEN_PADDING * 2), 
     height: 44,
     paddingHorizontal: 12,
     backgroundColor: '#fff',
   },
+  
+  // [수정] 상단 헤더 아이콘들 좌우 여백 30
   topHeaderRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 16,
+    paddingHorizontal: SCREEN_PADDING,
     paddingTop: 10,
     marginBottom: 12,
   },
@@ -596,12 +605,14 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#F5F5F5',
   },
-  stickyTitleWrap: { marginTop: 4, marginBottom: 10, paddingLeft: 16 },
+  // [수정] 스티키 헤더 타이틀 여백 30
+  stickyTitleWrap: { marginTop: 4, marginBottom: 10, paddingLeft: SCREEN_PADDING },
 
+  // [수정] 카테고리 그리드 좌우 여백 30
   gridWrapper: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    paddingHorizontal: 16,
+    paddingHorizontal: SCREEN_PADDING,
     justifyContent: 'space-between',
     marginTop: 6,
   },
@@ -629,13 +640,15 @@ const styles = StyleSheet.create({
   },
   gridTextSelected: { color: '#FFA847', fontWeight: '700' },
 
-  recommendHeader: { marginLeft: 16, marginBottom: 20 },
+  // [수정] 추천 섹션 제목 여백 30
+  recommendHeader: { marginLeft: SCREEN_PADDING, marginBottom: 20 },
   recommendTitle: { fontSize: 18, fontWeight: '800', color: '#000' },
   subTitle: {
     fontSize: 16,
     fontWeight: '700',
     marginBottom: 10,
     color: '#333',
+    marginLeft: SCREEN_PADDING, // [수정] 좌측 마진 30
   },
   subTitleSmall: {
     fontSize: 14,
@@ -645,7 +658,8 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
 
-  categorySection: { marginBottom: 24, paddingLeft: 16 },
+  categorySection: { marginBottom: 24, paddingLeft: 0 },
+  
   cardContainer: {
     width: 150,
     marginRight: 12,
@@ -694,8 +708,9 @@ const styles = StyleSheet.create({
   },
   reviewCountShort: { fontSize: 12, color: '#999' },
 
+  // [수정] 세로 리스트 아이템 좌우 여백 30
   storeContainer: {
-    paddingHorizontal: 16,
+    paddingHorizontal: SCREEN_PADDING,
     paddingVertical: 16,
     backgroundColor: '#fff',
   },

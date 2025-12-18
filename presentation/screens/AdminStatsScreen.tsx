@@ -153,7 +153,9 @@ export const AdminStatsScreen = () => {
         title: "방문자 추이",
         kpi: {
           value: visitors.toLocaleString(),
+          // ✅ "+-40%" 방지
           sub: `${selectedTab} ${visitorRate > 0 ? "+" : ""}${visitorRate}%`,
+          // ✅ 색상 분기용
           up: visitorRate >= 0,
         },
         labels:
@@ -162,6 +164,7 @@ export const AdminStatsScreen = () => {
             : selectedTab === "주간"
               ? ["월", "화", "수", "목", "금", "토", "일"]
               : selectedTab === "월간"
+                // ✅ 데이터 길이에 맞춰 라벨 생성(점 5개면 5주)
                 ? Array.from({ length: timeSeries.length }, (_, i) => `${i + 1}주`)
                 : startDate && endDate
                   ? getCustomLabels(startDate, endDate)
@@ -194,6 +197,7 @@ export const AdminStatsScreen = () => {
     };
   }, [current, selectedTab, startDate, endDate, theme]);
 
+  // ✅ “처음 로딩(데이터가 아직 없을 때)”만 전체 로딩 화면
   if (loading && !statsDetail) {
     return (
       <View

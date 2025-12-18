@@ -69,7 +69,8 @@ function UserNotificationScreen() {
     fetchAlarms,
     markAsRead,
     markAllAsRead,
-    deleteAlarm
+    deleteAlarm,
+    deleteAllAlarms
   } = useNotificationViewModel();
 
   const [isFilterModalVisible, setIsFilterModalVisible] = useState(false);
@@ -132,11 +133,21 @@ function UserNotificationScreen() {
       </View>
 
       <View style={styles.listHeader}>
-        {unreadCount > 0 && (
-          <TouchableOpacity onPress={markAllAsRead}>
-            <Text style={styles.markAllReadText}>모두 읽음으로 표시 ({unreadCount}개)</Text>
-          </TouchableOpacity>
-        )}
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+          {unreadCount > 0 ? (
+            <TouchableOpacity onPress={markAllAsRead}>
+              <Text style={styles.markAllReadText}>모두 읽음 표시 ({unreadCount}개)</Text>
+            </TouchableOpacity>
+          ) : (
+            <View /> 
+          )}
+
+          {notifications.length > 0 && (
+            <TouchableOpacity onPress={deleteAllAlarms}>
+              <Text style={styles.deleteAllText}>전체 삭제</Text>
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
 
       <ScrollView
@@ -171,6 +182,7 @@ const styles = StyleSheet.create({
   headerButton: { width: 44, height: 44, justifyContent: 'center', alignItems: 'center' },
   headerTitle: { fontSize: 18, fontWeight: '700', color: '#000', flex: 1, textAlign: 'center', marginLeft: 44, marginRight: 44 },
   markAllReadText: { color: MAIN_COLOR, fontWeight: "600", fontSize: 14 },
+  deleteAllText: { color: '#E53935', fontWeight: "600", fontSize: 14 },
   listHeader: { paddingHorizontal: 16, paddingTop: 10, marginBottom: 15 },
   listContainer: { flex: 1, paddingTop: 5 },
   emptyContainer: { alignItems: 'center', marginTop: 50, paddingHorizontal: 16 },

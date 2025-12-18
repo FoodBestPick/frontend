@@ -140,13 +140,13 @@ const styles = StyleSheet.create({
   },
   successBtn: {
     width: "100%",
-    paddingVertical: 12,
+    paddingVertical: 10, // 12에서 10으로 축소
     borderRadius: 10,
     alignItems: "center",
   },
   successBtnText: {
     color: "#fff",
     fontWeight: "bold",
-    fontSize: 16,
+    fontSize: 17, // 16에서 17로 확대
   },
 });

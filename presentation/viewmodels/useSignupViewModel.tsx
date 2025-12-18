@@ -1,7 +1,7 @@
 import { useState } from "react";
 // API 함수 직접 사용 (RepositoryImpl에 signup 정의됨)
 import { UserAuthRepositoryImpl } from "../../data/repositoriesImpl/UserAuthRepositoryImpl";
-import { Alert } from "react-native";
+import { useAlert } from "../../context/AlertContext";
 
 interface SignupData {
     email: string;
@@ -13,6 +13,7 @@ interface SignupData {
 export const useSignupViewModel = () => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const { showAlert } = useAlert();
 
     const signup = async (data: SignupData): Promise<boolean> => {
         setLoading(true);
@@ -43,7 +44,10 @@ export const useSignupViewModel = () => {
             setError(finalMessage);
 
             // 팝업으로도 즉시 알림
-            Alert.alert("회원가입 실패", finalMessage);
+            showAlert({
+                title: "회원가입 실패",
+                message: finalMessage
+            });
 
             return false;
         } finally {

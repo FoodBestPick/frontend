@@ -4,6 +4,18 @@ import { StatusBar } from 'react-native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { useContext, useState, useRef } from 'react';
 
+import { LogBox } from 'react-native';
+
+LogBox.ignoreLogs([
+  'This method is deprecated (as well as all React Native Firebase namespaced API)',
+  'Method called was `requestPermission`. Please use `requestPermission()` instead.',
+  'Method called was `onMessage`. Please use `onMessage()` instead.',
+  'Method called was `onTokenRefresh`. Please use `onTokenRefresh()` instead.',
+  'Method called was `AuthorizationStatus`. Please use `AuthorizationStatus` instead.',
+  'Method called was `hasPermission`. Please use `hasPermission()` instead.',
+  'Method called was `getToken`. Please use `getToken()` instead.',
+]);
+
 // Navigations
 import { AdminMainStack } from '../frontend/presentation/navigation/AdminNavigation';
 import { UserNavigation } from '../frontend/presentation/navigation/UserNavigation';
@@ -18,6 +30,7 @@ import FindAccountScreen from '../frontend/presentation/screens/FindAccountScree
 // ⭐ [추가됨] 비밀번호 변경 스크린 import
 import ChangePasswordScreen from './presentation/screens/ChangePasswordScreen';
 import DeleteAccountScreen from './presentation/screens/DeleteAccountScreen'; 
+import PrivacyPolicyScreen from './presentation/screens/PrivacyPolicyScreen';
 // Screens - User & Common
 import SearchScreen from '../frontend/presentation/screens/SearchScreen';
 import SearchResultScreen from '../frontend/presentation/screens/SearchResultScreen';
@@ -43,6 +56,7 @@ import { AdminInquiryScreen } from './presentation/screens/AdminInquiryScreen';
 // Contexts
 import { ThemeProvider, ThemeContext } from "./context/ThemeContext";
 import { AuthProvider, useAuth } from "./context/AuthContext";
+import { AlertProvider } from "./context/AlertContext";
 
 // Components
 import { FloatingChatButton } from './presentation/components/FloatingChatButton';
@@ -115,6 +129,7 @@ function AppInner() {
             />
             <Stack.Screen name="ChangePassword" component={ChangePasswordScreen} />
             <Stack.Screen name="DeleteAccount" component={DeleteAccountScreen} />
+            <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} />
             <Stack.Screen name="AdminRestaurantAdd" component={AdminRestaurantAddScreen} />
             <Stack.Screen name="NotificationScreen" component={AdminNotificationScreen} />
             <Stack.Screen name="AdminReportScreen" component={AdminReportScreen} />
@@ -156,7 +171,9 @@ export default function App() {
   return (
     <AuthProvider>
       <ThemeProvider>
-        <AppInner />
+        <AlertProvider>
+          <AppInner />
+        </AlertProvider>
       </ThemeProvider>
     </AuthProvider>
   );

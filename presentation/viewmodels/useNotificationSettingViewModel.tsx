@@ -1,11 +1,11 @@
 // useNotificationSettingViewModel.tsx
 import { useState, useCallback, useEffect } from "react";
-import { Alert } from "react-native";
 import {
   NotificationSettingRepositoryImpl,
   AlarmType,
   AlarmSettingsMap,
 } from "../../data/repositoriesImpl/NotificationSettingRepositoryImpl";
+import { useAlert } from "../../context/AlertContext";
 
 const DEFAULTS: AlarmSettingsMap = {
   REVIEW_LIKE: true,
@@ -16,6 +16,7 @@ const DEFAULTS: AlarmSettingsMap = {
 export const useNotificationSettingViewModel = () => {
   const [loading, setLoading] = useState(false);
   const [settings, setSettings] = useState<AlarmSettingsMap>(DEFAULTS);
+  const { showAlert } = useAlert();
 
   const fetchSettings = useCallback(async () => {
     setLoading(true);
@@ -44,7 +45,7 @@ export const useNotificationSettingViewModel = () => {
     } catch (e) {
       console.error(e);
       setSettings((p) => ({ ...p, [alarmType]: prev }));
-      Alert.alert("저장 실패", "설정을 변경하지 못했습니다.");
+      showAlert({ title: "저장 실패", message: "설정을 변경하지 못했습니다." });
     }
   };
 

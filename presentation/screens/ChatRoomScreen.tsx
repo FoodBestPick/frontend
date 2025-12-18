@@ -10,7 +10,6 @@ import {
     Image,
     KeyboardAvoidingView,
     Platform,
-    Alert,
     ActivityIndicator
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -20,6 +19,7 @@ import { useChatViewModel } from "../../presentation/viewmodels/ChatViewModel";
 import { useAuth } from "../../context/AuthContext";
 import { launchImageLibrary } from 'react-native-image-picker';
 import { ChatRepositoryImpl } from '../../data/repositoriesImpl/ChatRepositoryImpl';
+import { useAlert } from '../../context/AlertContext';
 
 const MAIN_COLOR = '#FFA847';
 const GRAY_BG = '#F2F2F2';
@@ -31,6 +31,7 @@ const ChatRoomScreen = () => {
 
     const { currentUserId, token, checkActiveRoom } = useAuth();
     const { messages, sendMessage, leaveRoom, isLeaving } = useChatViewModel(roomId);
+    const { showAlert } = useAlert();
 
     const [inputText, setInputText] = useState('');
     const [uploading, setUploading] = useState(false);
@@ -69,39 +70,36 @@ const ChatRoomScreen = () => {
             if (uploadedUrl) {
                 sendMessage(uploadedUrl); // URL 전송
             } else {
-                Alert.alert("업로드 실패", "이미지 업로드 중 오류가 발생했습니다.");
+                showAlert({ title: "업로드 실패", message: "이미지 업로드 중 오류가 발생했습니다." });
             }
         } catch (e) {
             console.error(e);
-            Alert.alert("오류", "이미지 전송 실패");
+            showAlert({ title: "오류", message: "이미지 전송 실패" });
         } finally {
             setUploading(false);
         }
     };
 
     const handleLeave = () => {
-        Alert.alert(
-            "채팅방 나가기",
-            "정말 나가시겠습니까?",
-            [
-                { text: "취소", style: "cancel" },
-                {
-                    text: "나가기",
-                    style: "destructive",
-                    onPress: async () => {
-                        try {
-                            await leaveRoom();
-                            checkActiveRoom(); // 뱃지 갱신
-                            navigation.goBack();
-                        } catch (e) {
-                            console.error(e);
-                            Alert.alert("나가기 실패", "잠시 후 다시 시도해주세요.");
-                        }
-                    },
-                },
-            ]
-        );
+        showAlert({
+            title: "채팅방 나가기",
+            message: "정말 나가시겠습니까?",
+            confirmText: "나가기",
+            cancelText: "취소",
+            showCancel: true,
+            onConfirm: async () => {
+                try {
+                    await leaveRoom();
+                    checkActiveRoom(); // 뱃지 갱신
+                    navigation.goBack();
+                } catch (e) {
+                    console.error(e);
+                    showAlert({ title: "나가기 실패", message: "잠시 후 다시 시도해주세요." });
+                }
+            }
+        });
     };
+
 
     const renderItem = ({ item }: { item: any }) => {
         console.log("isSystem:", item?.isSystem, "content:", item?.content);

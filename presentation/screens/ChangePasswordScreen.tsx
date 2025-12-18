@@ -1,16 +1,18 @@
 import React, { useState, useLayoutEffect } from 'react'; // useLayoutEffect 추가
 import {
     View, Text, TextInput, TouchableOpacity, StyleSheet,
-    ActivityIndicator, SafeAreaView, KeyboardAvoidingView, Platform, ScrollView, Alert
+    ActivityIndicator, SafeAreaView, KeyboardAvoidingView, Platform, ScrollView
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useChangePasswordViewModel } from '../viewmodels/useChangePasswordViewModel';
 import { useAuth } from '../../context/AuthContext';
+import { useAlert } from '../../context/AlertContext';
 
 const ChangePasswordScreen = () => {
     const navigation = useNavigation();
     const { changePassword, isLoading, validatePassword } = useChangePasswordViewModel();
     const { logout } = useAuth();
+    const { showAlert } = useAlert();
 
     const [newPassword, setNewPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
@@ -36,9 +38,11 @@ const ChangePasswordScreen = () => {
     const handleSubmit = async () => {
         const isSuccess = await changePassword(newPassword, confirmPassword);
         if (isSuccess) {
-            Alert.alert('성공', '비밀번호가 변경되었습니다.\n다시 로그인해주세요.', [
-                { text: '확인', onPress: () => logout() }
-            ]);
+            showAlert({
+                title: "성공",
+                message: "비밀번호가 변경되었습니다.\n다시 로그인해주세요.",
+                onConfirm: () => logout()
+            });
         }
     };
 

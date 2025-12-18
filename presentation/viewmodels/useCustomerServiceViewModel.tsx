@@ -1,11 +1,11 @@
 import { useState, useCallback } from 'react';
-import { Alert } from 'react-native';
 import { CreateInquiryUseCase } from '../../domain/usecases/CreateInquiryUseCase';
 import { GetInquiriesUseCase } from '../../domain/usecases/GetInquiriesUseCase';
 import { DeleteInquiryUseCase } from '../../domain/usecases/DeleteInquiryUseCase';
 import { InquiryRepositoryImpl } from '../../data/repositoriesImpl/InquiryRepositoryImpl';
 import { Inquiry, InquiryCategory, InquiryCreatePayload } from '../../domain/entities/Inquiry';
 import { launchImageLibrary } from 'react-native-image-picker';
+import { useAlert } from '../../context/AlertContext';
 
 export const useCustomerServiceViewModel = () => {
     const [inquiries, setInquiries] = useState<Inquiry[]>([]);
@@ -22,6 +22,8 @@ export const useCustomerServiceViewModel = () => {
     const getUseCase = new GetInquiriesUseCase(InquiryRepositoryImpl);
     const deleteUseCase = new DeleteInquiryUseCase(InquiryRepositoryImpl);
 
+    const { showAlert } = useAlert();
+
     // 문의 목록 조회
     const fetchInquiries = useCallback(async () => {
         setLoading(true);
@@ -32,7 +34,7 @@ export const useCustomerServiceViewModel = () => {
             setInquiries(sortedData);
         } catch (error) {
             console.error("fetchInquiries error:", error);
-            Alert.alert("오류", "문의 내역을 불러오는데 실패했습니다.");
+            showAlert({ title: "오류", message: "문의 내역을 불러오는데 실패했습니다." });
         } finally {
             setLoading(false);
             setRefreshing(false);
@@ -42,7 +44,7 @@ export const useCustomerServiceViewModel = () => {
     // 문의 작성
     const submitInquiry = async (onSuccess: () => void) => {
         if (!title.trim() || !content.trim()) {
-            Alert.alert("알림", "제목과 내용을 입력해주세요.");
+            showAlert({ title: "알림", message: "제목과 내용을 입력해주세요." });
             return;
         }
 
@@ -56,7 +58,7 @@ export const useCustomerServiceViewModel = () => {
             };
 
             await createUseCase.execute(payload);
-            Alert.alert("성공", "문의가 등록되었습니다.");
+            showAlert({ title: "성공", message: "문의가 등록되었습니다." });
             
             // 입력 필드 초기화
             setTitle('');
@@ -69,7 +71,7 @@ export const useCustomerServiceViewModel = () => {
 
         } catch (error) {
             console.error("submitInquiry error:", error);
-            Alert.alert("오류", "문의 등록에 실패했습니다.");
+            showAlert({ title: "오류", message: "문의 등록에 실패했습니다." });
         } finally {
             setLoading(false);
         }
@@ -77,27 +79,23 @@ export const useCustomerServiceViewModel = () => {
 
     // 문의 삭제
     const deleteInquiry = async (id: number) => {
-        Alert.alert(
-            "삭제 확인",
-            "정말로 이 문의를 삭제하시겠습니까?",
-            [
-                { text: "취소", style: "cancel" },
-                {
-                    text: "삭제",
-                    style: "destructive",
-                    onPress: async () => {
-                        try {
-                            await deleteUseCase.execute(id);
-                            // 로컬 상태에서 즉시 제거 (UX 향상)
-                            setInquiries(prev => prev.filter(i => i.id !== id));
-                            Alert.alert("알림", "삭제되었습니다.");
-                        } catch (error) {
-                            Alert.alert("오류", "삭제에 실패했습니다.");
-                        }
-                    }
+        showAlert({
+            title: "삭제 확인",
+            message: "정말로 이 문의를 삭제하시겠습니까?",
+            confirmText: "삭제",
+            cancelText: "취소",
+            showCancel: true,
+            onConfirm: async () => {
+                try {
+                    await deleteUseCase.execute(id);
+                    // 로컬 상태에서 즉시 제거 (UX 향상)
+                    setInquiries(prev => prev.filter(i => i.id !== id));
+                    showAlert({ title: "알림", message: "삭제되었습니다." });
+                } catch (error) {
+                    showAlert({ title: "오류", message: "삭제에 실패했습니다." });
                 }
-            ]
-        );
+            }
+        });
     };
 
     // 이미지 선택

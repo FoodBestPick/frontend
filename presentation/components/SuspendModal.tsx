@@ -284,7 +284,7 @@ const styles = StyleSheet.create({
   cancelBtn: {
     flex: 1,
     backgroundColor: "#F2F4F6",
-    padding: 12,
+    paddingVertical: 10, // 12에서 10으로 축소
     borderRadius: 10,
     marginRight: 8,
     alignItems: "center",
@@ -292,16 +292,18 @@ const styles = StyleSheet.create({
   applyBtn: {
     flex: 1,
     backgroundColor: "#007AFF",
-    padding: 12,
+    paddingVertical: 10, // 12에서 10으로 축소
     borderRadius: 10,
     alignItems: "center",
   },
   cancelText: {
     color: "#000",
     fontWeight: "bold",
+    fontSize: 17, // 15에서 17로 확대
   },
   applyText: {
     color: "#fff",
     fontWeight: "bold",
+    fontSize: 17, // 15에서 17로 확대
   },
 });

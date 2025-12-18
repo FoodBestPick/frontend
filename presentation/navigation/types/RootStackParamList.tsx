@@ -51,6 +51,7 @@ export type RootStackParamList = {
   };
   ChangePassword: undefined;
   DeleteAccount: undefined;
+  PrivacyPolicy: undefined;
   NotificationSetting: undefined;
   ReviewWrite: {
     restaurantId: number;

@@ -23,15 +23,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 // import { foodRes, CategoryKey, Store } from '../../data/mock/foodRes'; 
 import { useUserMainViewModel, Store } from '../viewmodels/UserMainViewModel';
-import { UserAuthRepositoryImpl } from '../../data/repositoriesImpl/UserAuthRepositoryImpl'; 
-import { useAuth } from '../../context/AuthContext'; 
-
-if (
-  Platform.OS === 'android' &&
-  UIManager.setLayoutAnimationEnabledExperimental
-) {
-  UIManager.setLayoutAnimationEnabledExperimental(true);
-}
+import { UserAuthRepositoryImpl } from '../../data/repositoriesImpl/UserAuthRepositoryImpl';
+import { useAuth } from '../../context/AuthContext';
 
 const { width } = Dimensions.get('window');
 const MAIN_COLOR = '#FFA847';

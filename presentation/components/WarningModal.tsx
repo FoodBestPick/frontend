@@ -202,23 +202,25 @@ const styles = StyleSheet.create({
   },
   cancelBtn: {
     flex: 1,
-    padding: 12,
+    paddingVertical: 10, // 12에서 10으로 축소
     borderRadius: 10,
     marginRight: 8,
     alignItems: "center",
   },
   applyBtn: {
     flex: 1,
-    padding: 12,
+    paddingVertical: 10, // 12에서 10으로 축소
     borderRadius: 10,
     alignItems: "center",
   },
   cancelText: {
     fontWeight: "bold",
+    fontSize: 17, // 15에서 17로 확대
   },
   applyText: {
     color: "#fff",
     fontWeight: "bold",
+    fontSize: 17, // 15에서 17로 확대
   },
 });
   

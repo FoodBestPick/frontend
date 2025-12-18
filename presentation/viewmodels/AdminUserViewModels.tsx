@@ -47,7 +47,6 @@ export const AdminUserViewModel = () => {
         }
     };
 
-    // ✨ 필터링 로직 (Client-Side)
     useEffect(() => {
         if (!allUsers.length && !loading) { // 로딩 중이 아니고 데이터가 없다면 필터링하지 않음
              setResponse({ code: 200, message: "success", data: [], page: 1, size: 10, totalPages: 1 });
@@ -55,6 +54,9 @@ export const AdminUserViewModel = () => {
         }
 
         let filtered = [...allUsers];
+
+        // 0. 관리자 계정은 목록에서 제외
+        filtered = filtered.filter((u: any) => u?.role !== "ADMIN");
 
         // 1. 키워드 검색
         if (keyword && keyword.trim() !== "") {
@@ -93,17 +95,25 @@ export const AdminUserViewModel = () => {
 
         // 4. 페이징
         const size = 10; // ViewModel에서 페이징 사이즈를 고정
-        const start = (page - 1) * size;
+        const totalPages = Math.ceil(filtered.length / size) || 1;
+        const safePage = Math.min(page, totalPages);
+
+        // 필터/검색으로 페이지 수가 줄어들었는데 현재 page가 더 크면 안전하게 보정
+        if (safePage !== page) {
+            setPage(safePage);
+            return;
+        }
+
+        const start = (safePage - 1) * size;
         const paginated = filtered.slice(start, start + size);
-        const totalPages = Math.ceil(filtered.length / size);
 
         setResponse({
             code: 200,
             message: "success",
             data: paginated,
-            page,
+            page: safePage,
             size,
-            totalPages: totalPages || 1, // totalPages가 0일 경우 1로 설정
+            totalPages,
         });
 
     }, [allUsers, page, status, sort, keyword, loading]); // loading 상태도 의존성에 추가
@@ -180,9 +190,9 @@ export const AdminUserViewModel = () => {
 
         giveWarning,
         suspendUser,
-        unsuspendUser, // ⭐ 추가
+        unsuspendUser,
         updateUserRole,
 
-        refresh: fetchAllData, // refresh는 fetchAllData를 호출
+        refresh: fetchAllData, 
     };
 };
